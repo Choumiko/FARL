@@ -88,6 +88,19 @@ for i = 0, 7 do
   polePlacement.data[i].y = (polePlacement.data[i].y + polePlacement.distance) * polePlacement.side * polePlacement.dir[i].y
 end
 
+--[traveldir] ={[raildir]
+local signalOffset =
+{
+  [0] = {pos={x=1.5,y=0.5}, dir=4},
+  [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
+  [2] = {pos={x=-0.5,y=1.5}, dir=6},
+  [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
+  [4] = {pos={x=-1.5,y=-0.5}, dir=0},
+  [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
+  [6] = {pos={x=0.5,y=-1.5}, dir=2},
+  [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
+}
+
 local function addPos(p1,p2)
   return {x=p1.x+p2.x, y=p1.y+p2.y}
 end
@@ -194,7 +207,7 @@ function FARL:layRails()
       end
       if dir then
         self.direction, self.lastrail = dir, last
-        if self["big-electric-pole"] > 0 or godmode then
+        if self["big-electric-pole"] > 0 or godmodePoles then
           self:placePole()
         end
       else
@@ -281,6 +294,7 @@ function FARL.create(index, player)
     locomotive = player.vehicle, train=player.vehicle.train,
     driver=player, index = index, active=false, lastrail=false,
     direction = false, input = 1, name = player.vehicle.backername,
+    signalCount = 0
   }
   if not findByPlayer(player) then
     local farl = FARL:new(new)
@@ -427,7 +441,7 @@ function FARL:removeItemFromCargo(item, count)
 end
 
 function FARL:updateCargo()
-  local types = {"straight-rail", "curved-rail", "big-electric-pole"}
+  local types = {"straight-rail", "curved-rail", "big-electric-pole", "rail-signal"}
   local cargo = self:cargoCount()
   for _,type in pairs(types) do
     self[type] = cargo[type] or 0
@@ -477,30 +491,36 @@ function FARL:placeRails(lastRail, travelDir, input)
     if canplace and hasRail then
       game.createentity{name = nextRail.name, position = newPos, direction = newDir, force = game.forces.player}
       self:removeItemFromCargo(nextRail.name, 1)
-      local debug = false --set to true when rails get misplaced
-        if debug then
-          local area = {{newPos.x-0.4,newPos.y-0.4},{newPos.x+0.4,newPos.y+0.4}}
-          for i,rail in ipairs(game.findentitiesfiltered{area=area, name=nextRail.name}) do
-            if rail.direction == newDir then
-              if rail.position.x ~= newPos.x or rail.position.y ~= newPos.y then
-                local diff={x=rail.position.x-newPos.x, y=rail.position.y-newPos.y}
-                local debugaction = lastRail.name.."@"..pos2Str(lastRail.position)..":"..lastRail.direction.." travel:"..travelDir.." input:"..input
-                local debugDiff = rail.name.." placed@"..pos2Str(rail.position).." calc@"..pos2Str(newPos).." diff="..pos2Str(diff)
-                table.insert(glob.debug, {debugaction, debugDiff})
-                debugDump({debugaction,debugDiff},true)
-              end
-              return newTravelDir, rail
-            end
-          end
-          self.driver.print("Placed rail not found?!")
-          return false, false
-        else
+      local signalWeight = nextRail.name == "curved-rail" and signalPlacement.curvedWeight or 1
+      self.signalCount = self.signalCount + signalWeight
+        if self["rail-signal"] > 0 or godmodeSignals then
+          if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
+        end 
+--        local debug = false --set to true when rails get misplaced
+--        if debug then
+--          local area = {{newPos.x-0.4,newPos.y-0.4},{newPos.x+0.4,newPos.y+0.4}}
+--          for i,rail in ipairs(game.findentitiesfiltered{area=area, name=nextRail.name}) do
+--            if rail.direction == newDir then
+--              if rail.position.x ~= newPos.x or rail.position.y ~= newPos.y then
+--                local diff={x=rail.position.x-newPos.x, y=rail.position.y-newPos.y}
+--                local debugaction = lastRail.name.."@"..pos2Str(lastRail.position)..":"..lastRail.direction.." travel:"..travelDir.." input:"..input
+--                local debugDiff = rail.name.." placed@"..pos2Str(rail.position).." calc@"..pos2Str(newPos).." diff="..pos2Str(diff)
+--                table.insert(glob.debug, {debugaction, debugDiff})
+--                debugDump({debugaction,debugDiff},true)
+--              end
+--              return newTravelDir, rail
+--            end
+--          end
+--          self.driver.print("Placed rail not found?!")
+--          return false, false
+--        else
           return newTravelDir,nextRail
-        end
+--        end
     elseif not canplace then
       self.driver.print("Cant place "..nextRail.name.."@"..pos2Str(newPos).." dir:"..newDir)
       return false, false
     elseif not hasRail then
+      self:deactivate()
       self.driver.print("Out of rails")
     end
   else
@@ -541,6 +561,28 @@ function FARL:placePole()
       self.driver.print("Can`t place pole@"..pos2Str(tmp))
     end
   end
+end
+
+function FARL:placeSignal(traveldir, rail)
+  if self.signalCount > signalPlacement.distance and rail.name ~= "curved-rail" then
+    local rail = rail
+    local data = signalOffset[traveldir]
+    local offset = data[rail.direction] or data.pos
+    local dir = data.dir
+    local pos = addPos(rail.position, offset)
+    self:removeTrees(pos)
+    local canplace = game.canplaceentity{name = "rail-signal", position = pos, direction = dir}
+    if canplace then
+      game.createentity{name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
+      self:removeItemFromCargo("rail-signal", 1)
+      self["rail-signal"] = self["rail-signal"] - 1
+      return true
+    else
+      self.driver.print("Can't place signal@"..pos2Str(pos))
+      return false
+    end
+  end
+  return false
 end
 
 function FARL:findLastPole()
