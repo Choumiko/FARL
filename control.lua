@@ -268,9 +268,12 @@ local function onTick(event)
 end
 
 local function initGlob()
-  if glob.version == nil or glob.version < "0.0.3" then
+  if glob.version == nil or glob.version < "0.0.9" then
     glob = {}
-    glob.version = "0.0.3"
+    if game.forces.player.technologies["rail-signals"].researched then
+      game.forces.player.recipes["farl"].enabled = true
+    end
+    glob.version = "0.0.9"
   end
   glob.farl = glob.farl or {}
   glob.railInfoLast = glob.railInfoLast or {}
@@ -280,13 +283,6 @@ local function initGlob()
   glob.poles = glob.poles or true
   for i,farl in pairs(glob.farl) do
     farl = resetMetatable(farl)
-  end
-  for _,p in pairs(game.players) do
-    p.force.resetrecipes()
-    p.force.resettechnologies()
-    if game.forces.player.technologies["rail-signals"].researched then
-      game.forces.player.recipes["farl"].enabled = true
-    end
   end
 end
 
@@ -526,12 +522,12 @@ function FARL:placeRails(lastRail, travelDir, input)
       self:removeItemFromCargo(nextRail.name, 1)
       local signalWeight = nextRail.name == "curved-rail" and signalPlacement.curvedWeight or 1
       self.signalCount = self.signalCount + signalWeight
-        if glob.signals and (self["rail-signal"] > 0 or godmodeSignals) then
-          if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
-        end
         if glob.poles and (self["big-electric-pole"] > 0 or godmodePoles) then
           self:placePole(newTravelDir, nextRail)
         end 
+        if glob.signals and (self["rail-signal"] > 0 or godmodeSignals) then
+          if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
+        end
 --        local debug = false --set to true when rails get misplaced
 --        if debug then
 --          local area = {{newPos.x-0.4,newPos.y-0.4},{newPos.x+0.4,newPos.y+0.4}}
@@ -574,9 +570,12 @@ function FARL:calcPole(lastrail, traveldir)
   local data = polePlacement.data[traveldir]
   local offset = addPos(data, {x=0,y=0})
   local distance, side, dir = polePlacement.distance, polePlacement.side, polePlacement.dir[traveldir]
+  local lookup = lastrail.direction
   if lastrail.name ~= "curved-rail" then
     if data[lastrail.direction] then
-      offset = addPos(data[lastrail.direction])
+      local flip = side == -1 and true or false
+      if flip then lookup = (lookup+4)%8 end 
+      offset = addPos(data[lookup])
     else
       offset = addPos(data)
     end
@@ -663,7 +662,8 @@ function FARL:findLastPole()
   end
   if not pole then
     self.lastPole = addPos(self.lastrail.position, {x=-100,y=-100})
-    self.lastCheckPole = addPos(self.lastrail.position, polePlacement.data[self:calcTrainDir()%8])
+    local offset = self:calcPole(self.lastrail, self:calcTrainDir())
+    self.lastCheckPole = addPos(self.lastrail.position, offset)
   else
     self.lastPole = pole
     self.lastCheckPole = {x=pole.x,y=pole.y}
@@ -791,8 +791,12 @@ remote.addinterface("farl",
     end,
     reset = function()
       glob.farl = {}
-      for i,p in pairs(glob.players) do
-        if p.gui.left.farl then FARL.destroyGui(i,p) end
+      if game.forces.player.technologies["rail-signals"].researched then
+        game.forces.player.recipes["farl"].enabled = true
+      end
+      for i,p in pairs(game.players) do
+        if p.gui.left.farl then p.gui.left.farl.destroy() end
+        if p.gui.top.farl then p.gui.top.farl.destroy() end
       end
     end,
     godmode = function(bool)
