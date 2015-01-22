@@ -64,29 +64,58 @@ local clearAreas =
 local polePlacement = polePlacement  
 polePlacement.data = {
     [0]={x = 2, y = 0},
-    [1]={x = 1.5, y = 1.5},
+    [1]={x=3,y=1, [3]={x=2,y=2}, [7]={x=1,y=1}},
     [2]={x = 0, y = 2},
-    [3]={x = 1.5, y = 1.5},
+    [3]={x=3,y=1, [1]={x=1,y=1},[5]={x=2,y=2}},
     [4]={x = 2, y = 0},
-    [5]={x = 1.5, y = 1.5},
+    [5]={x=3,y=1, [3]={x=1,y=1}, [7]={x=2,y=2}},
     [6]={x = 0, y = 2},
-    [7]={x = 1.5, y = 1.5},
+    [7]={x=3,y=1, [1]={x=2,y=2},[5]={x=1,y=1}},
 }
+
+--[[
+curves from travel dir to travel dir:
+0 3 - 4 0 - 7
+1 5 - 4 0 - 1
+2 5 - 6 2 - 1
+3 7 - 6 2 - 3  
+4 7 - 0 4 - 3
+5 1 - 0 4 - 5
+6 1 - 2 6 - 5
+7 3 - 2 6 - 7
+--]]
+polePlacement.curveToDirs =
+  {
+    [0] = {"0347"},
+    [1] ={"0145"} ,
+    [2] ={"1256"} ,
+    [3] ={"2367"} ,
+    [4] ={"0347"} ,
+    [5] ={"0145"} ,
+    [6] ={"1265"} ,
+    [7] ={"2367"}
+    }
+
+polePlacement.curves = {
+    [0]={x=3,y=0},
+    [1]={x=3,y=0},
+    [2]={x=0,y=3},
+    [3]={x=0,y=3},
+    [4]={x=3,y=0},
+    [5]={x=3,y=0},
+    [6]={x=0,y=3},
+    [7]={x=0,y=3}
+  }
 polePlacement.dir = {
     [0]={x = 1, y = 1},
-    [7]={x = 1, y = -1},
+    [1]={x = 1, y = 1},
     [2]={x = 1, y = 1},
-    [5]={x = -1, y = -1},
-
-    [4]={x = -1, y = 1},
     [3]={x = -1, y = 1},
+    [4]={x = -1, y = 1},
+    [5]={x = -1, y = -1},
     [6]={x = 1, y = -1},
-    [1]={x = 1, y = 1}
+    [7]={x = 1, y = -1}
 }  
-for i = 0, 7 do
-  polePlacement.data[i].x = (polePlacement.data[i].x + polePlacement.distance) * polePlacement.side * polePlacement.dir[i].x
-  polePlacement.data[i].y = (polePlacement.data[i].y + polePlacement.distance) * polePlacement.side * polePlacement.dir[i].y
-end
 
 --[traveldir] ={[raildir]
 local signalOffset =
@@ -102,6 +131,7 @@ local signalOffset =
 }
 
 local function addPos(p1,p2)
+  local p2 = p2 or {x=0,y=0}
   return {x=p1.x+p2.x, y=p1.y+p2.y}
 end
 local function pos2Str(pos)
@@ -207,9 +237,6 @@ function FARL:layRails()
       end
       if dir then
         self.direction, self.lastrail = dir, last
-        if self["big-electric-pole"] > 0 or godmodePoles then
-          self:placePole()
-        end
       else
         self:deactivate()
         self.driver.print("Deactivated")
@@ -495,6 +522,9 @@ function FARL:placeRails(lastRail, travelDir, input)
       self.signalCount = self.signalCount + signalWeight
         if self["rail-signal"] > 0 or godmodeSignals then
           if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
+        end
+        if self["big-electric-pole"] > 0 or godmodePoles then
+          self:placePole(newTravelDir, nextRail)
         end 
 --        local debug = false --set to true when rails get misplaced
 --        if debug then
@@ -534,11 +564,27 @@ function FARL:placeRails(lastRail, travelDir, input)
   end
 end
 
-function FARL:placePole()
+function FARL:placePole(traveldir, lastrail)
   local tmp = {x=self.lastCheckPole.x,y=self.lastCheckPole.y}
-  self.lastCheckPole = addPos(self.lastrail.position, polePlacement.data[self.direction])
+  local data = polePlacement.data[traveldir]
+  local offset = addPos(data, {x=0,y=0})
+  if lastrail.name ~= "curved-rail" then
+    if data[lastrail.direction] then
+      offset = addPos(data[lastrail.direction])
+    else
+      offset = addPos(data)
+    end
+  else
+    offset = addPos(offset,polePlacement.curves[lastrail.direction])
+  end
+  local distance, side, dir = polePlacement.distance, polePlacement.side, polePlacement.dir[traveldir]
+  if  lastrail.name == "curved-rail" then dir = {x=1,y=1} end
+  offset.x = (offset.x + distance) * side * dir.x
+  offset.y = (offset.y + distance) * side * dir.y
+  glob.lastCheckRail = {pos=addPos(lastrail.position,{x=0,y=0}), dir=lastrail.direction, tr=traveldir}
+  self.lastCheckPole = addPos(lastrail.position, offset)
   local distance = util.distance(self.lastPole, self.lastCheckPole)
-  local basedon = addPos(self.lastrail.position,{x=0,y=0})
+  local basedon = addPos(lastrail.position,{x=0,y=0})
   if distance > 30 then
     self:removeTrees(tmp)
     local canplace = game.canplaceentity{name = "big-electric-pole", position = tmp}
@@ -559,6 +605,7 @@ function FARL:placePole()
       return true
     else
       self.driver.print("Can`t place pole@"..pos2Str(tmp))
+      --debugDump(glob.lastCheckRail,true)
     end
   end
 end
