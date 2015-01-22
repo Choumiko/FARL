@@ -1,4 +1,9 @@
-require "settings"
+require "defines"
+require "util"
+godmode = false
+godmodePoles = false
+godmodeSignals = false
+removeStone = true
 
 local math = math
 local util = util
@@ -61,7 +66,11 @@ local clearAreas =
       {{x=0.5,y=-1.5},{x=0.5,y=2.5}},{{x=-0.5,y=-2.5},{x=-0.5,y=1.5}},
       {{x=-1.5,y=-3.5},{x=-1.5,y=1.5}},{{x=-3.5,y=-3.5},{x=-2.5,y=0.5}}}
   }
-local polePlacement = polePlacement  
+
+local signalPlacement = {}
+
+local polePlacement = {}
+ 
 polePlacement.data = {
     [0]={x = 2, y = 0},
     [1]={x=3,y=1, [3]={x=2,y=2}, [7]={x=1,y=1}},
@@ -258,7 +267,7 @@ local function onTick(event)
   if event.tick%10==9  then
     for pi, player in ipairs(game.players) do
       if (player.vehicle ~= nil and player.vehicle.name == "farl") then
-        if player.gui.left.farl and not player.gui.left.farl.start then FARL.destroyGui(pi,player) end
+        --if player.gui.left.farl and not player.gui.left.farl.rows then FARL.destroyGui(pi,player) end
         if player.gui.left.farl == nil then
           FARL.create(pi, player)
         end
@@ -271,13 +280,19 @@ local function onTick(event)
 end
 
 local function initGlob()
-  if glob.version == nil or glob.version < "0.0.9" then
+  if glob.version == nil or glob.version < "0.1.1" then
     glob = {}
     if game.forces.player.technologies["rail-signals"].researched then
       game.forces.player.recipes["farl"].enabled = true
     end
-    glob.version = "0.0.9"
+    glob.settings = {}
+    glob.version = "0.1.0"
   end
+  glob.settings = glob.settings or {}
+  glob.settings.poleDistance = glob.settings.poleDistance or 1
+  glob.settings.poleSide = glob.settings.poleSide or 1
+  glob.settings.signalDistance = glob.settings.signalDistance or 15
+  glob.settings.curvedWeight = glob.settings.curvedWeight or 4
   glob.farl = glob.farl or {}
   glob.railInfoLast = glob.railInfoLast or {}
   glob.debug = glob.debug or {}
@@ -349,7 +364,7 @@ function FARL:activate()
   self.direction = self:calcTrainDir()
   if self.lastrail and self.direction and self.lastPole and self.lastCheckPole then
     self.active = true
-    self.driver.gui.left.farl.start.caption="Stop"
+    self.driver.gui.left.farl.rows.buttons.start.caption="Stop"
   else
     self:deactivate()
   end
@@ -361,7 +376,7 @@ function FARL:deactivate()
   self.lastrail = nil
   self.direction = nil
   self.lastPole, self.lastCheckPole = nil,nil
-  self.driver.gui.left.farl.start.caption="Start"
+  self.driver.gui.left.farl.rows.buttons.start.caption="Start"
 end
 
 function FARL.createGui(index, player)
@@ -370,9 +385,12 @@ function FARL.createGui(index, player)
   local caption = f.active and "Stop" or "Start"
   local farl = player.gui.left.add({type="frame", direction="vertical", name="farl"})
   --farl.add({type="button", name="debug", caption="Debug Info"})
-  farl.add({type="button", name="start", caption=caption})
-  farl.add({type="checkbox", name="signals", caption="Place signals", state=glob.signals})
-  farl.add({type="checkbox", name="poles", caption="Place poles", state=glob.poles})
+  local rows = farl.add({type="table", name="rows", colspan=1})
+  local buttons = rows.add({type="table", name="buttons", colspan=2})
+  buttons.add({type="button", name="start", caption=caption, style="farl_button"})
+  buttons.add({type="button", name="settings", caption="S", style="farl_button"})
+  rows.add({type="checkbox", name="signals", caption="Place signals", state=glob.signals})
+  rows.add({type="checkbox", name="poles", caption="Place poles", state=glob.poles})
 end
 
 function FARL.destroyGui(index,player)
@@ -380,33 +398,92 @@ function FARL.destroyGui(index,player)
   player.gui.left.farl.destroy()
 end
 
+function FARL:toggleSettingsWindow(index,player)
+  local row = player.gui.left.farl.rows
+  local captionSide
+  if glob.settings.poleSide == 1 then
+    captionSide = "right"
+  else
+    captionSide = "left"
+  end
+  if row.settings ~= nil then
+    local s = row.settings
+    local pDistance = tonumber(s.poleDistance.text) or glob.settings.poleDistance
+    pDistance = pDistance < 0 and 1 or pDistance
+    pDistance = pDistance >= 5 and 5 or pDistance
+    local sDistance = tonumber(s.signalDistance.text) or glob.settings.signalDistance
+    sDistance = sDistance < 0 and 0 or sDistance
+    local weight = tonumber(s.curvedWeight.text) or glob.settings.curvedWeight
+    weight = weight < 0 and 1 or weight
+    self:saveSettings({poleDistance=pDistance, signalDistance=sDistance, curvedWeight=weight})
+    player.gui.left.farl.rows.buttons.settings.caption="S"
+    row.settings.destroy()
+  else 
+    local settings = row.add({type="table", name="settings", colspan=2})
+    player.gui.left.farl.rows.buttons.settings.caption="Save settings"
+    settings.add({type="label", caption="Distance between pole and rail", style="farl_label"})
+    local pDistance = settings.add({type="textfield", name="poleDistance", style="farl_textfield_small"})
+    settings.add({type="label", caption="Side of pole:", style="farl_label"})
+    settings.add({type="button", name="side", caption=captionSide, style="farl_button"})
+    settings.add({type="label", caption="Distance between rail signals", style="farl_label"})
+    local sDistance = settings.add({type="textfield", name="signalDistance", style="farl_textfield_small"})
+    settings.add({type="label", caption="Weight for curved rails", style="farl_label"})
+    local weight = settings.add({type="textfield", name="curvedWeight", style="farl_textfield_small"})
+    pDistance.text = glob.settings.poleDistance
+    sDistance.text = glob.settings.signalDistance
+    weight.text = glob.settings.curvedWeight
+  end
+end
+
+function FARL:saveSettings(s)
+  for i,p in pairs(s) do
+    if glob.settings[i] then
+      glob.settings[i] = p
+    end
+  end
+end
+
 function FARL.onGuiClick(event)
   local index = event.playerindex or event.name
   local player = game.players[index]
-  --local train = player.opened or player.vehicle
-  local farl = findByPlayer(player)
-  local name = event.element.name
-  if farl then
-    if event.element.name == "debug" then
-      saveVar(glob,"debug")
-      --glob.debug = {}
-      --glob.action = {}
-      farl:debugInfo()
-    elseif event.element.name == "start" then
-      if event.element.caption == "Start" then
-        farl:activate()
-        --FARL.debugInfo(player, farl.locomotive)
-      else
-        if player.vehicle.name == "farl" then
-          farl:deactivate()
+  if player.gui.left.farl ~= nil then
+    --local train = player.opened or player.vehicle
+    local farl = findByPlayer(player)
+    local name = event.element.name
+    if farl then
+      if name == "debug" then
+        saveVar(glob,"debug")
+        --glob.debug = {}
+        --glob.action = {}
+        farl:debugInfo()
+      elseif name == "start" then
+        if event.element.caption == "Start" then
+          farl:activate()
+          --FARL.debugInfo(player, farl.locomotive)
+        else
+          if player.vehicle.name == "farl" then
+            farl:deactivate()
+          end
         end
+      elseif name == "settings" then
+        farl:toggleSettingsWindow(index,player)
+      elseif name == "side" then
+        if event.element.caption == "right" then
+          glob.settings.poleSide = -1
+          event.element.caption = "left"
+          return
+        else
+          glob.settings.poleSide = 1
+          event.element.caption = "right"
+          return
+        end
+      elseif name == "signals" or name == "poles" then
+        glob[name] = not glob[name]
       end
-    elseif name == "signals" or name == "poles" then
-      glob[name] = not glob[name]
+    else
+      player.print("Gui without train, wrooong!")
+      FARL.destroyGui(index,player)
     end
-  else
-    player.print("Gui without train, wrooong!")
-    FARL.destroyGui(index,player)
   end
 end
 
@@ -525,7 +602,7 @@ function FARL:placeRails(lastRail, travelDir, input)
     if canplace and hasRail then
       game.createentity{name = nextRail.name, position = newPos, direction = newDir, force = game.forces.player}
       self:removeItemFromCargo(nextRail.name, 1)
-      local signalWeight = nextRail.name == "curved-rail" and signalPlacement.curvedWeight or 1
+      local signalWeight = nextRail.name == "curved-rail" and glob.settings.curvedWeight or 1
       self.signalCount = self.signalCount + signalWeight
         if glob.poles and (self["big-electric-pole"] > 0 or godmodePoles) then
           self:placePole(newTravelDir, nextRail)
@@ -574,7 +651,7 @@ end
 function FARL:calcPole(lastrail, traveldir)
   local data = polePlacement.data[traveldir]
   local offset = addPos(data, {x=0,y=0})
-  local distance, side, dir = polePlacement.distance, polePlacement.side, polePlacement.dir[traveldir]
+  local distance, side, dir = glob.settings.poleDistance, glob.settings.poleSide, polePlacement.dir[traveldir]
   local lookup = lastrail.direction
   if lastrail.name ~= "curved-rail" then
     if data[lastrail.direction] then
@@ -587,7 +664,7 @@ function FARL:calcPole(lastrail, traveldir)
   else
     offset = addPos(offset,polePlacement.curves[lastrail.direction])
     --dir = polePlacement.dir[lastrail.direction]
-    distance = distance - 1
+    distance = distance > 1 and distance - 1 or 1
   end
 --  if  lastrail.name == "curved-rail" then dir = {x=1,y=1} end
   offset.x = (offset.x + distance) * side * dir.x
@@ -632,7 +709,7 @@ function FARL:placePole(traveldir, lastrail)
 end
 
 function FARL:placeSignal(traveldir, rail)
-  if self.signalCount > signalPlacement.distance and rail.name ~= "curved-rail" then
+  if self.signalCount > glob.settings.signalDistance and rail.name ~= "curved-rail" then
     local rail = rail
     local data = signalOffset[traveldir]
     local offset = data[rail.direction] or data.pos
@@ -803,6 +880,7 @@ remote.addinterface("farl",
         if p.gui.left.farl then p.gui.left.farl.destroy() end
         if p.gui.top.farl then p.gui.top.farl.destroy() end
       end
+      initGlob()
     end,
     godmode = function(bool)
       godmode = bool
