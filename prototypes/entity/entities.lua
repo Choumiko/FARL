@@ -23,7 +23,7 @@ data:extend(
       selection_box = {{-0.85, -2.6}, {0.9, 2.5}},
       drawing_box = {{-1, -4}, {1, 3}},
       weight = 2000,
-      max_speed = 1.2,
+      max_speed = 0.8,
       max_power = "600kW",
       braking_force = 10,
       friction_force = 0.0015,
