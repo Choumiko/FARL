@@ -163,6 +163,8 @@ end
 
 function FARL:getRail(lastRail, travelDir, input)
   local lastRail, travelDir, input = lastRail, travelDir, input
+  if travelDir > 7 or travelDir < 0 then return false,false end
+  if input > 2 or input < 0 then return false, false end
   local data = inputToNewDir[travelDir][input]
   local input2dir = {[0]=-1,[1]=0,[2]=1}
   local newTravelDir = (travelDir + input2dir[input]) % 8
@@ -232,14 +234,15 @@ function FARL:layRails()
       local dir, last = self:placeRails(self.lastrail, self.direction, self.input)
       if dir and last == "extra" and self.active then
         dir, last = self:placeRails(self.lastrail, self.direction, 1)
-        dir, last = self:placeRails(last, dir, self.input)
+        if dir and last then
+          dir, last = self:placeRails(last, dir, self.input)
+        end
       end
       if dir then
         self.direction, self.lastrail = dir, last
       else
         self:deactivate()
         self.driver.print("Deactivated")
-        self.driver.gui.left.farl.start.caption="Start"
       end
     end
   end
@@ -392,12 +395,10 @@ function FARL.onGuiClick(event)
     elseif event.element.name == "start" then
       if event.element.caption == "Start" then
         farl:activate()
-        event.element.caption = "Stop"
         --FARL.debugInfo(player, farl.locomotive)
       else
         if player.vehicle.name == "farl" then
           farl:deactivate()
-          event.element.caption = "Start"
         end
       end
     elseif name == "signals" or name == "poles" then
@@ -435,6 +436,10 @@ function FARL:findLastRail()
       end
     end
     if not found then return last end
+  end
+  if last.name == "curved-rail" then
+    self.driver.print("Can't start on curved rails")
+    return false
   end
   return last
 end
