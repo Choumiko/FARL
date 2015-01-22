@@ -298,17 +298,23 @@ local function initGlob()
     glob = {}
     if game.forces.player.technologies["rail-signals"].researched then
       game.forces.player.recipes["farl"].enabled = true
-      glob.signals = false
-      glob.poles = false
+      glob.signals = true
+      glob.poles = true
     end
     glob.settings = {}
-    glob.version = "0.1.0"
+    glob.version = "0.1.1"
   end
   glob.settings = glob.settings or {}
   glob.settings.poleDistance = glob.settings.poleDistance or 1
   glob.settings.poleSide = glob.settings.poleSide or 1
   glob.settings.signalDistance = glob.settings.signalDistance or 15
   glob.settings.curvedWeight = glob.settings.curvedWeight or 4
+  if glob.signals == nil then
+    glob.signals = true
+  end
+  if glob.poles == nil then
+    glob.poles = true
+  end
   glob.farl = glob.farl or {}
   glob.railInfoLast = glob.railInfoLast or {}
   glob.debug = glob.debug or {}
