@@ -280,7 +280,7 @@ local function onTick(event)
 end
 
 local function initGlob()
-  if glob.version == nil or glob.version < "0.1.1" then
+  if glob.version == nil or glob.version < "0.1.0" then
     glob = {}
     if game.forces.player.technologies["rail-signals"].researched then
       game.forces.player.recipes["farl"].enabled = true
