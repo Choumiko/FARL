@@ -352,7 +352,8 @@ function FARL.create(index, player)
     locomotive = player.vehicle, train=player.vehicle.train,
     driver=player, index = index, active=false, lastrail=false,
     direction = false, input = 1, name = player.vehicle.backername,
-    signalCount = 0, cruise = false
+    signalCount = 0, cruise = false, placeSignals = glob.signals,
+    placePoles = glob.poles, curvedWeight = glob.settings.curvedWeight
   }
   if not findByPlayer(player) then
     local farl = FARL:new(new)
@@ -372,6 +373,7 @@ function FARL.remove(index, player)
     FARL.destroyGui(index,player)
   end
 end
+
 function FARL:activate()
   if self.active then self:deactivate() end
   self.lastrail = self:findLastRail()
@@ -458,13 +460,22 @@ function FARL:toggleSettingsWindow(index,player)
     weight.text = glob.settings.curvedWeight
   end
 end
-
+function FARL.updateSettings(s)
+  for i, farl in pairs(glob.farl) do
+    farl.placePoles = glob.poles
+    farl.placeSignals = glob.signals
+    if s then
+      farl.curvedWeight = s.curvedWeight
+    end
+  end 
+end
 function FARL:saveSettings(s)
   for i,p in pairs(s) do
     if glob.settings[i] then
       glob.settings[i] = p
     end
   end
+  FARL.updateSettings(s)
 end
 
 function FARL.onGuiClick(event)
@@ -521,6 +532,7 @@ function FARL.onGuiClick(event)
         end
       elseif name == "signals" or name == "poles" then
         glob[name] = not glob[name]
+        FARL.updateSettings()
       end
     else
       player.print("Gui without train, wrooong!")
@@ -595,36 +607,14 @@ end
 
 function FARL:updateCargo()
   local types = {"straight-rail", "curved-rail", "big-electric-pole", "rail-signal"}
-  local cargo = self:cargoCount()
   for _,type in pairs(types) do
-    self[type] = cargo[type] or 0
-  end  
-end
-
-function FARL:cargoCount()
-  local sum = {}
-  local train = self.train
-  for i, wagon in ipairs(train.carriages) do
-    if wagon.type == "cargo-wagon" then
-      sum = self:addInventoryContents(sum, wagon.getinventory(1).getcontents())
+    self[type] = 0
+    for i, wagon in ipairs(self.train.carriages) do
+      if wagon.type == "cargo-wagon" then
+        self[type] = self[type] + wagon.getinventory(1).getitemcount(type)      
+      end
     end
-  end
-  return sum
-end
-
-function FARL:addInventoryContents(invA, invB)
-  local res = {}
-  for item, c in pairs(invA) do
-    invB[item] = invB[item] or 0
-    res[item] = c + invB[item]
-    invB[item] = nil
-    if res[item] == 0 then res[item] = nil end
-  end
-  for item,c in pairs(invB) do
-    res[item] = c
-    if res[item] == 0 then res[item] = nil end
-  end
-  return res
+  end  
 end
 
 function FARL:placeRails(lastRail, travelDir, input)
@@ -644,14 +634,14 @@ function FARL:placeRails(lastRail, travelDir, input)
     if canplace and hasRail then
       game.createentity{name = nextRail.name, position = newPos, direction = newDir, force = game.forces.player}
       self:removeItemFromCargo(nextRail.name, 1)
-        if glob.poles then
-          local signalWeight = nextRail.name == "curved-rail" and glob.settings.curvedWeight or 1
+        if self.placePoles then
+          local signalWeight = nextRail.name == "curved-rail" and self.curvedWeight or 1
           self.signalCount = self.signalCount + signalWeight
           if godmodePoles or self["big-electric-pole"] > 0 then
             self:placePole(newTravelDir, nextRail)
           end
         end 
-        if glob.signals then
+        if self.placeSignals then
           if godmodeSignals or self["rail-signal"] > 0 then
             if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
           end
