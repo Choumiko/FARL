@@ -161,7 +161,7 @@ function FARL:removeTrees(pos, area)
   end
   for _, entity in ipairs(game.findentitiesfiltered{area = area, type = "tree"}) do
     entity.die()
-    self:addItemToCargo("raw-wood", 1)
+    if not godmode then self:addItemToCargo("raw-wood", 1) end
   end
   if removeStone then
     for _, entity in ipairs(game.findentitiesfiltered{area = area, name = "stone-rock"}) do
@@ -235,9 +235,23 @@ function FARL:getRail(lastRail, travelDir, input)
   end
 end
 
+--function FARL:cruiseControl()
+--  if self.cruise then
+--    if self.train.speed < glob.cruiseSpeed then
+--      self.driver.ridingstate = {acceleration = 1, direction = self.driver.ridingstate.direction}
+--    else
+--      self.driver.ridingstate = {acceleration = 0, direction = self.driver.ridingstate.direction}
+--    end
+--  end
+--  if not self.cruise then
+--    self.driver.ridingstate = {acceleration = self.driver.ridingstate.acceleration, direction = self.driver.ridingstate.direction}
+--  end
+--end
+
 function FARL:layRails()
   if self.active and self.lastrail and self.train then
     self.direction = self.direction or self:calcTrainDir()
+    --self:cruiseControl()
     if self.train.speed > 0 and util.distance(self.lastrail.position, self.locomotive.position) < 6 then
       self.input = self.driver.ridingstate.direction
       local dir, last = self:placeRails(self.lastrail, self.direction, self.input)
@@ -284,6 +298,8 @@ local function initGlob()
     glob = {}
     if game.forces.player.technologies["rail-signals"].researched then
       game.forces.player.recipes["farl"].enabled = true
+      glob.signals = false
+      glob.poles = false
     end
     glob.settings = {}
     glob.version = "0.1.0"
@@ -297,11 +313,11 @@ local function initGlob()
   glob.railInfoLast = glob.railInfoLast or {}
   glob.debug = glob.debug or {}
   glob.action = glob.action or {}
-  glob.signals = glob.signals or true
-  glob.poles = glob.poles or true
+  glob.cruiseSpeed = glob.cruiseSpeed or 0.4
   for i,farl in pairs(glob.farl) do
     farl = resetMetatable(farl)
   end
+  glob.version = "0.1.0"
 end
 
 local function oninit() initGlob() end
@@ -336,7 +352,7 @@ function FARL.create(index, player)
     locomotive = player.vehicle, train=player.vehicle.train,
     driver=player, index = index, active=false, lastrail=false,
     direction = false, input = 1, name = player.vehicle.backername,
-    signalCount = 0
+    signalCount = 0, cruise = false
   }
   if not findByPlayer(player) then
     local farl = FARL:new(new)
@@ -359,12 +375,17 @@ end
 function FARL:activate()
   if self.active then self:deactivate() end
   self.lastrail = self:findLastRail()
-  self:findLastPole()
-  self:updateCargo()
-  self.direction = self:calcTrainDir()
-  if self.lastrail and self.direction and self.lastPole and self.lastCheckPole then
-    self.active = true
-    self.driver.gui.left.farl.rows.buttons.start.caption="Stop"
+  if self.lastrail then
+    self:findLastPole()
+    self:updateCargo()
+    self.direction = self:calcTrainDir()
+    if self.direction and self.lastPole and self.lastCheckPole then
+      self.active = true
+      self.driver.gui.left.farl.rows.buttons.start.caption="Stop"
+    else
+      self:deactivate()
+      self.driver.print("Error activating, drive on straight rails and try again")
+    end
   else
     self:deactivate()
   end
@@ -376,7 +397,9 @@ function FARL:deactivate()
   self.lastrail = nil
   self.direction = nil
   self.lastPole, self.lastCheckPole = nil,nil
+  self.cruise = false
   self.driver.gui.left.farl.rows.buttons.start.caption="Start"
+  --self.driver.gui.left.farl.rows.cc.caption="Cruise"
 end
 
 function FARL.createGui(index, player)
@@ -389,6 +412,7 @@ function FARL.createGui(index, player)
   local buttons = rows.add({type="table", name="buttons", colspan=2})
   buttons.add({type="button", name="start", caption=caption, style="farl_button"})
   buttons.add({type="button", name="settings", caption="S", style="farl_button"})
+  --rows.add({type="button", name="cc", caption="Cruise", style="farl_button"})
   rows.add({type="checkbox", name="signals", caption="Place signals", state=glob.signals})
   rows.add({type="checkbox", name="poles", caption="Place poles", state=glob.poles})
 end
@@ -475,6 +499,24 @@ function FARL.onGuiClick(event)
         else
           glob.settings.poleSide = 1
           event.element.caption = "right"
+          return
+        end
+      elseif name == "cc" then
+        if event.element.caption == "Cruise" then
+          if farl.driver and farl.driver.ridingstate then
+            farl.cruise = true
+            event.element.caption = "Stop cruise"
+            local input = farl.input or 1
+            farl.driver.ridingstate = {acceleration = 1, direction = input}
+          end
+          return
+        else
+          if farl.driver and farl.driver.ridingstate then
+            farl.cruise = false
+            event.element.caption = "Cruise"
+            local input = farl.input or 1
+            farl.driver.ridingstate = {acceleration = farl.driver.ridingstate.acceleration, direction = input}
+          end
           return
         end
       elseif name == "signals" or name == "poles" then
@@ -602,13 +644,17 @@ function FARL:placeRails(lastRail, travelDir, input)
     if canplace and hasRail then
       game.createentity{name = nextRail.name, position = newPos, direction = newDir, force = game.forces.player}
       self:removeItemFromCargo(nextRail.name, 1)
-      local signalWeight = nextRail.name == "curved-rail" and glob.settings.curvedWeight or 1
-      self.signalCount = self.signalCount + signalWeight
-        if glob.poles and (self["big-electric-pole"] > 0 or godmodePoles) then
-          self:placePole(newTravelDir, nextRail)
+        if glob.poles then
+          local signalWeight = nextRail.name == "curved-rail" and glob.settings.curvedWeight or 1
+          self.signalCount = self.signalCount + signalWeight
+          if godmodePoles or self["big-electric-pole"] > 0 then
+            self:placePole(newTravelDir, nextRail)
+          end
         end 
-        if glob.signals and (self["rail-signal"] > 0 or godmodeSignals) then
-          if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
+        if glob.signals then
+          if godmodeSignals or self["rail-signal"] > 0 then
+            if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
+          end
         end
 --        local debug = false --set to true when rails get misplaced
 --        if debug then
@@ -850,26 +896,39 @@ local YELLOW = {r = 0.8, g = 0.8}
 
 function flyingText(line, color, pos, show)
   if show then
-    pos = pos or game.player.position
+    pos = pos
     color = color or RED
     game.createentity({name="flying-text", position=pos, text=line, color=color})
   end
 end
 
+--function setGhostDriver(locomotive)
+--  local ghost = newGhostDriverEntity(game.player.position)
+--  locomotive.passenger = ghost
+--  return ghost
+--end
+--
+--function newGhostDriverEntity(position)
+--  game.createentity({name="farl_player", position=position, force=game.forces.player})
+--  local entities = game.findentitiesfiltered({area={{position.x, position.y},{position.x, position.y}}, name="farl_player"})
+--  if entities[1] ~= nil then
+--    return entities[1]
+--  end
+--end
 remote.addinterface("farl",
   {
     railInfo = function(rail)
-      game.player.print(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction)
+      debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
       if glob.railInfoLast.valid then
         local pos = glob.railInfoLast.position
         local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
-        game.player.print("Offset from last: x="..diff.x..",y="..diff.y)
+        debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
       end
       glob.railInfoLast = rail
     end,
     debugInfo = function()
       saveVar(glob, "console")
-      saveVar(glob.debug, "RailDebug")
+      --saveVar(glob.debug, "RailDebug")
     end,
     reset = function()
       glob.farl = {}
@@ -886,5 +945,14 @@ remote.addinterface("farl",
       godmode = bool
       godmodePoles = bool
       godmodeSignals = bool
+    end,
+    setSpeed = function(speed)
+      glob.cruiseSpeed = speed
     end
+--    setDriver = function(loco)
+--      if loco.name == "farl" then
+--        driver = setGhostDriver(loco)
+--        driver.ridingstate = {acceleration=1,direction=1}
+--      end
+--    end
   })
