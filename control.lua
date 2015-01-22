@@ -83,7 +83,6 @@ curves from travel dir to travel dir:
 5 1 - 0 4 - 5
 6 1 - 2 6 - 5
 7 3 - 2 6 - 7
---]]
 polePlacement.curveToDirs =
   {
     [0] = {"0347"},
@@ -95,16 +94,16 @@ polePlacement.curveToDirs =
     [6] ={"1265"} ,
     [7] ={"2367"}
     }
-
+--]]
 polePlacement.curves = {
-    [0]={x=3,y=0},
-    [1]={x=3,y=0},
-    [2]={x=0,y=3},
-    [3]={x=0,y=3},
-    [4]={x=3,y=0},
-    [5]={x=3,y=0},
-    [6]={x=0,y=3},
-    [7]={x=0,y=3}
+    [0]={x=2,y=0},
+    [1]={x=2,y=0},
+    [2]={x=0,y=2},
+    [3]={x=0,y=2},
+    [4]={x=2,y=0},
+    [5]={x=2,y=0},
+    [6]={x=0,y=2},
+    [7]={x=0,y=2}
   }
 polePlacement.dir = {
     [0]={x = 1, y = 1},
@@ -240,7 +239,7 @@ function FARL:layRails()
       else
         self:deactivate()
         self.driver.print("Deactivated")
-        self.driver.gui.top.farl.start.caption="Start"
+        self.driver.gui.left.farl.start.caption="Start"
       end
     end
   end
@@ -256,12 +255,12 @@ local function onTick(event)
   if event.tick%10==9  then
     for pi, player in ipairs(game.players) do
       if (player.vehicle ~= nil and player.vehicle.name == "farl") then
-        if player.gui.top.farl and not player.gui.top.farl.start then FARL.destroyGui(pi,player) end
-        if player.gui.top.farl == nil then
+        if player.gui.left.farl and not player.gui.left.farl.start then FARL.destroyGui(pi,player) end
+        if player.gui.left.farl == nil then
           FARL.create(pi, player)
         end
       end
-      if player.vehicle == nil and player.gui.top.farl ~= nil then
+      if player.vehicle == nil and player.gui.left.farl ~= nil then
         FARL.remove(pi,player)
       end
     end
@@ -277,6 +276,8 @@ local function initGlob()
   glob.railInfoLast = glob.railInfoLast or {}
   glob.debug = glob.debug or {}
   glob.action = glob.action or {}
+  glob.signals = glob.signals or true
+  glob.poles = glob.poles or true
   for i,farl in pairs(glob.farl) do
     farl = resetMetatable(farl)
   end
@@ -337,7 +338,7 @@ function FARL.remove(index, player)
       break
     end
   end
-  if player.gui.top.farl ~= nil then
+  if player.gui.left.farl ~= nil then
     FARL.destroyGui(index,player)
   end
 end
@@ -349,7 +350,7 @@ function FARL:activate()
   self.direction = self:calcTrainDir()
   if self.lastrail and self.direction and self.lastPole and self.lastCheckPole then
     self.active = true
-    self.driver.gui.top.farl.start.caption="Stop"
+    self.driver.gui.left.farl.start.caption="Stop"
   else
     self:deactivate()
   end
@@ -361,21 +362,23 @@ function FARL:deactivate()
   self.lastrail = nil
   self.direction = nil
   self.lastPole, self.lastCheckPole = nil,nil
-  self.driver.gui.top.farl.start.caption="Start"
+  self.driver.gui.left.farl.start.caption="Start"
 end
 
 function FARL.createGui(index, player)
-  if player.gui.top.farl ~= nil then return end
+  if player.gui.left.farl ~= nil then return end
   local f = findByPlayer(player)
   local caption = f.active and "Stop" or "Start"
-  local farl = player.gui.top.add({type="frame", direction="vertical", name="farl"})
-  farl.add({type="button", name="debug", caption="Debug Info"})
+  local farl = player.gui.left.add({type="frame", direction="vertical", name="farl"})
+  --farl.add({type="button", name="debug", caption="Debug Info"})
   farl.add({type="button", name="start", caption=caption})
+  farl.add({type="checkbox", name="signals", caption="Place signals", state=glob.signals})
+  farl.add({type="checkbox", name="poles", caption="Place poles", state=glob.poles})
 end
 
 function FARL.destroyGui(index,player)
-  if player.gui.top.farl == nil then return end
-  player.gui.top.farl.destroy()
+  if player.gui.left.farl == nil then return end
+  player.gui.left.farl.destroy()
 end
 
 function FARL.onGuiClick(event)
@@ -383,6 +386,7 @@ function FARL.onGuiClick(event)
   local player = game.players[index]
   --local train = player.opened or player.vehicle
   local farl = findByPlayer(player)
+  local name = event.element.name
   if farl then
     if event.element.name == "debug" then
       saveVar(glob,"debug")
@@ -400,6 +404,8 @@ function FARL.onGuiClick(event)
           event.element.caption = "Start"
         end
       end
+    elseif name == "signals" or name == "poles" then
+      glob[name] = not glob[name]
     end
   else
     player.print("Gui without train, wrooong!")
@@ -520,10 +526,10 @@ function FARL:placeRails(lastRail, travelDir, input)
       self:removeItemFromCargo(nextRail.name, 1)
       local signalWeight = nextRail.name == "curved-rail" and signalPlacement.curvedWeight or 1
       self.signalCount = self.signalCount + signalWeight
-        if self["rail-signal"] > 0 or godmodeSignals then
+        if glob.signals and (self["rail-signal"] > 0 or godmodeSignals) then
           if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
         end
-        if self["big-electric-pole"] > 0 or godmodePoles then
+        if glob.poles and (self["big-electric-pole"] > 0 or godmodePoles) then
           self:placePole(newTravelDir, nextRail)
         end 
 --        local debug = false --set to true when rails get misplaced
@@ -564,10 +570,10 @@ function FARL:placeRails(lastRail, travelDir, input)
   end
 end
 
-function FARL:placePole(traveldir, lastrail)
-  local tmp = {x=self.lastCheckPole.x,y=self.lastCheckPole.y}
+function FARL:calcPole(lastrail, traveldir)
   local data = polePlacement.data[traveldir]
   local offset = addPos(data, {x=0,y=0})
+  local distance, side, dir = polePlacement.distance, polePlacement.side, polePlacement.dir[traveldir]
   if lastrail.name ~= "curved-rail" then
     if data[lastrail.direction] then
       offset = addPos(data[lastrail.direction])
@@ -576,12 +582,23 @@ function FARL:placePole(traveldir, lastrail)
     end
   else
     offset = addPos(offset,polePlacement.curves[lastrail.direction])
+    --dir = polePlacement.dir[lastrail.direction]
+    distance = distance - 1
   end
-  local distance, side, dir = polePlacement.distance, polePlacement.side, polePlacement.dir[traveldir]
-  if  lastrail.name == "curved-rail" then dir = {x=1,y=1} end
+--  if  lastrail.name == "curved-rail" then dir = {x=1,y=1} end
   offset.x = (offset.x + distance) * side * dir.x
   offset.y = (offset.y + distance) * side * dir.y
-  glob.lastCheckRail = {pos=addPos(lastrail.position,{x=0,y=0}), dir=lastrail.direction, tr=traveldir}
+  if lastrail.name == "curved-rail" then
+  --debugDump({lr=lastrail, off=offset, tr=traveldir},true)
+  --debugDump({dist=distance,side=side,dir=dir},true)
+  --debugDump("Result:"..pos2Str( addPos(lastrail.position, offset)),true)
+  end
+  return offset
+end
+
+function FARL:placePole(traveldir, lastrail)
+  local tmp = {x=self.lastCheckPole.x,y=self.lastCheckPole.y}
+  local offset = self:calcPole(lastrail, traveldir)
   self.lastCheckPole = addPos(lastrail.position, offset)
   local distance = util.distance(self.lastPole, self.lastCheckPole)
   local basedon = addPos(lastrail.position,{x=0,y=0})
@@ -597,7 +614,7 @@ function FARL:placePole(traveldir, lastrail)
       end
       if placed.position.x ~= tmp.x or placed.position.y ~= tmp.y then
         local diff={x=placed.position.x-tmp.x, y=placed.position.y-tmp.y}
-        --self.driver.print("Misplaced pole: placed@"..pos2Str(placed.position).." calc@"..pos2Str(tmp).." diff="..pos2Str(diff))
+        self.driver.print("Misplaced pole: placed@"..pos2Str(placed.position).." calc@"..pos2Str(tmp).." diff="..pos2Str(diff))
       end
       self:removeItemFromCargo("big-electric-pole", 1)
       self.lastPole = tmp
@@ -715,7 +732,15 @@ game.onevent(defines.events.onguiclick, FARL.onGuiClick)
 --game.onevent(defines.events.onplayermineditem, function(event) onplayermineditem(event) end)
 --game.onevent(defines.events.onpreplayermineditem, function(event) onpreplayermineditem(event) end)
 --game.onevent(defines.events.onbuiltentity, function(event) onbuiltentity(event) end)
---game.onevent(defines.events.onplayercreated, function(event) onplayercreated(event) end)
+local function onplayercreated(event)
+  local player = game.getplayer(event.playerindex)
+  local gui = player.gui
+  if gui.top.farl ~= nil then
+    gui.top.farl.destroy()
+  end
+end
+
+game.onevent(defines.events.onplayercreated, onplayercreated)
 
 function debugDump(var, force)
   if false or force then
@@ -767,20 +792,12 @@ remote.addinterface("farl",
     reset = function()
       glob.farl = {}
       for i,p in pairs(glob.players) do
-        if p.gui.top.farl then FARL.destroyGui(i,p) end
+        if p.gui.left.farl then FARL.destroyGui(i,p) end
       end
     end,
-    placePole = function()
-      local farl = findByPlayer(game.player)
-      farl:activate()
-      farl:placePole()
-    end,
-    cruiseControl = function()
-      glob.cc = glob.cc or 0
-      if glob.cc == 0 then
-        glob.cc = 1
-      else
-        glob.cc = 0
-      end
+    godmode = function(bool)
+      godmode = bool
+      godmodePoles = bool
+      godmodeSignals = bool
     end
   })
