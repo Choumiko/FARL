@@ -264,7 +264,7 @@ function FARL:layRails()
     self.direction = self.direction or self:calcTrainDir()
     self:cruiseControl()
     self.acc = self.driver.ridingstate.acceleration
-    if self.acc ~= 3 and self.train.speed > 0 and util.distance(self.lastrail.position, self.locomotive.position) < 6 then
+    if self.acc ~= 3 and util.distance(self.lastrail.position, self.locomotive.position) < 6 then
       self.input = self.driver.ridingstate.direction
       local dir, last = self:placeRails(self.lastrail, self.direction, self.input)
       if dir and last == "extra" and self.active then
@@ -428,20 +428,21 @@ function FARL:deactivate()
   self.lastPole, self.lastCheckPole = nil,nil
   self.cruise = false
   self.driver.gui.left.farl.rows.buttons.start.caption="Start"
-  self.driver.gui.left.farl.rows.cc.caption="Cruise"
+  self.driver.gui.left.farl.rows.buttons.cc.caption="Cruise"
 end
 
 function FARL.createGui(index, player)
   if player.gui.left.farl ~= nil then return end
   local f = findByPlayer(player)
   local caption = f.active and "Stop" or "Start"
+  local captioncc = f.cruise and "Stop cruise" or "Cruise"
   local farl = player.gui.left.add({type="frame", direction="vertical", name="farl"})
   --farl.add({type="button", name="debug", caption="Debug Info"})
   local rows = farl.add({type="table", name="rows", colspan=1})
-  local buttons = rows.add({type="table", name="buttons", colspan=2})
+  local buttons = rows.add({type="table", name="buttons", colspan=3})
   buttons.add({type="button", name="start", caption=caption, style="farl_button"})
+  buttons.add({type="button", name="cc", caption=captioncc, style="farl_button"})
   buttons.add({type="button", name="settings", caption="S", style="farl_button"})
-  rows.add({type="button", name="cc", caption="Cruise", style="farl_button"})
   rows.add({type="checkbox", name="signals", caption="Place signals", state=glob.signals})
   rows.add({type="checkbox", name="poles", caption="Place poles", state=glob.poles})
 end
@@ -508,6 +509,12 @@ end
 function FARL.onGuiClick(event)
   local index = event.playerindex or event.name
   local player = game.players[index]
+  if glob.version < "0.1.3" then
+    FARL.destroyGui(index,player) 
+    FARL.createGui(index,player)
+    glob.version = "0.1.3"
+    return
+  end
   if player.gui.left.farl ~= nil then
     --local train = player.opened or player.vehicle
     local farl = findByPlayer(player)
