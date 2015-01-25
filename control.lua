@@ -82,28 +82,6 @@ polePlacement.data = {
     [7]={x=3,y=1, [1]={x=2,y=2},[5]={x=1,y=1}},
 }
 
---[[
-curves from travel dir to travel dir:
-0 3 - 4 0 - 7
-1 5 - 4 0 - 1
-2 5 - 6 2 - 1
-3 7 - 6 2 - 3  
-4 7 - 0 4 - 3
-5 1 - 0 4 - 5
-6 1 - 2 6 - 5
-7 3 - 2 6 - 7
-polePlacement.curveToDirs =
-  {
-    [0] = {"0347"},
-    [1] ={"0145"} ,
-    [2] ={"1256"} ,
-    [3] ={"2367"} ,
-    [4] ={"0347"} ,
-    [5] ={"0145"} ,
-    [6] ={"1265"} ,
-    [7] ={"2367"}
-    }
---]]
 polePlacement.curves = {
     [0]={x=2,y=0},
     [1]={x=2,y=0},
@@ -452,10 +430,7 @@ end
 function FARL.createGui(index, player)
   if player.gui.left.farl ~= nil then return end
   local f = findByPlayer(player)
-  --local caption = f.active and "Stop" or "Start"
-  --local captioncc = f.cruise and "Stop cruise" or "Cruise"
   local farl = player.gui.left.add({type="frame", direction="vertical", name="farl"})
-  --farl.add({type="button", name="debug", caption="Debug Info"})
   local rows = farl.add({type="table", name="rows", colspan=1})
   local buttons = rows.add({type="table", name="buttons", colspan=3})
   buttons.add({type="button", name="start", caption="", style="farl_button"})
@@ -560,7 +535,6 @@ function FARL.onGuiClick(event)
     return
   end
   if player.gui.left.farl ~= nil then
-    --local train = player.opened or player.vehicle
     local farl = findByPlayer(player)
     if farl then
       local name = event.element.name
@@ -570,19 +544,8 @@ function FARL.onGuiClick(event)
         --glob.action = {}
         farl:debugInfo()
       elseif name == "start" then
-       --farl.active = not farl.active
        farl:toggleActive()
        farl:updateGui()
---        if event.element.caption == "Start" then
---          farl:activate()
---          return
---          --FARL.debugInfo(player, farl.locomotive)
---        else
---          if player.vehicle.name == "farl" then
---            farl:deactivate()
---            return
---          end
---        end
       elseif name == "settings" then
         farl:toggleSettingsWindow(index,player)
       elseif name == "side" then
@@ -743,26 +706,6 @@ function FARL:placeRails(lastRail, travelDir, input, trackCount)
               if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
             end
           end
-  --        local debug = false --set to true when rails get misplaced
-  --        if debug then
-  --          local area = {{newPos.x-0.4,newPos.y-0.4},{newPos.x+0.4,newPos.y+0.4}}
-  --          for i,rail in ipairs(game.findentitiesfiltered{area=area, name=nextRail.name}) do
-  --            if rail.direction == newDir then
-  --              if rail.position.x ~= newPos.x or rail.position.y ~= newPos.y then
-  --                local diff={x=rail.position.x-newPos.x, y=rail.position.y-newPos.y}
-  --                local debugaction = lastRail.name.."@"..pos2Str(lastRail.position)..":"..lastRail.direction.." travel:"..travelDir.." input:"..input
-  --                local debugDiff = rail.name.." placed@"..pos2Str(rail.position).." calc@"..pos2Str(newPos).." diff="..pos2Str(diff)
-  --                table.insert(glob.debug, {debugaction, debugDiff})
-  --                debugDump({debugaction,debugDiff},true)
-  --              end
-  --              return newTravelDir, rail
-  --            end
-  --          end
-  --          self.driver.print("Placed rail not found?!")
-  --          return false, false
-  --        else
-            --return newTravelDir,nextRail
-  --        end
       elseif not canplace then
         self.driver.print("Cant place "..nextRail.name.."@"..pos2Str(newPos).." dir:"..newDir)
         return false, false
@@ -879,9 +822,7 @@ function FARL:placeSignal(traveldir, rail)
     local pos = addPos(rail.position, offset)
     self:removeTrees(pos)
     local success, entity = FARL.genericPlace{name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
---    local canplace = game.canplaceentity{name = "rail-signal", position = pos, direction = dir}
     if success then
---      game.createentity{name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
       self:removeItemFromCargo("rail-signal", 1)
       self["rail-signal"] = self["rail-signal"] - 1
       return success, entity
