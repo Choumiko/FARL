@@ -1,5 +1,6 @@
 require "defines"
 require "FARL"
+require "GUI"
 
 godmode = false
 godmodePoles = false
@@ -115,26 +116,6 @@ signalOffset =
     [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
   }
 
-function addPos(p1,p2)
-  local p2 = p2 or {x=0,y=0}
-  return {x=p1.x+p2.x, y=p1.y+p2.y}
-end
-
-function subPos(p1,p2)
-  local p2 = p2 or {x=0,y=0}
-  return {x=p1.x-p2.x, y=p1.y-p2.y}
-end
-
-function pos2Str(pos)
-  return util.positiontostr(pos)
-end
-function fixPos(pos)
-  local ret = {}
-  if pos.x then ret[1] = pos.x end
-  if pos.y then ret[2] = pos.y end
-  return ret
-end
-
 function resetMetatable(o, mt)
   setmetatable(o,{__index=mt})
   return o
@@ -213,7 +194,7 @@ local function onGuiClick(event)
     return
   end
   if player.gui.left.farl ~= nil then
-    local farl = findByPlayer(player)
+    local farl = FARL.findByPlayer(player)
     if farl then
       GUI.onGuiClick(event, farl, player)
     else
