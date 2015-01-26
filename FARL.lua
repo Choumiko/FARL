@@ -11,22 +11,118 @@ function findByPlayer(player)
 end
 
 Observer = {
+  onNotify = function(self, entity, event)
 
-    onNotify = function(self, entity, event)
-
-    end
-
+  end
 }
 
 GUI = {
+  new = function(index, player)
+    local new = {}
+    setmetatable(new, {__index=GUI})
+    return new
+  end,
 
-    new = function(index, player)
+  onNotify = function(self, entity, event)
 
-    end,
+  end,
 
-    onNotify = function(self, entity, event)
+  createGui = function(index, player)
+    if player.gui.left.farl ~= nil then return end
+    local farl = player.gui.left.add({type="frame", direction="vertical", name="farl"})
+    local rows = farl.add({type="table", name="rows", colspan=1})
+    local buttons = rows.add({type="table", name="buttons", colspan=3})
+    buttons.add({type="button", name="start", caption="", style="farl_button"})
+    buttons.add({type="button", name="cc", caption="", style="farl_button"})
+    buttons.add({type="button", name="settings", caption="S", style="farl_button"})
+    rows.add({type="checkbox", name="signals", caption="Place signals", state=glob.signals})
+    rows.add({type="checkbox", name="poles", caption="Place poles", state=glob.poles})
+  end,
 
+  destroyGui = function(index,player)
+    if player.gui.left.farl == nil then return end
+    player.gui.left.farl.destroy()
+  end,
+
+  onGuiClick = function(event, farl, player)
+    local name = event.element.name
+    if name == "debug" then
+      saveVar(glob,"debug")
+      --glob.debug = {}
+      --glob.action = {}
+      farl:debugInfo()
+    elseif name == "start" then
+      farl:toggleActive()
+--      GUI.updateGui(farl)
+    elseif name == "settings" then
+      GUI.toggleSettingsWindow(player)
+    elseif name == "side" then
+      if event.element.caption == "right" then
+        glob.settings.poleSide = -1
+        event.element.caption = "left"
+        return
+      else
+        glob.settings.poleSide = 1
+        event.element.caption = "right"
+        return
+      end
+    elseif name == "cc" then
+      farl:toggleCruiseControl()
+--      GUI.updateGui(farl)
+    elseif name == "signals" or name == "poles" then
+      glob[name] = not glob[name]
     end
+  end,
+  
+  toggleSettingsWindow = function(player)
+    local row = player.gui.left.farl.rows
+    local captionSide
+    if glob.settings.poleSide == 1 then
+      captionSide = "right"
+    else
+      captionSide = "left"
+    end
+    if row.settings ~= nil then
+      local s = row.settings
+      local pDistance = tonumber(s.poleDistance.text) or glob.settings.poleDistance
+      pDistance = pDistance < 0 and 1 or pDistance
+      pDistance = pDistance >= 5 and 5 or pDistance
+      local sDistance = tonumber(s.signalDistance.text) or glob.settings.signalDistance
+      sDistance = sDistance < 0 and 0 or sDistance
+      local weight = tonumber(s.curvedWeight.text) or glob.settings.curvedWeight
+      weight = weight < 0 and 1 or weight
+      player.gui.left.farl.rows.buttons.settings.caption="S"
+      GUI.saveSettings{poleDistance=pDistance, signalDistance=sDistance, curvedWeight=weight}
+      row.settings.destroy()
+    else
+      local settings = row.add({type="table", name="settings", colspan=2})
+      player.gui.left.farl.rows.buttons.settings.caption="Save settings"
+      settings.add({type="label", caption="Distance between pole and rail", style="farl_label"})
+      local pDistance = settings.add({type="textfield", name="poleDistance", style="farl_textfield_small"})
+      settings.add({type="label", caption="Side of pole:", style="farl_label"})
+      settings.add({type="button", name="side", caption=captionSide, style="farl_button"})
+      settings.add({type="label", caption="Distance between rail signals", style="farl_label"})
+      local sDistance = settings.add({type="textfield", name="signalDistance", style="farl_textfield_small"})
+      settings.add({type="label", caption="Weight for curved rails", style="farl_label"})
+      local weight = settings.add({type="textfield", name="curvedWeight", style="farl_textfield_small"})
+      pDistance.text = glob.settings.poleDistance
+      sDistance.text = glob.settings.signalDistance
+      weight.text = glob.settings.curvedWeight
+    end
+  end,
+  
+  saveSettings = function(s)
+    for i,p in pairs(s) do
+      if glob.settings[i] then
+        glob.settings[i] = p
+      end
+    end
+  end,
+  
+  updateGui = function(farl)
+    farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and "Stop" or "Start"
+    farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and "Stop cruise" or "Cruise"
+  end,
 }
 
 FARL = {
@@ -35,8 +131,7 @@ FARL = {
       locomotive = player.vehicle, train=player.vehicle.train,
       driver=player, index = index, active=false, lastrail=false,
       direction = false, input = 1, name = player.vehicle.backername,
-      signalCount = 0, cruise = false, cruiseInterrupt = 0, placeSignals = glob.signals,
-      placePoles = glob.poles, curvedWeight = glob.settings.curvedWeight
+      signalCount = 0, cruise = false, cruiseInterrupt = 0
     }
     setmetatable(new, {__index=FARL})
     if not findByPlayer(player) then
@@ -51,9 +146,6 @@ FARL = {
         glob.farl[i] = nil
         break
       end
-    end
-    if player.gui.left.farl ~= nil then
-      FARL.destroyGui(index,player)
     end
   end,
 
@@ -207,7 +299,6 @@ FARL = {
   end,
 
   activate = function(self)
-    if self.active then self:deactivate() end
     self.lastrail = self:findLastRail()
     if self.lastrail then
       self:findLastPole()
@@ -215,9 +306,7 @@ FARL = {
       self.direction = self:calcTrainDir()
       if self.direction and self.lastPole and self.lastCheckPole then
         self.active = true
-        self:updateGui()
       else
-        self:deactivate()
         self.driver.print("Error activating, drive on straight rails and try again")
       end
     else
@@ -231,7 +320,7 @@ FARL = {
     self.lastrail = nil
     self.direction = nil
     self.lastPole, self.lastCheckPole = nil,nil
-    self:updateGui()
+    self.cruise = false
   end,
 
   toggleActive = function(self)
@@ -243,84 +332,6 @@ FARL = {
     end
   end,
 
-  createGui = function(index, player)
-    if player.gui.left.farl ~= nil then return end
-    local farl = player.gui.left.add({type="frame", direction="vertical", name="farl"})
-    local rows = farl.add({type="table", name="rows", colspan=1})
-    local buttons = rows.add({type="table", name="buttons", colspan=3})
-    buttons.add({type="button", name="start", caption="", style="farl_button"})
-    buttons.add({type="button", name="cc", caption="", style="farl_button"})
-    buttons.add({type="button", name="settings", caption="S", style="farl_button"})
-    rows.add({type="checkbox", name="signals", caption="Place signals", state=glob.signals})
-    rows.add({type="checkbox", name="poles", caption="Place poles", state=glob.poles})
-  end,
-
-  destroyGui = function(index,player)
-    if player.gui.left.farl == nil then return end
-    player.gui.left.farl.destroy()
-  end,
-
-  toggleSettingsWindow = function(self,index,player)
-    local row = player.gui.left.farl.rows
-    local captionSide
-    if glob.settings.poleSide == 1 then
-      captionSide = "right"
-    else
-      captionSide = "left"
-    end
-    if row.settings ~= nil then
-      local s = row.settings
-      local pDistance = tonumber(s.poleDistance.text) or glob.settings.poleDistance
-      pDistance = pDistance < 0 and 1 or pDistance
-      pDistance = pDistance >= 5 and 5 or pDistance
-      local sDistance = tonumber(s.signalDistance.text) or glob.settings.signalDistance
-      sDistance = sDistance < 0 and 0 or sDistance
-      local weight = tonumber(s.curvedWeight.text) or glob.settings.curvedWeight
-      weight = weight < 0 and 1 or weight
-      self:saveSettings({poleDistance=pDistance, signalDistance=sDistance, curvedWeight=weight})
-      player.gui.left.farl.rows.buttons.settings.caption="S"
-      row.settings.destroy()
-    else
-      local settings = row.add({type="table", name="settings", colspan=2})
-      player.gui.left.farl.rows.buttons.settings.caption="Save settings"
-      settings.add({type="label", caption="Distance between pole and rail", style="farl_label"})
-      local pDistance = settings.add({type="textfield", name="poleDistance", style="farl_textfield_small"})
-      settings.add({type="label", caption="Side of pole:", style="farl_label"})
-      settings.add({type="button", name="side", caption=captionSide, style="farl_button"})
-      settings.add({type="label", caption="Distance between rail signals", style="farl_label"})
-      local sDistance = settings.add({type="textfield", name="signalDistance", style="farl_textfield_small"})
-      settings.add({type="label", caption="Weight for curved rails", style="farl_label"})
-      local weight = settings.add({type="textfield", name="curvedWeight", style="farl_textfield_small"})
-      pDistance.text = glob.settings.poleDistance
-      sDistance.text = glob.settings.signalDistance
-      weight.text = glob.settings.curvedWeight
-    end
-  end,
-
-  updateSettings = function(s)
-    for i, farl in ipairs(glob.farl) do
-      farl.placePoles = glob.poles
-      farl.placeSignals = glob.signals
-      if s then
-        farl.curvedWeight = s.curvedWeight
-      end
-    end
-  end,
-
-  saveSettings = function(self,s)
-    for i,p in pairs(s) do
-      if glob.settings[i] then
-        glob.settings[i] = p
-      end
-    end
-    FARL.updateSettings(s)
-  end,
-
-  updateGui = function(self)
-    self.driver.gui.left.farl.rows.buttons.start.caption = self.active and "Stop" or "Start"
-    self.driver.gui.left.farl.rows.buttons.cc.caption = self.cruise and "Stop cruise" or "Cruise"
-  end,
-
   toggleCruiseControl = function(self)
     if not self.cruise then
       if self.driver and self.driver.ridingstate then
@@ -328,7 +339,6 @@ FARL = {
         local input = self.input or 1
         self.driver.ridingstate = {acceleration = 1, direction = input}
       end
-      self:updateGui()
       return
     else
       if self.driver and self.driver.ridingstate then
@@ -336,55 +346,7 @@ FARL = {
         local input = self.input or 1
         self.driver.ridingstate = {acceleration = self.driver.ridingstate.acceleration, direction = input}
       end
-      self:updateGui()
       return
-    end
-  end,
-
-  onGuiClick = function(event)
-    local index = event.playerindex or event.name
-    local player = game.players[index]
-    if glob.version < "0.1.3" then
-      FARL.destroyGui(index,player)
-      FARL.createGui(index,player)
-      glob.version = "0.1.3"
-      return
-    end
-    if player.gui.left.farl ~= nil then
-      local farl = findByPlayer(player)
-      if farl then
-        local name = event.element.name
-        if name == "debug" then
-          saveVar(glob,"debug")
-          --glob.debug = {}
-          --glob.action = {}
-          farl:debugInfo()
-        elseif name == "start" then
-          farl:toggleActive()
-          farl:updateGui()
-        elseif name == "settings" then
-          farl:toggleSettingsWindow(index,player)
-        elseif name == "side" then
-          if event.element.caption == "right" then
-            glob.settings.poleSide = -1
-            event.element.caption = "left"
-            return
-          else
-            glob.settings.poleSide = 1
-            event.element.caption = "right"
-            return
-          end
-        elseif name == "cc" then
-          farl:toggleCruiseControl()
-          farl:updateGui()
-        elseif name == "signals" or name == "poles" then
-          glob[name] = not glob[name]
-          FARL.updateSettings()
-        end
-      else
-        player.print("Gui without train, wrooong!")
-        FARL.destroyGui(index,player)
-      end
     end
   end,
 
@@ -510,13 +472,13 @@ FARL = {
         if canplace and hasRail then
           game.createentity{name = nextRail.name, position = newPos, direction = newDir, force = game.forces.player}
           self:removeItemFromCargo(nextRail.name, 1)
-          if self.placePoles then
+          if glob.poles then
             if godmodePoles or self["big-electric-pole"] > 0 then
               self:placePole(newTravelDir, nextRail)
             end
           end
-          if self.placeSignals then
-            local signalWeight = nextRail.name == "curved-rail" and self.curvedWeight or 1
+          if glob.signals then
+            local signalWeight = nextRail.name == "curved-rail" and glob.settings.curvedWeight or 1
             self.signalCount = self.signalCount + signalWeight
             if godmodeSignals or self["rail-signal"] > 0 then
               if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end

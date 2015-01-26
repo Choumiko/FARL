@@ -66,11 +66,11 @@ clearAreas =
       {{x=-1.5,y=-3.5},{x=-1.5,y=1.5}},{{x=-3.5,y=-3.5},{x=-2.5,y=0.5}}}
   }
 
-signalPlacement = {}
+  signalPlacement = {}
 
-polePlacement = {}
- 
-polePlacement.data = {
+  polePlacement = {}
+
+  polePlacement.data = {
     [0]={x = 2, y = 0},
     [1]={x=3,y=1, [3]={x=2,y=2}, [7]={x=1,y=1}},
     [2]={x = 0, y = 2},
@@ -79,9 +79,9 @@ polePlacement.data = {
     [5]={x=3,y=1, [3]={x=1,y=1}, [7]={x=2,y=2}},
     [6]={x = 0, y = 2},
     [7]={x=3,y=1, [1]={x=2,y=2},[5]={x=1,y=1}},
-}
+  }
 
-polePlacement.curves = {
+  polePlacement.curves = {
     [0]={x=2,y=0},
     [1]={x=2,y=0},
     [2]={x=0,y=2},
@@ -91,7 +91,7 @@ polePlacement.curves = {
     [6]={x=0,y=2},
     [7]={x=0,y=2}
   }
-polePlacement.dir = {
+  polePlacement.dir = {
     [0]={x = 1, y = 1},
     [1]={x = 1, y = 1},
     [2]={x = 1, y = 1},
@@ -100,20 +100,20 @@ polePlacement.dir = {
     [5]={x = -1, y = -1},
     [6]={x = 1, y = -1},
     [7]={x = 1, y = -1}
-}  
+  }
 
---[traveldir] ={[raildir]
+  --[traveldir] ={[raildir]
 signalOffset =
-{
-  [0] = {pos={x=1.5,y=0.5}, dir=4},
-  [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
-  [2] = {pos={x=-0.5,y=1.5}, dir=6},
-  [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
-  [4] = {pos={x=-1.5,y=-0.5}, dir=0},
-  [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
-  [6] = {pos={x=0.5,y=-1.5}, dir=2},
-  [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
-}
+  {
+    [0] = {pos={x=1.5,y=0.5}, dir=4},
+    [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
+    [2] = {pos={x=-0.5,y=1.5}, dir=6},
+    [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
+    [4] = {pos={x=-1.5,y=-0.5}, dir=0},
+    [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
+    [6] = {pos={x=0.5,y=-1.5}, dir=2},
+    [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
+  }
 
 function addPos(p1,p2)
   local p2 = p2 or {x=0,y=0}
@@ -135,8 +135,8 @@ function fixPos(pos)
   return ret
 end
 
-function resetMetatable(o)
-  setmetatable(o,{__index=FARL})
+function resetMetatable(o, mt)
+  setmetatable(o,{__index=mt})
   return o
 end
 
@@ -146,20 +146,18 @@ local function onTick(event)
       if (player.vehicle ~= nil and player.vehicle.name == "farl") then
         if player.gui.left.farl == nil then
           FARL.new(pi, player)
-          FARL.createGui(pi,player)
+          GUI.createGui(pi,player)
         end
       end
       if player.vehicle == nil and player.gui.left.farl ~= nil then
         FARL.remove(pi,player)
-        FARL.destroyGui(pi,player)
+        GUI.destroyGui(pi,player)
       end
     end
   end
   for i, farl in ipairs(glob.farl) do
-      farl:update(event)
-      if event.tick % 10 == 1 then
-        farl:updateGui()
-      end
+    farl:update(event)
+    GUI.updateGui(farl)
   end
 end
 
@@ -191,7 +189,7 @@ local function initGlob()
   glob.action = glob.action or {}
   glob.cruiseSpeed = glob.cruiseSpeed or 0.4
   for i,farl in ipairs(glob.farl) do
-    farl = resetMetatable(farl)
+    farl = resetMetatable(farl, FARL)
     if glob.version < "0.1.3" then
       farl.cruiseInterrupt = 0
     end
@@ -205,10 +203,30 @@ local function onload()
   initGlob()
 end
 
+local function onGuiClick(event)
+  local index = event.playerindex or event.name
+  local player = game.players[index]
+  if glob.version < "0.1.3" then
+    GUI.destroyGui(index,player)
+    GUI.createGui(index,player)
+    glob.version = "0.1.3"
+    return
+  end
+  if player.gui.left.farl ~= nil then
+    local farl = findByPlayer(player)
+    if farl then
+      GUI.onGuiClick(event, farl, player)
+    else
+      player.print("Gui without train, wrooong!")
+      GUI.destroyGui(index,player)
+    end
+  end
+end
+
 game.oninit(oninit)
 game.onload(onload)
 game.onevent(defines.events.ontick, onTick)
-game.onevent(defines.events.onguiclick, FARL.onGuiClick)
+game.onevent(defines.events.onguiclick, onGuiClick)
 --game.onevent(defines.events.ontrainchangedstate, function(event) ontrainchangedstate(event) end)
 --game.onevent(defines.events.onplayermineditem, function(event) onplayermineditem(event) end)
 --game.onevent(defines.events.onpreplayermineditem, function(event) onpreplayermineditem(event) end)
@@ -303,11 +321,11 @@ remote.addinterface("farl",
     setSpeed = function(speed)
       glob.cruiseSpeed = speed
     end
---    setDriver = function(loco)
---      if loco.name == "farl" then
---        driver = setGhostDriver(loco)
---        driver.ridingstate = {acceleration=1,direction=1}
---      end
---    end
---/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
+  --    setDriver = function(loco)
+  --      if loco.name == "farl" then
+  --        driver = setGhostDriver(loco)
+  --        driver.ridingstate = {acceleration=1,direction=1}
+  --      end
+  --    end
+  --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
   })
