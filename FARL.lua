@@ -170,6 +170,8 @@ FARL = {
       end
       if self.train.speed < limit then
         self.driver.ridingstate = {acceleration = 1, direction = self.driver.ridingstate.direction}
+      elseif self.active and self.train.speed > limit + 0.1 then
+        self.driver.ridingstate = {acceleration = 2, direction = self.driver.ridingstate.direction}
       else
         self.driver.ridingstate = {acceleration = 0, direction = self.driver.ridingstate.direction}
       end
@@ -256,13 +258,16 @@ FARL = {
     end
   end,
 
-  findLastRail = function(self)
+  findLastRail = function(self, limit)
     local trainDir = self:calcTrainDir()
     local test = self:railBelowTrain()
-    local limit = 10
     local last = test
+    local limit, count = limit, 1
     while test and test.name ~= "curved-rail" do
       last = test
+      if limit and count == limit then
+        return last
+      end
       local _, next = self:getRail(last,trainDir,1)
       local pos = fixPos(next.position)
       local area = {{pos[1]-0.4,pos[2]-0.4},{pos[1]+0.4,pos[2]+0.4}}
@@ -281,6 +286,7 @@ FARL = {
           break
         end
       end
+      count = count + 1
       if not found then return last end
     end
     if last.name == "curved-rail" then
@@ -354,6 +360,23 @@ FARL = {
       entity = game.createentity(arg)
     end
     return canPlace, entity
+  end,
+
+  createJunction = function(self, input)
+    self:activate()
+    self.last = self:findLastRail(3)
+    local dir, last = self:placeRails(self.last, self.direction, input)
+    if dir and last == "extra" and self.active then
+      dir, last = self:placeRails(self.lastrail, self.direction, 1)
+      if dir and last then
+        dir, last = self:placeRails(last, dir, input)
+      end
+    end
+    if dir then
+      self.direction, self.lastrail = dir, last
+    else
+      self.driver.print("Couldn't create junction")
+    end
   end,
 
   placeRails = function(self,lastRail, travelDir, input, trackCount)

@@ -15,16 +15,33 @@ GUI = {
 
   end,
 
+  add = function(parent, e, bind)
+    local type, name = e.type, e.name
+    if not e.style and (type == "button" or type == "label") then
+      e.style = "farl_"..type
+    end
+    if bind then
+      if type == "checkbox" then
+        e.state = glob[bind]
+      end
+    end 
+    return parent.add(e)
+  end,
+  
   createGui = function(index, player)
     if player.gui.left.farl ~= nil then return end
-    local farl = player.gui.left.add({type="frame", direction="vertical", name="farl"})
-    local rows = farl.add({type="table", name="rows", colspan=1})
-    local buttons = rows.add({type="table", name="buttons", colspan=3})
-    buttons.add({type="button", name="start", caption="", style="farl_button"})
-    buttons.add({type="button", name="cc", caption="", style="farl_button"})
-    buttons.add({type="button", name="settings", caption="S", style="farl_button"})
-    rows.add({type="checkbox", name="signals", caption="Place signals", state=glob.signals})
-    rows.add({type="checkbox", name="poles", caption="Place poles", state=glob.poles})
+    local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farl"})
+    local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
+    local buttons = GUI.add(rows, {type="table", name="buttons", colspan=3})
+    GUI.add(buttons, {type="button", name="start"})
+    GUI.add(buttons, {type="button", name="cc"})
+    GUI.add(buttons, {type="button", name="settings", caption="S"})
+    GUI.add(rows, {type="checkbox", name="signals", caption="Place signals"}, "signals")
+    GUI.add(rows, {type="checkbox", name="poles", caption="Place poles"}, "poles")
+    local buttons2 = GUI.add(rows,{type="table", name="junctions", colspan=3})
+    GUI.add(buttons2, {type="label", caption="Junction"})
+    GUI.add(buttons2, {type="button", name="junctionLeft", caption="left"})
+    GUI.add(buttons2, {type="button", name="junctionRight", caption="right"})
   end,
 
   destroyGui = function(index,player)
@@ -41,7 +58,6 @@ GUI = {
       farl:debugInfo()
     elseif name == "start" then
       farl:toggleActive()
---      GUI.updateGui(farl)
     elseif name == "settings" then
       GUI.toggleSettingsWindow(player)
     elseif name == "side" then
@@ -56,12 +72,15 @@ GUI = {
       end
     elseif name == "cc" then
       farl:toggleCruiseControl()
---      GUI.updateGui(farl)
     elseif name == "signals" or name == "poles" then
       glob[name] = not glob[name]
+    elseif name == "junctionLeft" then
+      farl:createJunction(0)
+    elseif name == "junctionRight" then
+      farl:createJunction(2)
     end
   end,
-  
+
   toggleSettingsWindow = function(player)
     local row = player.gui.left.farl.rows
     local captionSide
@@ -98,7 +117,7 @@ GUI = {
       weight.text = glob.settings.curvedWeight
     end
   end,
-  
+
   saveSettings = function(s)
     for i,p in pairs(s) do
       if glob.settings[i] then
@@ -106,7 +125,7 @@ GUI = {
       end
     end
   end,
-  
+
   updateGui = function(farl)
     farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and "Stop" or "Start"
     farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and "Stop cruise" or "Cruise"
