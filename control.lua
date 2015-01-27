@@ -126,19 +126,21 @@ local function onTick(event)
     for pi, player in ipairs(game.players) do
       if (player.vehicle ~= nil and player.vehicle.name == "farl") then
         if player.gui.left.farl == nil then
-          FARL.new(pi, player)
+          FARL.onPlayerEnter(pi, player)
           GUI.createGui(pi,player)
         end
       end
       if player.vehicle == nil and player.gui.left.farl ~= nil then
-        FARL.remove(pi,player)
+        FARL.onPlayerLeave(pi,player)
         GUI.destroyGui(pi,player)
       end
     end
   end
   for i, farl in ipairs(glob.farl) do
     farl:update(event)
-    GUI.updateGui(farl)
+    if farl.driver then
+      GUI.updateGui(farl)
+    end
   end
 end
 

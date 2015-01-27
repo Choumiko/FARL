@@ -11,6 +11,9 @@ function subPos(p1,p2)
 end
 
 function pos2Str(pos)
+  if not pos.x or not pos.y then
+    pos = {x=0,y=0}
+  end
   return util.positiontostr(pos)
 end
 
@@ -30,21 +33,37 @@ FARL = {
       signalCount = 0, cruise = false, cruiseInterrupt = 0
     }
     setmetatable(new, {__index=FARL})
-    if not FARL.findByPlayer(player) then
-      table.insert(glob.farl, new)
-    end
     return new
   end,
+  
+  onPlayerEnter = function(index, player)
+    local i = FARL.findByLocomotive(player.vehicle)
+    if i then
+      glob.farl[i].driver = player
+    else
+      table.insert(glob.farl, FARL.new(index,player))
+    end
+  end,
 
-  remove = function(index, player)
+  onPlayerLeave = function(index, player)
     for i,f in ipairs(glob.farl) do
       if f.driver.name == player.name then
-        glob.farl[i] = nil
+        f:deactivate()
+        f.driver = false
         break
       end
     end
   end,
-
+  
+  findByLocomotive = function(loco)
+    for i,f in ipairs(glob.farl) do
+      if f.locomotive.equals(loco) then
+        return i
+      end
+    end
+    return false
+  end,
+  
   findByPlayer = function(player)
     for i,f in ipairs(glob.farl) do
       if f.locomotive.equals(player.vehicle) then
@@ -56,20 +75,21 @@ FARL = {
   end,
 
   update = function(self, event)
-    if not self.train.valid then
-      self.train = self.locomotive.train
-      if self.train.valid then
-        self:updateCargo()
+    if self.driver then
+      if not self.train.valid then
+        self.train = self.locomotive.train
+        if self.train.valid then
+          self:updateCargo()
+        else
+          self.deactivate("Error (invalid train)")
+        end
       else
-        self.driver.print("Invalid train")
-        self.deactivate()
+        if event.tick % 60 == 0 then
+          self:updateCargo()
+        end
+        self.cruiseInterrupt = self.driver.ridingstate.acceleration
+        self:layRails()
       end
-    else
-      if event.tick % 60 == 0 then
-        self:updateCargo()
-      end
-      self.cruiseInterrupt = self.driver.ridingstate.acceleration
-      self:layRails()
     end
   end,
 
@@ -200,13 +220,21 @@ FARL = {
           self.direction, self.lastrail = dir, last
         else
           self:deactivate()
-          self.driver.print("Deactivated")
         end
       end
     end
   end,
 
   activate = function(self)
+    if self.lastrail and self.direction then
+      if self.direction == self:calcTrainDir() and util.distance(self.lastrail.position, self.locomotive.position) < 6 then
+        self:updateCargo()
+        self.active = true
+        return
+      end
+    end
+    self.lastrail = false
+    self.signalCount = 0
     self.lastrail = self:findLastRail()
     if self.lastrail then
       self:findLastPole()
@@ -218,17 +246,22 @@ FARL = {
         self.driver.print("Error activating, drive on straight rails and try again")
       end
     else
-      self:deactivate()
+      self:deactivate("Error (no rail found)", true) 
     end
   end,
 
-  deactivate = function(self)
+  deactivate = function(self, reason, full)
     self.active = false
     self.input = nil
-    self.lastrail = nil
-    self.direction = nil
-    self.lastPole, self.lastCheckPole = nil,nil
     self.cruise = false
+    if reason then
+      self.driver.print("Deactivated: "..reason)
+    end
+    if full then
+      self.lastrail = nil
+      self.direction = nil
+      self.lastPole, self.lastCheckPole = nil,nil
+    end
   end,
 
   toggleActive = function(self)
@@ -289,10 +322,10 @@ FARL = {
       count = count + 1
       if not found then return last end
     end
-    if last.name == "curved-rail" then
-      self.driver.print("Can't start on curved rails")
-      return false
-    end
+--    if not last then
+--      self.driver.print("No rail found")
+--      return false
+--    end
     return last
   end,
 
@@ -386,7 +419,7 @@ FARL = {
     for i=1,trackCount do
       if i>1 then lastRail = nextRail end
       newTravelDir, nextRail = self:getRail(lastRail,travelDir,input)
-      if newTravelDir then
+      if newTravelDir and nextRail.position then
         local newDir = nextRail.direction
         local newPos = nextRail.position
         self:removeTrees(newPos)
@@ -417,16 +450,14 @@ FARL = {
           self.driver.print("Cant place "..nextRail.name.."@"..pos2Str(newPos).." dir:"..newDir)
           return false, false
         elseif not hasRail then
-          self:deactivate()
-          self.driver.print("Out of rails")
+          self:deactivate("Out of rails")
           return false, false
         end
       else
         if nextRail == "extra" then
           return travelDir, nextRail
         else
-          self.driver.print("Error with: traveldir="..travelDir.." input:"..input)
-          self:deactivate()
+          self:deactivate("Error with: traveldir="..travelDir.." input:"..input)
           debugDump(lastRail,true)
           return false, false
         end
@@ -614,6 +645,7 @@ FARL = {
         end
       end
     end
-    return curves[1]
+    if curves[1] then self:deactivate("Can't start on curves", true) end
+    return false
   end
 }
