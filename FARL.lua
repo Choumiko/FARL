@@ -25,10 +25,10 @@ function fixPos(pos)
 end
 
 FARL = {
-  new = function(index, player)
+  new = function(player)
     local new = {
       locomotive = player.vehicle, train=player.vehicle.train,
-      driver=player, index = index, active=false, lastrail=false,
+      driver=player, active=false, lastrail=false,
       direction = false, input = 1, name = player.vehicle.backername,
       signalCount = 0, cruise = false, cruiseInterrupt = 0
     }
@@ -36,18 +36,18 @@ FARL = {
     return new
   end,
   
-  onPlayerEnter = function(index, player)
+  onPlayerEnter = function(player)
     local i = FARL.findByLocomotive(player.vehicle)
     if i then
       glob.farl[i].driver = player
     else
-      table.insert(glob.farl, FARL.new(index,player))
+      table.insert(glob.farl, FARL.new(player))
     end
   end,
 
-  onPlayerLeave = function(index, player)
+  onPlayerLeave = function(player)
     for i,f in ipairs(glob.farl) do
-      if f.driver.name == player.name then
+      if f.driver and f.driver.name == player.name then
         f:deactivate()
         f.driver = false
         break
@@ -246,7 +246,7 @@ FARL = {
         self.driver.print("Error activating, drive on straight rails and try again")
       end
     else
-      self:deactivate("Error (no rail found)", true) 
+      self:deactivate("Error (no valid rail found)", true) 
     end
   end,
 
@@ -322,10 +322,6 @@ FARL = {
       count = count + 1
       if not found then return last end
     end
---    if not last then
---      self.driver.print("No rail found")
---      return false
---    end
     return last
   end,
 
@@ -447,7 +443,7 @@ FARL = {
             end
           end
         elseif not canplace then
-          self.driver.print("Cant place "..nextRail.name.."@"..pos2Str(newPos).." dir:"..newDir)
+          self:deactivate("Can't place rail", true)
           return false, false
         elseif not hasRail then
           self:deactivate("Out of rails")
@@ -557,6 +553,14 @@ FARL = {
       local data = signalOffset[traveldir]
       local offset = data[rail.direction] or data.pos
       local dir = data.dir
+      if glob.flipSignals then
+        local off = offset
+        if traveldir % 2 == 1 then
+          off = data[(rail.direction+4)%8] or data.pos
+        end
+        offset = {x=off.x*-1, y=off.y*-1}
+        dir = (dir + 4) % 8
+      end
       local pos = addPos(rail.position, offset)
       self:removeTrees(pos)
       local success, entity = FARL.genericPlace{name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
@@ -647,5 +651,13 @@ FARL = {
     end
     if curves[1] then self:deactivate("Can't start on curves", true) end
     return false
+  end,
+  
+  flyingText = function(self, line, color, show)
+  if show then
+    local pos = addPos(self.locomotive.position, {x=0,y=-1})
+    color = color or RED
+    game.createentity({name="flying-text", position=pos, text=line, color=color})
   end
+end
 }

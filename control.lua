@@ -67,43 +67,42 @@ clearAreas =
       {{x=-1.5,y=-3.5},{x=-1.5,y=1.5}},{{x=-3.5,y=-3.5},{x=-2.5,y=0.5}}}
   }
 
-  signalPlacement = {}
+  polePlacement = {
 
-  polePlacement = {}
+      data = {
+        [0]={x = 2, y = 0},
+        [1]={x=3,y=1, [3]={x=2,y=2}, [7]={x=1,y=1}},
+        [2]={x = 0, y = 2},
+        [3]={x=3,y=1, [1]={x=1,y=1},[5]={x=2,y=2}},
+        [4]={x = 2, y = 0},
+        [5]={x=3,y=1, [3]={x=1,y=1}, [7]={x=2,y=2}},
+        [6]={x = 0, y = 2},
+        [7]={x=3,y=1, [1]={x=2,y=2},[5]={x=1,y=1}},
+      },
 
-  polePlacement.data = {
-    [0]={x = 2, y = 0},
-    [1]={x=3,y=1, [3]={x=2,y=2}, [7]={x=1,y=1}},
-    [2]={x = 0, y = 2},
-    [3]={x=3,y=1, [1]={x=1,y=1},[5]={x=2,y=2}},
-    [4]={x = 2, y = 0},
-    [5]={x=3,y=1, [3]={x=1,y=1}, [7]={x=2,y=2}},
-    [6]={x = 0, y = 2},
-    [7]={x=3,y=1, [1]={x=2,y=2},[5]={x=1,y=1}},
+      curves = {
+        [0]={x=2,y=0},
+        [1]={x=2,y=0},
+        [2]={x=0,y=2},
+        [3]={x=0,y=2},
+        [4]={x=2,y=0},
+        [5]={x=2,y=0},
+        [6]={x=0,y=2},
+        [7]={x=0,y=2}
+      },
+
+      dir = {
+        [0]={x = 1, y = 1},
+        [1]={x = 1, y = 1},
+        [2]={x = 1, y = 1},
+        [3]={x = -1, y = 1},
+        [4]={x = -1, y = 1},
+        [5]={x = -1, y = -1},
+        [6]={x = 1, y = -1},
+        [7]={x = 1, y = -1}
+      }
   }
-
-  polePlacement.curves = {
-    [0]={x=2,y=0},
-    [1]={x=2,y=0},
-    [2]={x=0,y=2},
-    [3]={x=0,y=2},
-    [4]={x=2,y=0},
-    [5]={x=2,y=0},
-    [6]={x=0,y=2},
-    [7]={x=0,y=2}
-  }
-  polePlacement.dir = {
-    [0]={x = 1, y = 1},
-    [1]={x = 1, y = 1},
-    [2]={x = 1, y = 1},
-    [3]={x = -1, y = 1},
-    [4]={x = -1, y = 1},
-    [5]={x = -1, y = -1},
-    [6]={x = 1, y = -1},
-    [7]={x = 1, y = -1}
-  }
-
-  --[traveldir] ={[raildir]
+--[traveldir] ={[raildir]
 signalOffset =
   {
     [0] = {pos={x=1.5,y=0.5}, dir=4},
@@ -126,19 +125,24 @@ local function onTick(event)
     for pi, player in ipairs(game.players) do
       if (player.vehicle ~= nil and player.vehicle.name == "farl") then
         if player.gui.left.farl == nil then
-          FARL.onPlayerEnter(pi, player)
-          GUI.createGui(pi,player)
+          FARL.onPlayerEnter(player)
+          GUI.createGui(player)
         end
       end
       if player.vehicle == nil and player.gui.left.farl ~= nil then
-        FARL.onPlayerLeave(pi,player)
-        GUI.destroyGui(pi,player)
+        FARL.onPlayerLeave(player)
+        GUI.destroyGui(player)
       end
     end
   end
   for i, farl in ipairs(glob.farl) do
     farl:update(event)
     if farl.driver then
+      if glob.version < "0.1.4" then
+        GUI.destroyGui(farl.driver)
+        GUI.createGui(farl.driver)
+        glob.version = "0.1.4"
+      end
       GUI.updateGui(farl)
     end
   end
@@ -166,6 +170,9 @@ local function initGlob()
   if glob.poles == nil then
     glob.poles = true
   end
+  if glob.flipSignals == nil then
+    glob.flipSignals = false
+  end
   glob.farl = glob.farl or {}
   glob.railInfoLast = glob.railInfoLast or {}
   glob.debug = glob.debug or {}
@@ -173,9 +180,10 @@ local function initGlob()
   glob.cruiseSpeed = glob.cruiseSpeed or 0.4
   for i,farl in ipairs(glob.farl) do
     farl = resetMetatable(farl, FARL)
-    if glob.version < "0.1.3" then
+    if glob.version < "0.1.4" then
       farl.cruiseInterrupt = 0
     end
+    farl.index = nil
   end
   glob.version = "0.1.3"
 end
@@ -189,10 +197,10 @@ end
 local function onGuiClick(event)
   local index = event.playerindex or event.name
   local player = game.players[index]
-  if glob.version < "0.1.3" then
-    GUI.destroyGui(index,player)
-    GUI.createGui(index,player)
-    glob.version = "0.1.3"
+  if glob.version < "0.1.4" then
+    GUI.destroyGui(player)
+    GUI.createGui(player)
+    glob.version = "0.1.4"
     return
   end
   if player.gui.left.farl ~= nil then
@@ -201,9 +209,17 @@ local function onGuiClick(event)
       GUI.onGuiClick(event, farl, player)
     else
       player.print("Gui without train, wrooong!")
-      GUI.destroyGui(index,player)
+      GUI.destroyGui(player)
     end
   end
+end
+
+function onpreplayermineditem(event)
+  local ent = event.entity
+  local cname = ent.name
+  if ent.type == "locomotive" and cname == "farl" then
+    table.remove(glob.farl, FARL.findByLocomotive(ent))
+  end  
 end
 
 game.oninit(oninit)
@@ -212,7 +228,7 @@ game.onevent(defines.events.ontick, onTick)
 game.onevent(defines.events.onguiclick, onGuiClick)
 --game.onevent(defines.events.ontrainchangedstate, function(event) ontrainchangedstate(event) end)
 --game.onevent(defines.events.onplayermineditem, function(event) onplayermineditem(event) end)
---game.onevent(defines.events.onpreplayermineditem, function(event) onpreplayermineditem(event) end)
+game.onevent(defines.events.onpreplayermineditem, function(event) onpreplayermineditem(event) end)
 --game.onevent(defines.events.onbuiltentity, function(event) onbuiltentity(event) end)
 
 local function onplayercreated(event)
@@ -248,14 +264,6 @@ end
 local RED = {r = 0.9}
 local GREEN = {g = 0.7}
 local YELLOW = {r = 0.8, g = 0.8}
-
-function flyingText(line, color, pos, show)
-  if show then
-    pos = pos
-    color = color or RED
-    game.createentity({name="flying-text", position=pos, text=line, color=color})
-  end
-end
 
 --function setGhostDriver(locomotive)
 --  local ghost = newGhostDriverEntity(game.player.position)
@@ -303,12 +311,29 @@ remote.addinterface("farl",
     end,
     setSpeed = function(speed)
       glob.cruiseSpeed = speed
-    end
-  --    setDriver = function(loco)
-  --      if loco.name == "farl" then
-  --        driver = setGhostDriver(loco)
-  --        driver.ridingstate = {acceleration=1,direction=1}
-  --      end
-  --    end
+    end,
+    
+--    setDriver = function(loco)
+--        if loco.name == "farl" then
+--          local i = FARL.findByLocomotive(loco)
+--          local farl = glob.farl[i]
+--          driver = setGhostDriver(loco)
+--          farl.driver = driver
+--          godmode = true
+--          farl:activate()
+--          farl:toggleCruiseControl()
+--          driver.ridingstate = {acceleration=1,direction=1}
+--        end
+--    end,
+--    
+--    removeDriver = function(loco)
+--        if loco.name == "farl" and loco.vehicle.passenger.name == "farl_player" then
+--          local i = FARL.findByLocomotive(loco)
+--          glob.farl[i].driver = false
+--          loco.vehicle.passenger = nil
+--          driver.destroy()
+--          driver = nil
+--        end
+--    end
   --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
   })
