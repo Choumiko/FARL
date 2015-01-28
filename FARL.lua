@@ -122,7 +122,7 @@ FARL = {
     end
   end,
 
-  getRail = function(self,lastRail, travelDir, input)
+  getRail = function(lastRail, travelDir, input)
     local lastRail, travelDir, input = lastRail, travelDir, input
     if travelDir > 7 or travelDir < 0 then return false,false end
     if input > 2 or input < 0 then return false, false end
@@ -315,7 +315,7 @@ FARL = {
       if limit and count == limit then
         return last
       end
-      local _, next = self:getRail(last,trainDir,1)
+      local _, next = FARL.getRail(last,trainDir,1)
       local pos = fixPos(next.position)
       local area = {{pos[1]-0.4,pos[2]-0.4},{pos[1]+0.4,pos[2]+0.4}}
       local found = false
@@ -428,7 +428,7 @@ FARL = {
     local newTravelDir, nextRail
     for i=1,trackCount do
       if i>1 then lastRail = nextRail end
-      newTravelDir, nextRail = self:getRail(lastRail,travelDir,input)
+      newTravelDir, nextRail = FARL.getRail(lastRail,travelDir,input)
       if newTravelDir and nextRail.position then
         local newDir = nextRail.direction
         local newPos = nextRail.position

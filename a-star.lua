@@ -23,7 +23,7 @@
 -- SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 -- ======================================================================
 
-module ( "astar", package.seeall )
+require "util"
 
 ----------------------------------------------------------------
 -- local variables
@@ -36,23 +36,23 @@ local cachedPaths = nil
 -- local functions
 ----------------------------------------------------------------
 
-function dist ( x1, y1, x2, y2 )
+function dist (pos1, pos2)
 
-  return math.sqrt ( math.pow ( x2 - x1, 2 ) + math.pow ( y2 - y1, 2 ) )
+  return util.distance(pos1, pos2)
 end
 
 function dist_between ( nodeA, nodeB )
 
-  return dist ( nodeA.x, nodeA.y, nodeB.x, nodeB.y )
+  return util.distance ( nodeA.position, nodeB.position)
 end
 
 function heuristic_cost_estimate ( nodeA, nodeB )
 
-  return dist ( nodeA.x, nodeA.y, nodeB.x, nodeB.y )
+  return util.distance ( nodeA.position, nodeB.position)
 end
 
 function is_valid_node ( node, neighbor )
-
+-- check for watertiles
   return true
 end
 
@@ -69,7 +69,7 @@ function lowest_f_score ( set, f_score )
 end
 
 function neighbor_nodes ( theNode, nodes )
-
+-- get Neighbor nodes with FARL:getRail
   local neighbors = {}
   for _, node in ipairs ( nodes ) do
     if theNode ~= node and is_valid_node ( theNode, node ) then
@@ -165,9 +165,9 @@ function clear_cached_paths ()
   cachedPaths = nil
 end
 
-function distance ( x1, y1, x2, y2 )
+function distance ( pos1, pos2 )
 
-  return dist ( x1, y1, x2, y2 )
+  return dist ( pos1, pos2 )
 end
 
 function path ( start, goal, nodes, ignore_cache, valid_node_func )

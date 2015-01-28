@@ -232,7 +232,19 @@ local function onbuiltentity(event)
       debugDump(farlRails[1].name.."@"..pos2Str(farlRails[1].position).." dir:"..farlRails[1].direction,true)
       debugDump(farlRails[2].name.."@"..pos2Str(farlRails[2].position).." dir:"..farlRails[2].direction,true)
       local diff= subPos(farlRails[1].position, farlRails[2].position)
-      debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
+      local generalDir = ""
+      if diff.y < 0 then 
+        generalDir = "S"
+      elseif diff.y > 0 then
+        generalDir = "N"
+      end
+      if diff.x < 0 then 
+        generalDir = generalDir.."E"
+      elseif diff.x > 0 then
+        generalDir = generalDir.."W"
+      end
+      debugDump("Direction: "..generalDir,true)
+      debugDump("Offset: x="..diff.x..",y="..diff.y,true)
     end
     if #farlRails > 2 then
       farlRails[1].destroy()
@@ -240,7 +252,6 @@ local function onbuiltentity(event)
       farlRails = {}
       table.insert(farlRails, ent)
     end
-    debugDump(#farlRails,true)
   end
 end
 
