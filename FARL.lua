@@ -23,7 +23,9 @@ function fixPos(pos)
   if pos.y then ret[2] = pos.y end
   return ret
 end
-
+local RED = {r = 0.9}
+local GREEN = {g = 0.7}
+local YELLOW = {r = 0.8, g = 0.8}
 FARL = {
   new = function(player)
     local new = {
@@ -208,6 +210,15 @@ FARL = {
       self.acc = self.driver.ridingstate.acceleration
       if self.acc ~= 3 and util.distance(self.lastrail.position, self.locomotive.position) < 6 then
         self.input = self.driver.ridingstate.direction
+        if self.driver.name == "farl_player" then
+          if self.course and self.course[1] then
+            local diff = subPos(self.lastrail.position, self.course[1].pos)
+              if diff.x == 0 and diff.y == 0 then
+                self.input = self.course[1].input
+                table.remove(self.course, 1)
+              end
+          end
+        end        
         local count = (self.input == 1 and self.direction%2==1) and 1 or 1
         local dir, last = self:placeRails(self.lastrail, self.direction, self.input, count)
         if dir and last == "extra" and self.active then
@@ -220,6 +231,9 @@ FARL = {
           self.direction, self.lastrail = dir, last
         else
           self:deactivate()
+        end
+        if #self.course == 0 then
+          self:deactivate("Course done", true)
         end
       end
     end
@@ -243,7 +257,7 @@ FARL = {
       if self.direction and self.lastPole and self.lastCheckPole then
         self.active = true
       else
-        self.driver.print("Error activating, drive on straight rails and try again")
+        self:print("Error activating, drive on straight rails and try again")
       end
     else
       self:deactivate("Error (no valid rail found)", true) 
@@ -255,7 +269,7 @@ FARL = {
     self.input = nil
     self.cruise = false
     if reason then
-      self.driver.print("Deactivated: "..reason)
+      self:print("Deactivated: "..reason)
     end
     if full then
       self.lastrail = nil
@@ -404,7 +418,7 @@ FARL = {
     if dir then
       self.direction, self.lastrail = dir, last
     else
-      self.driver.print("Couldn't create junction")
+      self:print("Couldn't create junction")
     end
   end,
 
@@ -541,7 +555,7 @@ FARL = {
         self["big-electric-pole"] = self["big-electric-pole"] - 1
         return true
       else
-      --self.driver.print("Can`t place pole@"..pos2Str(tmp))
+      --self:print("Can`t place pole@"..pos2Str(tmp))
       --debugDump(glob.lastCheckRail,true)
       end
     end
@@ -569,7 +583,7 @@ FARL = {
         self["rail-signal"] = self["rail-signal"] - 1
         return success, entity
       else
-        --self.driver.print("Can't place signal@"..pos2Str(pos))
+        --self:print("Can't place signal@"..pos2Str(pos))
         return success, entity
       end
     end
@@ -651,6 +665,14 @@ FARL = {
     end
     if curves[1] then self:deactivate("Can't start on curves", true) end
     return false
+  end,
+  
+  print = function(self, msg)
+    if self.driver.name ~= "farl_player" then
+      self.driver.print(msg)
+    else
+      self:flyingText(msg, RED, true)
+    end
   end,
   
   flyingText = function(self, line, color, show)

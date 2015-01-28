@@ -137,7 +137,7 @@ local function onTick(event)
   end
   for i, farl in ipairs(glob.farl) do
     farl:update(event)
-    if farl.driver then
+    if farl.driver and farl.driver.name ~= "farl_player" then
       if glob.version < "0.1.4" then
         GUI.destroyGui(farl.driver)
         GUI.createGui(farl.driver)
@@ -237,6 +237,7 @@ local function onplayercreated(event)
   if gui.top.farl ~= nil then
     gui.top.farl.destroy()
   end
+  debugDump("onplayercreated",true)
 end
 
 game.onevent(defines.events.onplayercreated, onplayercreated)
@@ -261,23 +262,21 @@ function saveVar(var, name)
   --game.makefile("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
 end
 
-local RED = {r = 0.9}
-local GREEN = {g = 0.7}
-local YELLOW = {r = 0.8, g = 0.8}
+driverNextDir = 1
 
---function setGhostDriver(locomotive)
---  local ghost = newGhostDriverEntity(game.player.position)
---  locomotive.passenger = ghost
---  return ghost
---end
---
---function newGhostDriverEntity(position)
---  game.createentity({name="farl_player", position=position, force=game.forces.player})
---  local entities = game.findentitiesfiltered({area={{position.x, position.y},{position.x, position.y}}, name="farl_player"})
---  if entities[1] ~= nil then
---    return entities[1]
---  end
---end
+function setGhostDriver(locomotive)
+  local ghost = newGhostDriverEntity(game.player.position)
+  locomotive.passenger = ghost
+  return ghost
+end
+
+function newGhostDriverEntity(position)
+  game.createentity({name="farl_player", position=position, force=game.forces.player})
+  local entities = game.findentitiesfiltered({area={{position.x, position.y},{position.x, position.y}}, name="farl_player"})
+  if entities[1] ~= nil then
+    return entities[1]
+  end
+end
 remote.addinterface("farl",
   {
     railInfo = function(rail)
@@ -313,27 +312,65 @@ remote.addinterface("farl",
       glob.cruiseSpeed = speed
     end,
     
---    setDriver = function(loco)
---        if loco.name == "farl" then
---          local i = FARL.findByLocomotive(loco)
---          local farl = glob.farl[i]
---          driver = setGhostDriver(loco)
---          farl.driver = driver
---          godmode = true
---          farl:activate()
---          farl:toggleCruiseControl()
---          driver.ridingstate = {acceleration=1,direction=1}
---        end
---    end,
---    
---    removeDriver = function(loco)
---        if loco.name == "farl" and loco.vehicle.passenger.name == "farl_player" then
---          local i = FARL.findByLocomotive(loco)
---          glob.farl[i].driver = false
---          loco.vehicle.passenger = nil
---          driver.destroy()
---          driver = nil
---        end
---    end
+    setDriver = function(loco)
+        if loco.name == "farl" then
+          local i = FARL.findByLocomotive(loco)
+          local farl = glob.farl[i]
+          driver = setGhostDriver(loco)
+          farl.driver = driver
+          godmode = true
+          --farl:activate()
+          farl:toggleCruiseControl()
+          driver.ridingstate = {acceleration=1,direction=1}
+        end
+    end,
+    
+    removeDriver = function(loco)
+        if loco.name == "farl" then
+          local farl = glob.farl[FARL.findByLocomotive(loco)]
+          if farl.driver.name == "farl_player" then
+            farl.cruise = false
+            farl:deactivate("", true)
+            farl.driver.destroy()
+            farl.driver = false
+          else
+            debugDump("No farl_player found",true)
+          end
+        end
+    end,
+    
+    goLeft = function(loco)
+      local farl = glob.farl[FARL.findByLocomotive(loco)]
+      driverNextDir = 0
+    end,
+    goRight = function(loco)
+      local farl = glob.farl[FARL.findByLocomotive(loco)]
+      driverNextDir = 2
+    end,
+    activate = function(loco)
+      if loco.name == "farl" then
+        local farl = glob.farl[FARL.findByLocomotive(loco)]
+        if farl and not farl.active and farl.driver ~= nil then
+          farl:activate()
+        end
+      end
+    end,
+    
+    course = function(loco)
+      local course = {
+        {pos={x=83,y=9}, input=0},
+        {pos={x=107,y=-9}, input=0},
+        {pos={x=110,y=-14}, input=0},
+        {pos={x=110,y=-22}, input=0},
+        {pos={x=85,y=-29}, input=1}
+      }
+      if loco.name == "farl" then
+        local farl = glob.farl[FARL.findByLocomotive(loco)]
+        if farl and not farl.active and farl.driver ~= nil then
+          farl.course = course
+          farl:activate()
+        end
+      end
+    end
   --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
   })
