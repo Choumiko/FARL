@@ -232,7 +232,7 @@ FARL = {
         else
           self:deactivate()
         end
-        if #self.course == 0 then
+        if self.driver.name == "farl_player" and #self.course == 0 then
           self:deactivate("Course done", true)
         end
       end

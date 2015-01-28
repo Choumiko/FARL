@@ -195,5 +195,19 @@ data:extend(
       open_sound = { filename = "__base__/sound/car-door-open.ogg", volume=0.7 },
       close_sound = { filename = "__base__/sound/car-door-close.ogg", volume = 0.7 },
       sound_minimum_speed = 0.5
+    },
+    {
+      type = "rail",
+      name = "farl-rail",
+      icon = "__FARL__/graphics/icons/straight-rail.png",
+      flags = {"placeable-neutral", "player-creation", "building-direction-8-way"},
+      minable = {mining_time = 1, result = "farl-rail"},
+      max_health = 100,
+      corpse = "straight-rail-remnants",
+      collision_box = {{-0.7, -0.8}, {0.7, 0.8}},
+      selection_box = {{-0.7, -0.8}, {0.7, 0.8}},
+      bending_type = "straight",
+      rail_category = "regular",
+      pictures = railpictures()
     }
   })

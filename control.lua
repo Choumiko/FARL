@@ -222,6 +222,28 @@ function onpreplayermineditem(event)
   end  
 end
 
+
+farlRails = {}
+local function onbuiltentity(event)
+  local ent = event.createdentity
+  if ent.name == "farl-rail" then
+    table.insert(farlRails, ent)
+    if #farlRails == 2 then
+      debugDump(farlRails[1].name.."@"..pos2Str(farlRails[1].position).." dir:"..farlRails[1].direction,true)
+      debugDump(farlRails[2].name.."@"..pos2Str(farlRails[2].position).." dir:"..farlRails[2].direction,true)
+      local diff= subPos(farlRails[1].position, farlRails[2].position)
+      debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
+    end
+    if #farlRails > 2 then
+      farlRails[1].destroy()
+      farlRails[2].destroy()
+      farlRails = {}
+      table.insert(farlRails, ent)
+    end
+    debugDump(#farlRails,true)
+  end
+end
+
 game.oninit(oninit)
 game.onload(onload)
 game.onevent(defines.events.ontick, onTick)
@@ -229,7 +251,7 @@ game.onevent(defines.events.onguiclick, onGuiClick)
 --game.onevent(defines.events.ontrainchangedstate, function(event) ontrainchangedstate(event) end)
 --game.onevent(defines.events.onplayermineditem, function(event) onplayermineditem(event) end)
 game.onevent(defines.events.onpreplayermineditem, function(event) onpreplayermineditem(event) end)
---game.onevent(defines.events.onbuiltentity, function(event) onbuiltentity(event) end)
+game.onevent(defines.events.onbuiltentity, onbuiltentity)
 
 local function onplayercreated(event)
   local player = game.getplayer(event.playerindex)
