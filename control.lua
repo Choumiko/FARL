@@ -1,6 +1,7 @@
 require "defines"
 require "FARL"
 require "GUI"
+require "a-star"
 
 godmode = false
 godmodePoles = false
@@ -245,6 +246,7 @@ local function onbuiltentity(event)
       end
       debugDump("Direction: "..generalDir,true)
       debugDump("Offset: x="..diff.x..",y="..diff.y,true)
+      debugDump("Distance: "..util.distance(farlRails[1].position, farlRails[2].position),true)
     end
     if #farlRails > 2 then
       farlRails[1].destroy()
@@ -310,14 +312,24 @@ function newGhostDriverEntity(position)
     return entities[1]
   end
 end
+
 remote.addinterface("farl",
   {
+  
+    neighbors = function(start, direction)
+      local start = {position=start.position, name=start.name, direction=start.direction, travelDir=direction, input=1}
+      local neighbors = neighbor_nodes(start)
+      for i,n in ipairs(neighbors) do
+        FARL.genericPlace(n)
+      end
+    end,
     railInfo = function(rail)
       debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
       if glob.railInfoLast.valid then
         local pos = glob.railInfoLast.position
         local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
         debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
+        debugDump("Distance: "..util.distance(pos, rail.position),true)
       end
       glob.railInfoLast = rail
     end,
@@ -390,7 +402,8 @@ remote.addinterface("farl",
     end,
     
     course = function(loco)
-      local course = {
+      local course = 
+      {
         {pos={x=83,y=9}, input=0},
         {pos={x=107,y=-9}, input=0},
         {pos={x=110,y=-14}, input=0},
@@ -404,6 +417,10 @@ remote.addinterface("farl",
           farl:activate()
         end
       end
+    end,
+    
+    tileAt = function(x,y)
+      debugDump(game.gettile(x, y).name,true)
     end
   --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
   })

@@ -1,5 +1,41 @@
 require "util"
 
+inputToNewDir2 =
+  {
+    [0] = {
+      [0]={pos={x=-1,y=-5},direction=0,curve={[4]={pos={x=-2,y=-8}},[5]={pos={x=0,y=-8}}}},
+      [1]={pos={x=0,y=-2},direction=0, shift={[4]={x=-1,y=-5},[5]={x=1,y=-5}}},
+      [2]={pos={x=1,y=-5},direction=1,curve={[4]={pos={x=0,y=-8}},[5]={pos={x=2,y=-8}}}}},
+    [1] = {
+      [0]={pos={x=3,y=-3},direction=5,curve={[1]={pos={x=4,y=-6}},[2]={diag=true}}, lastDir=3},
+      [1]={pos={x=0,y= -2},direction=3,connect={pos={x=3,y=-3},direction={[1]=7,[2]=3, [7]=5}}},
+      [2]={pos={x=3,y=-3},direction=6,curve={[1]={diag=true},[2]={pos={x=6,y=-4}}}, lastDir=7}},
+    [2] = {
+      [0]={pos={x=5,y=-1},direction=2,curve={[7]={pos={x=8,y=0}},[6]={pos={x=8,y=-2}}}},
+      [1]={pos={x=2,y=0},direction=2, shift={[6]={x=5,y=-1},[7]={x=5,y=1}}},
+      [2]={pos={x=5,y=1},direction=3,curve={[7]={pos={x=8,y=2}},[6]={pos={x=8,y=0}}}}},
+    [3] = {
+      [0]={pos={x=3,y=3},direction=7,curve={[4]={diag=true},[3]={pos={x=6,y=4}}}, lastDir=5},
+      [1]={pos={x=2,y=0},direction=5,connect={pos={x=3,y=3},direction={[3]=1,[4]=5}}},
+      [2]={pos={x=3,y=3},direction=0,curve={[4]={pos={x=4,y=6}},[3]={diag=true}}, lastDir=1}},
+    [4] = {
+      [0]={pos={x=1,y=5},direction=4,curve={[0]={pos={x=2,y=8}},[1]={pos={x=0,y=8}}}},
+      [1]={pos={x=0,y=2},direction=0, shift={[0]={x=1,y=5}, [1]={x=-1,y=5}}},
+      [2]={pos={x=-1,y=5},direction=5,curve={[0]={pos={x=0,y=8}},[1]={pos={x=-2,y=8}}}}},
+    [5] = {
+      [0]={pos={x=-3,y=3},direction=1,curve={[5]={pos={x=-4,y=6}},[6]={diag=true}}, lastDir=7},
+      [1]={pos={x= 0,y=2},direction=7,connect={pos={x=-3,y=3},direction={[5]=3,[6]=7, [7]=5}}},
+      [2]={pos={x=-3,y=3},direction=2,curve={[5]={diag=true},[6]={pos={x=-6,y=4}}}, lastDir=3}},
+    [6] = {
+      [0]={pos={x=-5,y=1},direction=6,curve={[3]={pos={x=-8,y=0}},[2]={pos={x=-8,y=2}}}},
+      [1]={pos={x=-2,y=0},direction=2, shift={[2]={x=-5,y=1},[3]={x=-5,y=-1}}},
+      [2]={pos={x=-5,y=-1},direction=7,curve={[3]={pos={x=-8,y=-2}},[2]={pos={x=-8,y=0}}}}},
+    [7] = {
+      [0]={pos={x=-3,y=-3},direction=3,curve={[0]={diag=true},[7]={pos={x=-6,y=-4}}}, lastDir=1},
+      [1]={pos={x=0,y=-2},direction=5,connect={pos={x=-3,y=-3},direction={[0]=1, [7]=5}}},
+      [2]={pos={x=-3,y=-3},direction=4,curve={[0]={pos={x=-4,y=-6}},[7]={diag=true}}, lastDir=5}}
+  }--{[]={pos={x=,y=},diag},[]={pos={x=,y=},diag}}
+
 function addPos(p1,p2)
   local p2 = p2 or {x=0,y=0}
   return {x=p1.x+p2.x, y=p1.y+p2.y}
@@ -37,7 +73,7 @@ FARL = {
     setmetatable(new, {__index=FARL})
     return new
   end,
-  
+
   onPlayerEnter = function(player)
     local i = FARL.findByLocomotive(player.vehicle)
     if i then
@@ -56,7 +92,7 @@ FARL = {
       end
     end
   end,
-  
+
   findByLocomotive = function(loco)
     for i,f in ipairs(glob.farl) do
       if f.locomotive.equals(loco) then
@@ -65,7 +101,7 @@ FARL = {
     end
     return false
   end,
-  
+
   findByPlayer = function(player)
     for i,f in ipairs(glob.farl) do
       if f.locomotive.equals(player.vehicle) then
@@ -123,6 +159,93 @@ FARL = {
   end,
 
   getRail = function(lastRail, travelDir, input)
+    local lastRail, travelDir, input = lastRail, travelDir, input
+    if travelDir > 7 or travelDir < 0 then return false,false end
+    if input > 2 or input < 0 then return false, false end
+    local data = inputToNewDir2[travelDir][input]
+    local input2dir = {[0]=-1,[1]=0,[2]=1}
+    local newTravelDir = (travelDir + input2dir[input]) % 8
+    local name = data.curve and "curved-rail" or "straight-rail"
+    local retDir, retRail
+    if input == 1 then --straight
+      local newDir, pos = data.direction, data.pos
+      if travelDir % 2 == 1 then --diagonal travel
+        if lastRail.name == "straight-rail" then      --diagonal after diagonal
+          if data.direction == lastRail.direction then
+            local mul = 1
+            if travelDir == 1 or travelDir == 5 then mul = -1 end
+            newDir = (data.direction+4) % 8
+            pos = {x=data.pos.y*mul, y=data.pos.x*mul}
+          end
+          pos = addPos(lastRail.position, pos)
+        elseif lastRail.name == "curved-rail" then --diagonal after curve
+          pos = addPos(lastRail.position, data.connect.pos)
+          newDir = data.connect.direction[lastRail.direction]
+        end
+      else -- N/E/S/W travel
+        local shift = ""
+        if lastRail.name == "curved-rail" then --straight after curve
+          pos = data.shift[lastRail.direction]
+          shift = pos2Str(data.shift[lastRail.direction])
+        end
+        pos = addPos(lastRail.position, pos)
+      end
+      retDir, retRail = newTravelDir, {name=name, position=pos, direction=newDir}
+    end
+    if input ~= 1 then --left or right
+      local s = "Changing direction from "..travelDir.." to "..newTravelDir
+      if travelDir % 2 == 0 and lastRail.name == "straight-rail" then --curve after N/S, E/W tracks
+        local pos = addPos(lastRail.position,data.pos)
+        retDir, retRail = newTravelDir, {name=name, position=pos, direction=data.direction}
+      elseif travelDir % 2 == 1 and lastRail.name == "straight-rail" then --curve after diagonal
+        local pos = {x=0,y=0}
+        local last = lastRail
+        if lastRail.direction ~= data.lastDir then -- need extra diagonal rail to connect
+          local testD, testR = FARL.getRail(lastRail,travelDir,1)
+          local d2, r2 = FARL.getRail(testR,testD,input)
+          debugDump({testD, testR},true)
+          debugDump({d2, r2},true)
+          retDir = {testD, d2}
+          retRail = {testR, r2}
+          --retDir, retRail = false, "extra"
+        else
+          pos = addPos(lastRail.position, data.pos)
+          retDir, retRail = newTravelDir, {name=name, position=pos, direction=data.direction}
+        end
+      elseif lastRail.name == "curved-rail" and name == "curved-rail" then
+        local pos
+        if not data.curve[lastRail.direction].diag then -- curves connect directly
+          pos = addPos(lastRail.position, data.curve[lastRail.direction].pos)
+          retDir, retRail = newTravelDir, {name=name, position=pos, direction=data.direction}
+        else
+          local testD, testR = FARL.getRail(lastRail,travelDir,1)
+          local d2, r2 = FARL.getRail(testR,testD,input)
+          debugDump({testD, testR},true)
+          debugDump({d2, r2},true)
+          retDir = {testD, d2}
+          retRail = {testR, r2}
+          --retDir, retRail = false, "extra"
+        end
+      end
+    end
+    return retDir, retRail
+  end,
+
+  sameResult = function(expDir, expRail, lastRail, travelDir, input)
+    local dir, rail = FARL.getRail2(lastRail, travelDir, input)
+    assert(expDir == dir)
+    if expDir and expRail then
+      if expRail.position then
+        assert(expRail.position.x == rail.position.x)
+        assert(expRail.position.y == rail.position.y)
+        assert(expRail.direction == rail.direction)
+        assert(expRail.name == rail.name)
+      end
+    else
+    
+    end
+  end,
+  getRail2 = function(lastRail, travelDir, input)
     local lastRail, travelDir, input = lastRail, travelDir, input
     if travelDir > 7 or travelDir < 0 then return false,false end
     if input > 2 or input < 0 then return false, false end
@@ -213,20 +336,20 @@ FARL = {
         if self.driver.name == "farl_player" then
           if self.course and self.course[1] then
             local diff = subPos(self.lastrail.position, self.course[1].pos)
-              if diff.x == 0 and diff.y == 0 then
-                self.input = self.course[1].input
-                table.remove(self.course, 1)
-              end
-          end
-        end        
-        local count = (self.input == 1 and self.direction%2==1) and 1 or 1
-        local dir, last = self:placeRails(self.lastrail, self.direction, self.input, count)
-        if dir and last == "extra" and self.active then
-          dir, last = self:placeRails(self.lastrail, self.direction, 1)
-          if dir and last then
-            dir, last = self:placeRails(last, dir, self.input)
+            if diff.x == 0 and diff.y == 0 then
+              self.input = self.course[1].input
+              table.remove(self.course, 1)
+            end
           end
         end
+        local count = (self.input == 1 and self.direction%2==1) and 1 or 1
+        local dir, last = self:placeRails(self.lastrail, self.direction, self.input, count)
+--        if dir and last == "extra" and self.active then
+--          dir, last = self:placeRails(self.lastrail, self.direction, 1)
+--          if dir and last then
+--            dir, last = self:placeRails(last, dir, self.input)
+--          end
+--        end
         if dir then
           self.direction, self.lastrail = dir, last
         else
@@ -260,7 +383,7 @@ FARL = {
         self:print("Error activating, drive on straight rails and try again")
       end
     else
-      self:deactivate("Error (no valid rail found)", true) 
+      self:deactivate("Error (no valid rail found)", true)
     end
   end,
 
@@ -316,6 +439,7 @@ FARL = {
         return last
       end
       local _, next = FARL.getRail(last,trainDir,1)
+      next = next[1] or next
       local pos = fixPos(next.position)
       local area = {{pos[1]-0.4,pos[2]-0.4},{pos[1]+0.4,pos[2]+0.4}}
       local found = false
@@ -422,13 +546,18 @@ FARL = {
     end
   end,
 
-  placeRails = function(self,lastRail, travelDir, input, trackCount)
+  placeRails = function(self,lastRail, travelDir, input)
     local trackCount = trackCount or 1
     local lastRail = lastRail
-    local newTravelDir, nextRail
-    for i=1,trackCount do
-      if i>1 then lastRail = nextRail end
-      newTravelDir, nextRail = FARL.getRail(lastRail,travelDir,input)
+    local newTravelDirs, nextRails
+    newTravelDirs, nextRails = FARL.getRail(lastRail,travelDir,input)
+    if type(newTravelDirs) == "number" then
+      newTravelDirs = {newTravelDirs}
+      nextRails = {nextRails}
+    end
+    local retDir, retRail = newTravelDirs[1], nextRails[1]
+    for i=1,#newTravelDirs do
+      local newTravelDir, nextRail = newTravelDirs[i], nextRails[i]
       if newTravelDir and nextRail.position then
         local newDir = nextRail.direction
         local newPos = nextRail.position
@@ -456,6 +585,7 @@ FARL = {
               if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
             end
           end
+          retDir, retRail = newTravelDir, nextRail
         elseif not canplace then
           self:deactivate("Can't place rail", true)
           return false, false
@@ -473,7 +603,7 @@ FARL = {
         end
       end
     end
-    return newTravelDir, nextRail
+    return retDir, retRail
   end,
 
   calcPole = function(self,lastrail, traveldir)
@@ -666,7 +796,7 @@ FARL = {
     if curves[1] then self:deactivate("Can't start on curves", true) end
     return false
   end,
-  
+
   print = function(self, msg)
     if self.driver.name ~= "farl_player" then
       self.driver.print(msg)
@@ -674,12 +804,12 @@ FARL = {
       self:flyingText(msg, RED, true)
     end
   end,
-  
+
   flyingText = function(self, line, color, show)
-  if show then
-    local pos = addPos(self.locomotive.position, {x=0,y=-1})
-    color = color or RED
-    game.createentity({name="flying-text", position=pos, text=line, color=color})
-  end
-end
+    if show then
+      local pos = addPos(self.locomotive.position, {x=0,y=-1})
+      color = color or RED
+      game.createentity({name="flying-text", position=pos, text=line, color=color})
+    end
+  end,
 }

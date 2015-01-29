@@ -68,29 +68,47 @@ function lowest_f_score ( set, f_score )
   return bestNode
 end
 
-function neighbor_nodes ( theNode, nodes )
+function neighbor_nodes (theNode)
 -- get Neighbor nodes with FARL:getRail
   local neighbors = {}
-  for _, node in ipairs ( nodes ) do
-    if theNode ~= node and is_valid_node ( theNode, node ) then
-      table.insert ( neighbors, node )
+  for i=0,2 do
+    local newDir, newNode = FARL.getRail(theNode, theNode.travelDir, i)
+    if type(newDir) == "number" and is_valid_node(newNode) then
+      newNode.travelDir = newDir
+      table.insert(neighbors, newNode)
     end
-  end
+  end  
+--  for _, node in ipairs ( nodes ) do
+--    if theNode ~= node and is_valid_node ( theNode, node ) then
+--      table.insert ( neighbors, node )
+--    end
+--  end
   return neighbors
 end
 
 function not_in ( set, theNode )
 
   for _, node in ipairs ( set ) do
-    if node == theNode then return false end
+    if same_node(node, theNode) then return false end
   end
   return true
+end
+
+function same_node(nodeA, nodeB)
+  if    nodeA.position.x == nodeB.position.x
+    and nodeA.position.y == nodeB.position.y
+    and nodeA.name == nodeB.name
+    and nodeB.direction == nodeB.direction then
+    return true
+  else
+    return false
+  end
 end
 
 function remove_node ( set, theNode )
 
   for i, node in ipairs ( set ) do
-    if node == theNode then
+    if same_node(node, theNode) then
       set [ i ] = set [ #set ]
       set [ #set ] = nil
       break
@@ -112,7 +130,7 @@ end
 -- pathfinding functions
 ----------------------------------------------------------------
 
-function a_star ( start, goal, nodes, valid_node_func )
+function a_star ( start, goal, valid_node_func )
 
   local closedset = {}
   local openset = { start }
@@ -127,7 +145,7 @@ function a_star ( start, goal, nodes, valid_node_func )
   while #openset > 0 do
 
     local current = lowest_f_score ( openset, f_score )
-    if current == goal then
+    if same_node(current, goal) then
       local path = unwind_path ( {}, came_from, goal )
       table.insert ( path, goal )
       return path
@@ -136,7 +154,7 @@ function a_star ( start, goal, nodes, valid_node_func )
     remove_node ( openset, current )
     table.insert ( closedset, current )
 
-    local neighbors = neighbor_nodes ( current, nodes )
+    local neighbors = neighbor_nodes (current)
     for _, neighbor in ipairs ( neighbors ) do
       if not_in ( closedset, neighbor ) then
 
@@ -170,7 +188,7 @@ function distance ( pos1, pos2 )
   return dist ( pos1, pos2 )
 end
 
-function path ( start, goal, nodes, ignore_cache, valid_node_func )
+function path ( start, goal, ignore_cache, valid_node_func )
 
   if not cachedPaths then cachedPaths = {} end
   if not cachedPaths [ start ] then
@@ -179,5 +197,5 @@ function path ( start, goal, nodes, ignore_cache, valid_node_func )
     return cachedPaths [ start ] [ goal ]
   end
 
-  return a_star ( start, goal, nodes, valid_node_func )
+  return a_star ( start, goal, valid_node_func )
 end
