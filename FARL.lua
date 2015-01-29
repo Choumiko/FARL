@@ -226,7 +226,7 @@ FARL = {
   end,
 
   activate = function(self)
-    if self.lastrail and self.direction then
+    if self.lastrail and self.direction and self.locomotive.valid then
       if self.direction == self:calcTrainDir() and util.distance(self.lastrail.position, self.locomotive.position) < 6 then
         self:updateCargo()
         self.active = true
@@ -356,7 +356,7 @@ FARL = {
   end,
 
   updateCargo = function(self)
-    local types = {"straight-rail", "curved-rail", "big-electric-pole", "rail-signal", "small-lamp"}
+    local types = {"straight-rail", "curved-rail", "big-electric-pole", "medium-electric-pole", "rail-signal", "small-lamp"}
     for _,type in pairs(types) do
       self[type] = 0
       for i, wagon in ipairs(self.train.carriages) do
@@ -431,7 +431,7 @@ FARL = {
           game.createentity{name = nextRail.name, position = newPos, direction = newDir, force = game.forces.player}
           self:removeItemFromCargo(nextRail.name, 1)
           if glob.poles then
-            if godmodePoles or self["big-electric-pole"] > 0 then
+            if godmodePoles or self["big-electric-pole"] > 0 or self["medium-electric-pole"] > 0 then
               self:placePole(newTravelDir, nextRail)
             end
           end
@@ -463,9 +463,11 @@ FARL = {
   end,
 
   calcPole = function(self,lastrail, traveldir)
-    local data = polePlacement.data[traveldir]
+    local placement = glob.medium and poleMedium or polePlacement
+  
+    local data = placement.data[traveldir]
     local offset = addPos(data, {x=0,y=0})
-    local distance, side, dir = glob.settings.poleDistance, glob.settings.poleSide, polePlacement.dir[traveldir]
+    local distance, side, dir = glob.settings.poleDistance, glob.settings.poleSide, placement.dir[traveldir]
     local lookup = lastrail.direction
     if lastrail.name ~= "curved-rail" then
       if data[lastrail.direction] then
@@ -476,7 +478,7 @@ FARL = {
         offset = addPos(data)
       end
     else
-      offset = addPos(offset,polePlacement.curves[lastrail.direction])
+      offset = addPos(offset,placement.curves[lastrail.direction])
       --dir = polePlacement.dir[lastrail.direction]
       distance = distance > 1 and distance - 1 or 1
     end
@@ -511,11 +513,13 @@ FARL = {
   end,
 
   placePole = function(self,traveldir, lastrail)
+    local name = glob.medium and "medium-electric-pole" or "big-electric-pole"
+    local reach = glob.medium and 9 or 30
     local tmp = {x=self.lastCheckPole.x,y=self.lastCheckPole.y}
-    local area = {{tmp.x-30,tmp.y-30},{tmp.x+30,tmp.y+30}}
+    local area = {{tmp.x-reach,tmp.y-reach},{tmp.x+reach,tmp.y+reach}}
     local minDist, minPos = util.distance(tmp, self.lastPole), false
     --debugDump("Distance to last:"..minDist,true)
-    for i,p in ipairs(game.findentitiesfiltered{area=area, name="big-electric-pole"}) do
+    for i,p in ipairs(game.findentitiesfiltered{area=area, name=name}) do
       local dist = util.distance(p.position, tmp)
       local diff = subPos(p.position,self.lastPole.position)
       if dist < minDist then
@@ -528,17 +532,17 @@ FARL = {
     local offset = self:calcPole(lastrail, traveldir)
     self.lastCheckPole = addPos(lastrail.position, offset)
     local distance = util.distance(self.lastPole, self.lastCheckPole)
-    if distance > 30 then
+    if distance > reach then
       self:removeTrees(tmp)
-      local canplace = game.canplaceentity{name = "big-electric-pole", position = tmp}
+      local canplace = game.canplaceentity{name = name, position = tmp}
       if canplace then
-        game.createentity{name = "big-electric-pole", position = tmp, force = game.forces.player}
+        game.createentity{name = name, position = tmp, force = game.forces.player}
         if godmode or self["small-lamp"] > 0 then
           self:placeLamp(traveldir, tmp)
         end
-        self:removeItemFromCargo("big-electric-pole", 1)
+        self:removeItemFromCargo(name, 1)
         self.lastPole = tmp
-        self["big-electric-pole"] = self["big-electric-pole"] - 1
+        self[name] = self[name] - 1
         return true
       else
       --self.driver.print("Can`t place pole@"..pos2Str(tmp))
@@ -577,9 +581,11 @@ FARL = {
   end,
 
   findLastPole = function(self)
+    local name = glob.medium and "medium-electric-pole" or "big-electric-pole" 
+    local reach = medium and 9 or 30
     local locomotive = self.locomotive
     local pos = {locomotive.position.x, locomotive.position.y}
-    local poles = game.findentitiesfiltered{area={{pos[1]-30,pos[2]-30},{pos[1]+30,pos[2]+30}}, name="big-electric-pole"}
+    local poles = game.findentitiesfiltered{area={{pos[1]-reach,pos[2]-reach},{pos[1]+reach,pos[2]+reach}}, name=name}
     local min, pole = 900, nil
     for i=1, #poles do
       local dist = math.abs(util.distance(locomotive.position,poles[i].position))

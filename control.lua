@@ -102,6 +102,40 @@ clearAreas =
         [7]={x = 1, y = -1}
       }
   }
+poleMedium = {
+      data = {
+        [0]={x = 1.5, y = 0.5},
+        [1]={x=1.5,y=1.5, [3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}},
+        [2]={x = 0.5, y = 1.5},
+        [3]={x=1.5,y=1.5, [1]={x=0.5,y=0.5},[5]={x=1.5,y=1.5}},
+        [4]={x = 1.5, y = 0.5},
+        [5]={x=1.5,y=1.5, [3]={x=0.5,y=0.5}, [7]={x=1.5,y=1.5}},
+        [6]={x = 0.5, y = 1.5},
+        [7]={x=1.5,y=1.5, [1]={x=1.5,y=1.5},[5]={x=0.5,y=0.5}},
+      },
+
+      curves = {
+        [0]={x=0,y=0},
+        [1]={x=0,y=0},
+        [2]={x=0,y=0},
+        [3]={x=0,y=0},
+        [4]={x=0,y=0},
+        [5]={x=0,y=0},
+        [6]={x=0,y=0},
+        [7]={x=0,y=0}
+      },
+      dir = {
+        [0]={x = 1, y = -1},
+        [1]={x = 1, y = 1},
+        [2]={x = 1, y = 1},
+        [3]={x = -1, y = 1},
+        [4]={x = -1, y = 1},
+        [5]={x = -1, y = -1},
+        [6]={x = -1, y = -1},
+        [7]={x = 1, y = -1}
+      }
+}  
+  
 --[traveldir] ={[raildir]
 signalOffset =
   {
@@ -164,6 +198,9 @@ local function initGlob()
   glob.settings.poleSide = glob.settings.poleSide or 1
   glob.settings.signalDistance = glob.settings.signalDistance or 15
   glob.settings.curvedWeight = glob.settings.curvedWeight or 4
+  if glob.medium == nil then
+    glob.medium = true
+  end
   if glob.signals == nil then
     glob.signals = true
   end
@@ -286,6 +323,7 @@ remote.addinterface("farl",
         local pos = glob.railInfoLast.position
         local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
         debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
+        debugDump("Dist:"..util.distance(pos, rail.position),true)
       end
       glob.railInfoLast = rail
     end,
