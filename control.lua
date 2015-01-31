@@ -223,7 +223,7 @@ local function initGlob()
     end
     glob.version = "0.1.4"
   end
-  glob.version = "0.1.4"
+  glob.version = "0.1.5"
 end
 
 local function oninit() initGlob() end
