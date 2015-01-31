@@ -478,7 +478,8 @@ FARL = {
         offset = addPos(data)
       end
     else
-      offset = addPos({x=0,y=0},placement.curves[lastrail.direction])
+      offset = glob.medium and {x=0,y=0} or offset
+      offset = addPos(offset,placement.curves[lastrail.direction])
       --dir = polePlacement.dir[lastrail.direction]
       distance = distance > 1 and distance - 1 or 1
     end
