@@ -486,9 +486,9 @@ FARL = {
     offset.x = (offset.x + distance) * side * dir.x
     offset.y = (offset.y + distance) * side * dir.y
     if lastrail.name == "curved-rail" then
-    debugDump({lr=lastrail, off=offset, tr=traveldir},true)
-    debugDump({dist=distance,side=side,dir=dir},true)
-    debugDump("Result:"..pos2Str( addPos(lastrail.position, offset)),true)
+    --debugDump({lr=lastrail, off=offset, tr=traveldir},true)
+    --debugDump({dist=distance,side=side,dir=dir},true)
+    --debugDump("Result:"..pos2Str( addPos(lastrail.position, offset)),true)
     end
     return offset
   end,

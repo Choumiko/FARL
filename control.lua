@@ -262,7 +262,7 @@ function onplayermineditem(event)
   if event.itemstack.name == "farl" then
     for i=#glob.farl,1,-1 do
       if glob.farl[i].delete then
-        glob.farl[i] = nil
+        table.remove(glob.farl, i)
       end
     end
   end  
