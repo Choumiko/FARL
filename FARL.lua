@@ -478,7 +478,7 @@ FARL = {
         offset = addPos(data)
       end
     else
-      offset = addPos(offset,placement.curves[lastrail.direction])
+      offset = addPos({x=0,y=0},placement.curves[lastrail.direction])
       --dir = polePlacement.dir[lastrail.direction]
       distance = distance > 1 and distance - 1 or 1
     end
@@ -486,9 +486,9 @@ FARL = {
     offset.x = (offset.x + distance) * side * dir.x
     offset.y = (offset.y + distance) * side * dir.y
     if lastrail.name == "curved-rail" then
-    --debugDump({lr=lastrail, off=offset, tr=traveldir},true)
-    --debugDump({dist=distance,side=side,dir=dir},true)
-    --debugDump("Result:"..pos2Str( addPos(lastrail.position, offset)),true)
+    debugDump({lr=lastrail, off=offset, tr=traveldir},true)
+    debugDump({dist=distance,side=side,dir=dir},true)
+    debugDump("Result:"..pos2Str( addPos(lastrail.position, offset)),true)
     end
     return offset
   end,
@@ -533,9 +533,11 @@ FARL = {
     self.lastCheckPole = addPos(lastrail.position, offset)
     local distance = util.distance(self.lastPole, self.lastCheckPole)
     if distance > reach then
+      --debugDump({lr=lastrail, dir=traveldir, offset=offset},true)
       self:removeTrees(tmp)
+      self[name] = self[name] or 0
       local canplace = game.canplaceentity{name = name, position = tmp}
-      if canplace then
+      if canplace and (self[name] > 0 or godmode or godmodePoles) then
         game.createentity{name = name, position = tmp, force = game.forces.player}
         if godmode or self["small-lamp"] > 0 then
           self:placeLamp(traveldir, tmp)

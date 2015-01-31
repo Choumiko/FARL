@@ -74,7 +74,7 @@ GUI = {
       end
     elseif name == "cc" then
       farl:toggleCruiseControl()
-    elseif name == "signals" or name == "poles" or name == "flipSignals" then
+    elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "medium" then
       glob[name] = not glob[name]
     elseif name == "junctionLeft" then
       farl:createJunction(0)
@@ -108,8 +108,10 @@ GUI = {
       player.gui.left.farl.rows.buttons.settings.caption="Save settings"
       settings.add({type="label", caption="Distance between pole and rail", style="farl_label"})
       local pDistance = settings.add({type="textfield", name="poleDistance", style="farl_textfield_small"})
-      settings.add({type="label", caption="Side of pole:", style="farl_label"})
-      settings.add({type="button", name="side", caption=captionSide, style="farl_button"})
+      local row1 = GUI.add(settings,{type="table", name="row2", colspan=2})
+      GUI.add(row1, {type="label", caption="Side of pole:", style="farl_label"})
+      GUI.add(row1, {type="button", name="side", caption=captionSide, style="farl_button"})
+      GUI.add(settings, {type="checkbox", name="medium", caption="use medium Poles"},"medium")
       settings.add({type="label", caption="Distance between rail signals", style="farl_label"})
       local sDistance = settings.add({type="textfield", name="signalDistance", style="farl_textfield_small"})
       settings.add({type="label", caption="Weight for curved rails", style="farl_label"})

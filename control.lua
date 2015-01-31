@@ -115,14 +115,14 @@ poleMedium = {
       },
 
       curves = {
-        [0]={x=0,y=0},
-        [1]={x=0,y=0},
-        [2]={x=0,y=0},
-        [3]={x=0,y=0},
-        [4]={x=0,y=0},
-        [5]={x=0,y=0},
-        [6]={x=0,y=0},
-        [7]={x=0,y=0}
+        [0]={x=1.5,y=0.5},
+        [1]={x=1.5,y=0.5},
+        [2]={x=0.5,y=1.5},
+        [3]={x=0.5,y=1.5},
+        [4]={x=1.5,y=0.5},
+        [5]={x=1.5,y=0.5},
+        [6]={x=0.5,y=1.5},
+        [7]={x=0.5,y=1.5}
       },
       dir = {
         [0]={x = 1, y = -1},
@@ -255,7 +255,21 @@ function onpreplayermineditem(event)
   local ent = event.entity
   local cname = ent.name
   if ent.type == "locomotive" and cname == "farl" then
-    table.remove(glob.farl, FARL.findByLocomotive(ent))
+    for i=1,#glob.farl do
+      if glob.farl[i].name == ent.backername then
+        glob.farl[i].delete = true
+      end
+    end
+  end  
+end
+
+function onplayermineditem(event)
+  if event.itemstack.name == "farl" then
+    for i=#glob.farl,1,-1 do
+      if glob.farl[i].delete then
+        glob.farl[i] = nil
+      end
+    end
   end  
 end
 
@@ -264,8 +278,8 @@ game.onload(onload)
 game.onevent(defines.events.ontick, onTick)
 game.onevent(defines.events.onguiclick, onGuiClick)
 --game.onevent(defines.events.ontrainchangedstate, function(event) ontrainchangedstate(event) end)
---game.onevent(defines.events.onplayermineditem, function(event) onplayermineditem(event) end)
-game.onevent(defines.events.onpreplayermineditem, function(event) onpreplayermineditem(event) end)
+game.onevent(defines.events.onplayermineditem, onplayermineditem)
+game.onevent(defines.events.onpreplayermineditem, onpreplayermineditem)
 --game.onevent(defines.events.onbuiltentity, function(event) onbuiltentity(event) end)
 
 local function onplayercreated(event)
