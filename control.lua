@@ -172,11 +172,6 @@ local function onTick(event)
   for i, farl in ipairs(glob.farl) do
     farl:update(event)
     if farl.driver then
-      if glob.version < "0.1.4" then
-        GUI.destroyGui(farl.driver)
-        GUI.createGui(farl.driver)
-        glob.version = "0.1.4"
-      end
       GUI.updateGui(farl)
     end
   end
@@ -199,7 +194,7 @@ local function initGlob()
   glob.settings.signalDistance = glob.settings.signalDistance or 15
   glob.settings.curvedWeight = glob.settings.curvedWeight or 4
   if glob.medium == nil then
-    glob.medium = true
+    glob.medium = false
   end
   if glob.signals == nil then
     glob.signals = true
@@ -222,7 +217,13 @@ local function initGlob()
     end
     farl.index = nil
   end
-  glob.version = "0.1.3"
+  if glob.version < "0.1.4" then
+    for i=1,#game.players do
+      GUI.destroyGui(game.players[i])
+    end
+    glob.version = "0.1.4"
+  end
+  glob.version = "0.1.4"
 end
 
 local function oninit() initGlob() end
@@ -234,12 +235,6 @@ end
 local function onGuiClick(event)
   local index = event.playerindex or event.name
   local player = game.players[index]
-  if glob.version < "0.1.4" then
-    GUI.destroyGui(player)
-    GUI.createGui(player)
-    glob.version = "0.1.4"
-    return
-  end
   if player.gui.left.farl ~= nil then
     local farl = FARL.findByPlayer(player)
     if farl then
