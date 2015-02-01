@@ -1,7 +1,7 @@
 require "defines"
 require "FARL"
 require "GUI"
-require "a-star"
+require "astar"
 
 godmode = false
 godmodePoles = false
@@ -312,7 +312,7 @@ function newGhostDriverEntity(position)
     return entities[1]
   end
 end
-
+local astarStart, astarGoal, astarent1, astarent2  
 remote.addinterface("farl",
   {
   
@@ -329,7 +329,11 @@ remote.addinterface("farl",
         local pos = glob.railInfoLast.position
         local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
         debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
-        debugDump("Distance: "..util.distance(pos, rail.position),true)
+        debugDump("Distance (util): "..util.distance(pos, rail.position),true)
+        local dx = math.abs(pos.x - rail.position.x)
+        local dy = math.abs(pos.y - rail.position.y)
+        local max = dx > dy and dx or dy
+        debugDump("Distance (heuristic): "..max, true)
       end
       glob.railInfoLast = rail
     end,
@@ -421,6 +425,47 @@ remote.addinterface("farl",
     
     tileAt = function(x,y)
       debugDump(game.gettile(x, y).name,true)
+    end,
+    
+    astar = function(rail, dir)
+      if not astarStart then
+        astarent1 = rail
+        astarStart = {name=rail.name, direction=rail.direction, position=rail.position, travelDir=dir}
+        return
+      end
+      if astarStart then
+        astarGoal = {name=rail.name, direction=rail.direction, position=rail.position, travelDir=dir}
+        astarent1.destroy()
+        rail.destroy()
+        local path, closedList = astar(astarStart, astarGoal)
+        saveVar(closedList,"ClosedList")
+        debugDump("---------",true)
+        for i=1,#path do
+          removeTrees(path[i].position)
+          FARL.genericPlace(path[i])
+          --game.player.print(path[i].name.."@"..pos2Str(path[i].position).." dir:"..path[i].direction)
+        end
+        astarStart, astarGoal = nil, nil        
+        --debugDump(path,true)
+      end
     end
   --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
   })
+  
+function removeTrees(pos, area)
+    if not area then
+      area = {{pos.x - 1.5, pos.y - 1.5}, {pos.x + 1.5, pos.y + 1.5}}
+    else
+      local tl, lr = fixPos(addPos(pos,area[1])), fixPos(addPos(pos,area[2]))
+      area = {{tl[1]-1,tl[2]-1},{lr[1]+1,lr[2]+1}}
+    end
+
+    for _, entity in ipairs(game.findentitiesfiltered{area = area, type = "tree"}) do
+      entity.die()
+    end
+    if removeStone then
+      for _, entity in ipairs(game.findentitiesfiltered{area = area, name = "stone-rock"}) do
+        entity.die()
+      end
+    end
+  end

@@ -203,8 +203,8 @@ FARL = {
         if lastRail.direction ~= data.lastDir then -- need extra diagonal rail to connect
           local testD, testR = FARL.getRail(lastRail,travelDir,1)
           local d2, r2 = FARL.getRail(testR,testD,input)
-          debugDump({testD, testR},true)
-          debugDump({d2, r2},true)
+          --debugDump({testD, testR},true)
+          --debugDump({d2, r2},true)
           retDir = {testD, d2}
           retRail = {testR, r2}
           --retDir, retRail = false, "extra"
@@ -220,8 +220,8 @@ FARL = {
         else
           local testD, testR = FARL.getRail(lastRail,travelDir,1)
           local d2, r2 = FARL.getRail(testR,testD,input)
-          debugDump({testD, testR},true)
-          debugDump({d2, r2},true)
+          --debugDump({testD, testR},true)
+          --debugDump({d2, r2},true)
           retDir = {testD, d2}
           retRail = {testR, r2}
           --retDir, retRail = false, "extra"
@@ -518,12 +518,13 @@ FARL = {
     end
   end,
 
-  genericPlace = function(arg)
+  genericPlace = function(arg, ignore)
     local canPlace = FARL.genericCanPlace(arg)
     local entity
-    if canPlace then
+    if canPlace or ignore then
       local direction = arg.direction or 0
       local force = arg.force or game.forces.player
+      arg.force = force
       entity = game.createentity(arg)
     end
     return canPlace, entity
