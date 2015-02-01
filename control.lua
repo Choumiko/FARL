@@ -437,11 +437,17 @@ remote.addinterface("farl",
         astarGoal = {name=rail.name, direction=rail.direction, position=rail.position, travelDir=dir}
         astarent1.destroy()
         rail.destroy()
-        local path, closedList = astar(astarStart, astarGoal)
+        local path, closedList = AStar.astar(astarStart, astarGoal)
         saveVar(closedList,"ClosedList")
         debugDump("---------",true)
         for i=1,#path do
           removeTrees(path[i].position)
+          if path[i].name == "curved-rail" then
+            local areas = clearAreas[path[i].direction%4]
+            for i=1,6 do
+              removeTrees(path[i].position, areas[i])
+            end
+          end
           FARL.genericPlace(path[i])
           --game.player.print(path[i].name.."@"..pos2Str(path[i].position).." dir:"..path[i].direction)
         end
