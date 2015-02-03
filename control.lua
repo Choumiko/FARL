@@ -20,7 +20,7 @@ removeStone = true
 --              [2]={entitynumber=2,name="big-electric-pole",position={x=2,y=2}},
 --              [3]={entitynumber=3,name="rail-signal",position={x=0.5,y=0.5},direction=5},
 --              [4]={entitynumber=4,name="small-lamp",position={x=0.5,y=2.5}}},name="_New 02"};
---              return blueprintData;end  
+--              return blueprintData;end
 --do local blueprintData={
 --    icons={[1]={name="big-electric-pole",index=1}},
 --    entities={
@@ -28,7 +28,7 @@ removeStone = true
 --    [2]={entitynumber=2,name="rail-signal",position={x=-0.5,y=1.5},direction=5},
 --    [3]={entitynumber=3,name="small-lamp",position={x=-0.5,y=3.5}},
 --    [4]={entitynumber=4,name="big-electric-pole",position={x=1,y=3}}},name="_New 03"};
---    return blueprintData;end                          
+--    return blueprintData;end
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 
 input2dir = {[0]=-1,[1]=0,[2]=1}
@@ -124,39 +124,7 @@ clearAreas =
         [7]={x = 1, y = -1}
       }
   }
-  poleMedium = {
- data = {
- [0]={x = 1.5, y = 0.5},
- [1]={x=1.5,y=1.5, [3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}},
- [2]={x = 0.5, y = 1.5},
- [3]={x=1.5,y=1.5, [1]={x=0.5,y=0.5},[5]={x=1.5,y=1.5}},
- [4]={x = 1.5, y = 0.5},
- [5]={x=1.5,y=1.5, [3]={x=0.5,y=0.5}, [7]={x=1.5,y=1.5}},
- [6]={x = 0.5, y = 1.5},
- [7]={x=1.5,y=1.5, [1]={x=1.5,y=1.5},[5]={x=0.5,y=0.5}},
- },
 
- curves = {
- [0]={x=1.5,y=0.5},
- [1]={x=1.5,y=0.5},
- [2]={x=0.5,y=1.5},
- [3]={x=0.5,y=1.5},
- [4]={x=1.5,y=0.5},
- [5]={x=1.5,y=0.5},
- [6]={x=0.5,y=1.5},
- [7]={x=0.5,y=1.5}
- },
- dir = {
- [0]={x = 1, y = -1},
- [1]={x = 1, y = 1},
- [2]={x = 1, y = 1},
- [3]={x = -1, y = 1},
- [4]={x = -1, y = 1},
- [5]={x = -1, y = -1},
- [6]={x = -1, y = -1},
- [7]={x = 1, y = -1}
- }
-} 
   --[traveldir] ={[raildir]
   signalOffset =
     {
@@ -175,6 +143,40 @@ clearAreas =
     return o
   end
 
+  poleMedium = {
+    data = {
+      [0]={x = 1.5, y = 0.5},
+      [1]={x=1.5,y=1.5, [3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}},
+      [2]={x = 0.5, y = 1.5},
+      [3]={x=1.5,y=1.5, [1]={x=0.5,y=0.5},[5]={x=1.5,y=1.5}},
+      [4]={x = 1.5, y = 0.5},
+      [5]={x=1.5,y=1.5, [3]={x=0.5,y=0.5}, [7]={x=1.5,y=1.5}},
+      [6]={x = 0.5, y = 1.5},
+      [7]={x=1.5,y=1.5, [1]={x=1.5,y=1.5},[5]={x=0.5,y=0.5}},
+    },
+
+    curves = {
+      [0]={x=1.5,y=0.5},
+      [1]={x=1.5,y=0.5},
+      [2]={x=0.5,y=1.5},
+      [3]={x=0.5,y=1.5},
+      [4]={x=1.5,y=0.5},
+      [5]={x=1.5,y=0.5},
+      [6]={x=0.5,y=1.5},
+      [7]={x=0.5,y=1.5}
+    },
+    dir = {
+      [0]={x = 1, y = -1},
+      [1]={x = 1, y = 1},
+      [2]={x = 1, y = 1},
+      [3]={x = -1, y = 1},
+      [4]={x = -1, y = 1},
+      [5]={x = -1, y = -1},
+      [6]={x = -1, y = -1},
+      [7]={x = 1, y = -1}
+    }
+  }
+
   local pathfinder = false
   local astarStart, astarGoal, astarent1, astarent2
   local path, frontier, cameFrom, cost_so_far
@@ -191,7 +193,7 @@ clearAreas =
       debugDump("#"..frontier.n,true)
       for i, ncost in pairs(frontier.nodes) do
         for j, node in pairs(ncost) do
-          if game.canplaceentity{name = "ghost", position = node.position, innername = node.name.."2", direction = node.direction, force = game.player.force} then          
+          if game.canplaceentity{name = "ghost", position = node.position, innername = node.name.."2", direction = node.direction, force = game.player.force} then
             table.insert(ghosts, game.createentity{name = "ghost", position = node.position, innername = node.name.."2", direction = node.direction, force = game.player.force})
           end
         end
@@ -285,7 +287,7 @@ clearAreas =
       end
       glob.version = "0.1.4"
     end
-    glob.version = "0.1.4"
+    glob.version = "0.1.5"
   end
 
   local function oninit() initGlob() end
@@ -329,7 +331,7 @@ clearAreas =
       end
     end
   end
-  
+
   game.oninit(oninit)
   game.onload(onload)
   game.onevent(defines.events.ontick, onTick)
@@ -363,6 +365,7 @@ clearAreas =
       end
     end
   end
+
   function saveVar(var, name)
     local var = var or glob
     local n = name or ""
@@ -388,14 +391,6 @@ clearAreas =
 
   remote.addinterface("farl",
     {
-
-      neighbors = function(start, direction)
-        local start = {position=start.position, name=start.name, direction=start.direction, travelDir=direction, input=1}
-        local neighbors = neighbor_nodes(start)
-        for i,n in ipairs(neighbors) do
-          FARL.genericPlace(n)
-        end
-      end,
       railInfo = function(rail)
         debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
         if glob.railInfoLast.valid then
@@ -430,68 +425,6 @@ clearAreas =
       end,
       setSpeed = function(speed)
         glob.cruiseSpeed = speed
-      end,
-
-      setDriver = function(loco)
-        if loco.name == "farl" then
-          local i = FARL.findByLocomotive(loco)
-          local farl = glob.farl[i]
-          driver = setGhostDriver(loco)
-          farl.driver = driver
-          godmode = true
-          --farl:activate()
-          farl:toggleCruiseControl()
-          driver.ridingstate = {acceleration=1,direction=1}
-        end
-      end,
-
-      removeDriver = function(loco)
-        if loco.name == "farl" then
-          local farl = glob.farl[FARL.findByLocomotive(loco)]
-          if farl.driver.name == "farl_player" then
-            farl.cruise = false
-            farl:deactivate("", true)
-            farl.driver.destroy()
-            farl.driver = false
-          else
-            debugDump("No farl_player found",true)
-          end
-        end
-      end,
-
-      goLeft = function(loco)
-        local farl = glob.farl[FARL.findByLocomotive(loco)]
-        driverNextDir = 0
-      end,
-      goRight = function(loco)
-        local farl = glob.farl[FARL.findByLocomotive(loco)]
-        driverNextDir = 2
-      end,
-      activate = function(loco)
-        if loco.name == "farl" then
-          local farl = glob.farl[FARL.findByLocomotive(loco)]
-          if farl and not farl.active and farl.driver ~= nil then
-            farl:activate()
-          end
-        end
-      end,
-
-      course = function(loco)
-        local course =
-          {
-            {pos={x=83,y=9}, input=0},
-            {pos={x=107,y=-9}, input=0},
-            {pos={x=110,y=-14}, input=0},
-            {pos={x=110,y=-22}, input=0},
-            {pos={x=85,y=-29}, input=1}
-          }
-        if loco.name == "farl" then
-          local farl = glob.farl[FARL.findByLocomotive(loco)]
-          if farl and not farl.active and farl.driver ~= nil then
-            farl.course = course
-            farl:activate()
-          end
-        end
       end,
 
       tileAt = function(x,y)

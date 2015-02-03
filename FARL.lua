@@ -460,7 +460,7 @@ FARL = {
           game.createentity{name = nextRail.name, position = newPos, direction = newDir, force = game.forces.player}
           self:removeItemFromCargo(nextRail.name, 1)
           if glob.poles then
-            if godmodePoles or self["big-electric-pole"] > 0 or slef["medium-electric-pole"] > 0 then
+            if godmodePoles or self["big-electric-pole"] > 0 or self["medium-electric-pole"] > 0 then
               self:placePole(newTravelDir, nextRail)
             end
           end
@@ -494,7 +494,6 @@ FARL = {
 
   calcPole = function(self,lastrail, traveldir)
     local placement = glob.medium and poleMedium or polePlacement
-    
     local data = placement.data[traveldir]
     local offset = addPos(data, {x=0,y=0})
     local distance, side, dir = glob.settings.poleDistance, glob.settings.poleSide, placement.dir[traveldir]
@@ -564,17 +563,18 @@ FARL = {
     self.lastCheckPole = addPos(lastrail.position, offset)
     local distance = util.distance(self.lastPole, self.lastCheckPole)
     if distance > reach then
+      --debugDump({lr=lastrail, dir=traveldir, offset=offset},true)
       self:removeTrees(tmp)
       self[name] = self[name] or 0
       local canplace = game.canplaceentity{name = name, position = tmp}
-      if canplace and self[name] > 0 or godmode or godmodePoles then
+      if canplace and (self[name] > 0 or godmode or godmodePoles) then
         game.createentity{name = name, position = tmp, force = game.forces.player}
         if godmode or self["small-lamp"] > 0 then
           self:placeLamp(traveldir, tmp)
         end
         self:removeItemFromCargo(name, 1)
         self.lastPole = tmp
-        self["big-electric-pole"] = self[name] - 1
+        self[name] = self[name] - 1
         return true
       else
       --self:print("Can`t place pole@"..pos2Str(tmp))
