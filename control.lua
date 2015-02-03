@@ -7,7 +7,28 @@ godmode = false
 godmodePoles = false
 godmodeSignals = false
 removeStone = true
-
+--do local blueprintData={
+--    icons={[1]={name="straight-rail",index=1},[2]={name="big-electric-pole",index=2}},
+--    entities={[1]={entitynumber=1,name="straight-rail",position={x=-1,y=1},direction=0},
+--              [2]={entitynumber=2,name="big-electric-pole",position={x=2,y=1}},
+--              [3]={entitynumber=3,name="rail-signal",position={x=0.5,y=1.5},direction=4},
+--              [4]={entitynumber=4,name="small-lamp",position={x=1.5,y=2.5}}},name="_New 01"};
+--              return blueprintData;end
+--do local blueprintData={
+--    icons={[1]={name="straight-rail",index=1}},
+--    entities={[1]={entitynumber=1,name="straight-rail",position={x=-1,y=-1},direction=3},
+--              [2]={entitynumber=2,name="big-electric-pole",position={x=2,y=2}},
+--              [3]={entitynumber=3,name="rail-signal",position={x=0.5,y=0.5},direction=5},
+--              [4]={entitynumber=4,name="small-lamp",position={x=0.5,y=2.5}}},name="_New 02"};
+--              return blueprintData;end  
+--do local blueprintData={
+--    icons={[1]={name="big-electric-pole",index=1}},
+--    entities={
+--    [1]={entitynumber=1,name="straight-rail",position={x=-1,y=1},direction=7},
+--    [2]={entitynumber=2,name="rail-signal",position={x=-0.5,y=1.5},direction=5},
+--    [3]={entitynumber=3,name="small-lamp",position={x=-0.5,y=3.5}},
+--    [4]={entitynumber=4,name="big-electric-pole",position={x=1,y=3}}},name="_New 03"};
+--    return blueprintData;end                          
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 
 input2dir = {[0]=-1,[1]=0,[2]=1}
@@ -103,342 +124,48 @@ clearAreas =
         [7]={x = 1, y = -1}
       }
   }
---[traveldir] ={[raildir]
-signalOffset =
-  {
-    [0] = {pos={x=1.5,y=0.5}, dir=4},
-    [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
-    [2] = {pos={x=-0.5,y=1.5}, dir=6},
-    [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
-    [4] = {pos={x=-1.5,y=-0.5}, dir=0},
-    [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
-    [6] = {pos={x=0.5,y=-1.5}, dir=2},
-    [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
-  }
+  --[traveldir] ={[raildir]
+  signalOffset =
+    {
+      [0] = {pos={x=1.5,y=0.5}, dir=4},
+      [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
+      [2] = {pos={x=-0.5,y=1.5}, dir=6},
+      [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
+      [4] = {pos={x=-1.5,y=-0.5}, dir=0},
+      [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
+      [6] = {pos={x=0.5,y=-1.5}, dir=2},
+      [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
+    }
 
-function resetMetatable(o, mt)
-  setmetatable(o,{__index=mt})
-  return o
-end
+  function resetMetatable(o, mt)
+    setmetatable(o,{__index=mt})
+    return o
+  end
 
-local function onTick(event)
-  if event.tick % 10 == 0  then
-    for pi, player in ipairs(game.players) do
-      if (player.vehicle ~= nil and player.vehicle.name == "farl") then
-        if player.gui.left.farl == nil then
-          FARL.onPlayerEnter(player)
-          GUI.createGui(player)
+  local pathfinder = false
+  local astarStart, astarGoal, astarent1, astarent2
+  local path, frontier, cameFrom, cost_so_far
+  local ghosts = {}
+  local function onTick(event)
+
+    if pathfinder and event.tick % 30 == 0 then
+      for _,g in pairs(ghosts) do
+        if g.valid then
+          g.destroy()
         end
       end
-      if player.vehicle == nil and player.gui.left.farl ~= nil then
-        FARL.onPlayerLeave(player)
-        GUI.destroyGui(player)
-      end
-    end
-  end
-  for i, farl in ipairs(glob.farl) do
-    farl:update(event)
-    if farl.driver and farl.driver.name ~= "farl_player" then
-      if glob.version < "0.1.4" then
-        GUI.destroyGui(farl.driver)
-        GUI.createGui(farl.driver)
-        glob.version = "0.1.4"
-      end
-      GUI.updateGui(farl)
-    end
-  end
-end
-
-local function initGlob()
-  if glob.version == nil or glob.version < "0.1.1" then
-    glob = {}
-    if game.forces.player.technologies["rail-signals"].researched then
-      game.forces.player.recipes["farl"].enabled = true
-      glob.signals = true
-      glob.poles = true
-    end
-    glob.settings = {}
-    glob.version = "0.1.1"
-  end
-  glob.settings = glob.settings or {}
-  glob.settings.poleDistance = glob.settings.poleDistance or 1
-  glob.settings.poleSide = glob.settings.poleSide or 1
-  glob.settings.signalDistance = glob.settings.signalDistance or 15
-  glob.settings.curvedWeight = glob.settings.curvedWeight or 4
-  if glob.signals == nil then
-    glob.signals = true
-  end
-  if glob.poles == nil then
-    glob.poles = true
-  end
-  if glob.flipSignals == nil then
-    glob.flipSignals = false
-  end
-  glob.farl = glob.farl or {}
-  glob.railInfoLast = glob.railInfoLast or {}
-  glob.debug = glob.debug or {}
-  glob.action = glob.action or {}
-  glob.cruiseSpeed = glob.cruiseSpeed or 0.4
-  for i,farl in ipairs(glob.farl) do
-    farl = resetMetatable(farl, FARL)
-    if glob.version < "0.1.4" then
-      farl.cruiseInterrupt = 0
-    end
-    farl.index = nil
-  end
-  glob.version = "0.1.3"
-end
-
-local function oninit() initGlob() end
-
-local function onload()
-  initGlob()
-end
-
-local function onGuiClick(event)
-  local index = event.playerindex or event.name
-  local player = game.players[index]
-  if glob.version < "0.1.4" then
-    GUI.destroyGui(player)
-    GUI.createGui(player)
-    glob.version = "0.1.4"
-    return
-  end
-  if player.gui.left.farl ~= nil then
-    local farl = FARL.findByPlayer(player)
-    if farl then
-      GUI.onGuiClick(event, farl, player)
-    else
-      player.print("Gui without train, wrooong!")
-      GUI.destroyGui(player)
-    end
-  end
-end
-
-function onpreplayermineditem(event)
-  local ent = event.entity
-  local cname = ent.name
-  if ent.type == "locomotive" and cname == "farl" then
-    table.remove(glob.farl, FARL.findByLocomotive(ent))
-  end  
-end
-
-
-farlRails = {}
-local function onbuiltentity(event)
-  local ent = event.createdentity
-  if ent.name == "farl-rail" then
-    table.insert(farlRails, ent)
-    if #farlRails == 2 then
-      debugDump(farlRails[1].name.."@"..pos2Str(farlRails[1].position).." dir:"..farlRails[1].direction,true)
-      debugDump(farlRails[2].name.."@"..pos2Str(farlRails[2].position).." dir:"..farlRails[2].direction,true)
-      local diff= subPos(farlRails[1].position, farlRails[2].position)
-      local generalDir = ""
-      if diff.y < 0 then 
-        generalDir = "S"
-      elseif diff.y > 0 then
-        generalDir = "N"
-      end
-      if diff.x < 0 then 
-        generalDir = generalDir.."E"
-      elseif diff.x > 0 then
-        generalDir = generalDir.."W"
-      end
-      debugDump("Direction: "..generalDir,true)
-      debugDump("Offset: x="..diff.x..",y="..diff.y,true)
-      debugDump("Distance: "..util.distance(farlRails[1].position, farlRails[2].position),true)
-    end
-    if #farlRails > 2 then
-      farlRails[1].destroy()
-      farlRails[2].destroy()
-      farlRails = {}
-      table.insert(farlRails, ent)
-    end
-  end
-end
-
-game.oninit(oninit)
-game.onload(onload)
-game.onevent(defines.events.ontick, onTick)
-game.onevent(defines.events.onguiclick, onGuiClick)
---game.onevent(defines.events.ontrainchangedstate, function(event) ontrainchangedstate(event) end)
---game.onevent(defines.events.onplayermineditem, function(event) onplayermineditem(event) end)
-game.onevent(defines.events.onpreplayermineditem, function(event) onpreplayermineditem(event) end)
-game.onevent(defines.events.onbuiltentity, onbuiltentity)
-
-local function onplayercreated(event)
-  local player = game.getplayer(event.playerindex)
-  local gui = player.gui
-  if gui.top.farl ~= nil then
-    gui.top.farl.destroy()
-  end
-  debugDump("onplayercreated",true)
-end
-
-game.onevent(defines.events.onplayercreated, onplayercreated)
-
-function debugDump(var, force)
-  if false or force then
-    for i,player in ipairs(game.players) do
-      local msg
-      if type(var) == "string" then
-        msg = var
-      else
-        msg = serpent.dump(var, {name="var", comment=false, sparse=false, sortkeys=true})
-      end
-      player.print(msg)
-    end
-  end
-end
-function saveVar(var, name)
-  local var = var or glob
-  local n = name or ""
-  game.makefile("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
-  --game.makefile("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
-end
-
-driverNextDir = 1
-
-function setGhostDriver(locomotive)
-  local ghost = newGhostDriverEntity(game.player.position)
-  locomotive.passenger = ghost
-  return ghost
-end
-
-function newGhostDriverEntity(position)
-  game.createentity({name="farl_player", position=position, force=game.forces.player})
-  local entities = game.findentitiesfiltered({area={{position.x, position.y},{position.x, position.y}}, name="farl_player"})
-  if entities[1] ~= nil then
-    return entities[1]
-  end
-end
-local astarStart, astarGoal, astarent1, astarent2  
-remote.addinterface("farl",
-  {
-  
-    neighbors = function(start, direction)
-      local start = {position=start.position, name=start.name, direction=start.direction, travelDir=direction, input=1}
-      local neighbors = neighbor_nodes(start)
-      for i,n in ipairs(neighbors) do
-        FARL.genericPlace(n)
-      end
-    end,
-    railInfo = function(rail)
-      debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
-      if glob.railInfoLast.valid then
-        local pos = glob.railInfoLast.position
-        local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
-        debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
-        debugDump("Distance (util): "..util.distance(pos, rail.position),true)
-        local dx = math.abs(pos.x - rail.position.x)
-        local dy = math.abs(pos.y - rail.position.y)
-        local max = dx > dy and dx or dy
-        debugDump("Distance (heuristic): "..max, true)
-      end
-      glob.railInfoLast = rail
-    end,
-    debugInfo = function()
-      saveVar(glob, "console")
-      --saveVar(glob.debug, "RailDebug")
-    end,
-    reset = function()
-      glob.farl = {}
-      if game.forces.player.technologies["rail-signals"].researched then
-        game.forces.player.recipes["farl"].enabled = true
-      end
-      for i,p in ipairs(game.players) do
-        if p.gui.left.farl then p.gui.left.farl.destroy() end
-        if p.gui.top.farl then p.gui.top.farl.destroy() end
-      end
-      initGlob()
-    end,
-    godmode = function(bool)
-      godmode = bool
-      godmodePoles = bool
-      godmodeSignals = bool
-    end,
-    setSpeed = function(speed)
-      glob.cruiseSpeed = speed
-    end,
-    
-    setDriver = function(loco)
-        if loco.name == "farl" then
-          local i = FARL.findByLocomotive(loco)
-          local farl = glob.farl[i]
-          driver = setGhostDriver(loco)
-          farl.driver = driver
-          godmode = true
-          --farl:activate()
-          farl:toggleCruiseControl()
-          driver.ridingstate = {acceleration=1,direction=1}
-        end
-    end,
-    
-    removeDriver = function(loco)
-        if loco.name == "farl" then
-          local farl = glob.farl[FARL.findByLocomotive(loco)]
-          if farl.driver.name == "farl_player" then
-            farl.cruise = false
-            farl:deactivate("", true)
-            farl.driver.destroy()
-            farl.driver = false
-          else
-            debugDump("No farl_player found",true)
+      path, frontier, cameFrom, cost_so_far = AStar.astar(astarStart, astarGoal, frontier, cameFrom, cost_so_far, pathfinder)
+      debugDump("#"..frontier.n,true)
+      for i, ncost in pairs(frontier.nodes) do
+        for j, node in pairs(ncost) do
+          if game.canplaceentity{name = "ghost", position = node.position, innername = node.name.."2", direction = node.direction, force = game.player.force} then          
+            table.insert(ghosts, game.createentity{name = "ghost", position = node.position, innername = node.name.."2", direction = node.direction, force = game.player.force})
           end
         end
-    end,
-    
-    goLeft = function(loco)
-      local farl = glob.farl[FARL.findByLocomotive(loco)]
-      driverNextDir = 0
-    end,
-    goRight = function(loco)
-      local farl = glob.farl[FARL.findByLocomotive(loco)]
-      driverNextDir = 2
-    end,
-    activate = function(loco)
-      if loco.name == "farl" then
-        local farl = glob.farl[FARL.findByLocomotive(loco)]
-        if farl and not farl.active and farl.driver ~= nil then
-          farl:activate()
-        end
       end
-    end,
-    
-    course = function(loco)
-      local course = 
-      {
-        {pos={x=83,y=9}, input=0},
-        {pos={x=107,y=-9}, input=0},
-        {pos={x=110,y=-14}, input=0},
-        {pos={x=110,y=-22}, input=0},
-        {pos={x=85,y=-29}, input=1}
-      }
-      if loco.name == "farl" then
-        local farl = glob.farl[FARL.findByLocomotive(loco)]
-        if farl and not farl.active and farl.driver ~= nil then
-          farl.course = course
-          farl:activate()
-        end
-      end
-    end,
-    
-    tileAt = function(x,y)
-      debugDump(game.gettile(x, y).name,true)
-    end,
-    
-    astar = function(rail, dir)
-      if not astarStart then
-        astarent1 = rail
-        astarStart = {name=rail.name, direction=rail.direction, position=rail.position, travelDir=dir}
-        return
-      end
-      if astarStart then
-        astarGoal = {name=rail.name, direction=rail.direction, position=rail.position, travelDir=dir}
-        astarent1.destroy()
-        rail.destroy()
-        local path, closedList = AStar.astar(astarStart, astarGoal)
-        saveVar(closedList,"ClosedList")
+      if path then
+        pathfinder = false
+        debugDump("finished, cached Neighbors:"..AStar.cachedNeighbors.n, true)
         debugDump("---------",true)
         for i=1,#path do
           removeTrees(path[i].position)
@@ -451,14 +178,333 @@ remote.addinterface("farl",
           FARL.genericPlace(path[i])
           --game.player.print(path[i].name.."@"..pos2Str(path[i].position).." dir:"..path[i].direction)
         end
-        astarStart, astarGoal = nil, nil        
+        astarStart, astarGoal = nil, nil
+        path, frontier, cameFrom, cost_so_far = nil,nil,nil,nil
         --debugDump(path,true)
       end
     end
-  --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
-  })
-  
-function removeTrees(pos, area)
+
+    if event.tick % 10 == 0  then
+      for pi, player in ipairs(game.players) do
+        if (player.vehicle ~= nil and player.vehicle.name == "farl") then
+          if player.gui.left.farl == nil then
+            FARL.onPlayerEnter(player)
+            GUI.createGui(player)
+          end
+        end
+        if player.vehicle == nil and player.gui.left.farl ~= nil then
+          FARL.onPlayerLeave(player)
+          GUI.destroyGui(player)
+        end
+      end
+    end
+    for i, farl in ipairs(glob.farl) do
+      farl:update(event)
+      if farl.driver and farl.driver.name ~= "farl_player" then
+        if glob.version < "0.1.4" then
+          GUI.destroyGui(farl.driver)
+          GUI.createGui(farl.driver)
+          glob.version = "0.1.4"
+        end
+        GUI.updateGui(farl)
+      end
+    end
+  end
+
+  local function initGlob()
+    if glob.version == nil or glob.version < "0.1.1" then
+      glob = {}
+      if game.forces.player.technologies["rail-signals"].researched then
+        game.forces.player.recipes["farl"].enabled = true
+        glob.signals = true
+        glob.poles = true
+      end
+      glob.settings = {}
+      glob.version = "0.1.1"
+    end
+    glob.settings = glob.settings or {}
+    glob.settings.poleDistance = glob.settings.poleDistance or 1
+    glob.settings.poleSide = glob.settings.poleSide or 1
+    glob.settings.signalDistance = glob.settings.signalDistance or 15
+    glob.settings.curvedWeight = glob.settings.curvedWeight or 4
+    if glob.signals == nil then
+      glob.signals = true
+    end
+    if glob.poles == nil then
+      glob.poles = true
+    end
+    if glob.flipSignals == nil then
+      glob.flipSignals = false
+    end
+    glob.farl = glob.farl or {}
+    glob.railInfoLast = glob.railInfoLast or {}
+    glob.debug = glob.debug or {}
+    glob.action = glob.action or {}
+    glob.cruiseSpeed = glob.cruiseSpeed or 0.4
+    for i,farl in ipairs(glob.farl) do
+      farl = resetMetatable(farl, FARL)
+      if glob.version < "0.1.4" then
+        farl.cruiseInterrupt = 0
+      end
+      farl.index = nil
+    end
+    glob.version = "0.1.3"
+  end
+
+  local function oninit() initGlob() end
+
+  local function onload()
+    initGlob()
+  end
+
+  local function onGuiClick(event)
+    local index = event.playerindex or event.name
+    local player = game.players[index]
+    if glob.version < "0.1.4" then
+      GUI.destroyGui(player)
+      GUI.createGui(player)
+      glob.version = "0.1.4"
+      return
+    end
+    if player.gui.left.farl ~= nil then
+      local farl = FARL.findByPlayer(player)
+      if farl then
+        GUI.onGuiClick(event, farl, player)
+      else
+        player.print("Gui without train, wrooong!")
+        GUI.destroyGui(player)
+      end
+    end
+  end
+
+  function onpreplayermineditem(event)
+    local ent = event.entity
+    local cname = ent.name
+    if ent.type == "locomotive" and cname == "farl" then
+      table.remove(glob.farl, FARL.findByLocomotive(ent))
+    end
+  end
+
+
+  farlRails = {}
+  local function onbuiltentity(event)
+    local ent = event.createdentity
+    if ent.name == "farl-rail" then
+      table.insert(farlRails, ent)
+      if #farlRails == 2 then
+        debugDump(farlRails[1].name.."@"..pos2Str(farlRails[1].position).." dir:"..farlRails[1].direction,true)
+        debugDump(farlRails[2].name.."@"..pos2Str(farlRails[2].position).." dir:"..farlRails[2].direction,true)
+        local diff= subPos(farlRails[1].position, farlRails[2].position)
+        local generalDir = ""
+        if diff.y < 0 then
+          generalDir = "S"
+        elseif diff.y > 0 then
+          generalDir = "N"
+        end
+        if diff.x < 0 then
+          generalDir = generalDir.."E"
+        elseif diff.x > 0 then
+          generalDir = generalDir.."W"
+        end
+        debugDump("Direction: "..generalDir,true)
+        debugDump("Offset: x="..diff.x..",y="..diff.y,true)
+        debugDump("Distance: "..util.distance(farlRails[1].position, farlRails[2].position),true)
+      end
+      if #farlRails > 2 then
+        farlRails[1].destroy()
+        farlRails[2].destroy()
+        farlRails = {}
+        table.insert(farlRails, ent)
+      end
+    end
+  end
+
+  game.oninit(oninit)
+  game.onload(onload)
+  game.onevent(defines.events.ontick, onTick)
+  game.onevent(defines.events.onguiclick, onGuiClick)
+  --game.onevent(defines.events.ontrainchangedstate, function(event) ontrainchangedstate(event) end)
+  --game.onevent(defines.events.onplayermineditem, function(event) onplayermineditem(event) end)
+  game.onevent(defines.events.onpreplayermineditem, function(event) onpreplayermineditem(event) end)
+  game.onevent(defines.events.onbuiltentity, onbuiltentity)
+
+  local function onplayercreated(event)
+    local player = game.getplayer(event.playerindex)
+    local gui = player.gui
+    if gui.top.farl ~= nil then
+      gui.top.farl.destroy()
+    end
+    debugDump("onplayercreated",true)
+  end
+
+  game.onevent(defines.events.onplayercreated, onplayercreated)
+
+  function debugDump(var, force)
+    if false or force then
+      for i,player in ipairs(game.players) do
+        local msg
+        if type(var) == "string" then
+          msg = var
+        else
+          msg = serpent.dump(var, {name="var", comment=false, sparse=false, sortkeys=true})
+        end
+        player.print(msg)
+      end
+    end
+  end
+  function saveVar(var, name)
+    local var = var or glob
+    local n = name or ""
+    game.makefile("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
+    --game.makefile("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
+  end
+
+  driverNextDir = 1
+
+  function setGhostDriver(locomotive)
+    local ghost = newGhostDriverEntity(game.player.position)
+    locomotive.passenger = ghost
+    return ghost
+  end
+
+  function newGhostDriverEntity(position)
+    game.createentity({name="farl_player", position=position, force=game.forces.player})
+    local entities = game.findentitiesfiltered({area={{position.x, position.y},{position.x, position.y}}, name="farl_player"})
+    if entities[1] ~= nil then
+      return entities[1]
+    end
+  end
+
+  remote.addinterface("farl",
+    {
+
+      neighbors = function(start, direction)
+        local start = {position=start.position, name=start.name, direction=start.direction, travelDir=direction, input=1}
+        local neighbors = neighbor_nodes(start)
+        for i,n in ipairs(neighbors) do
+          FARL.genericPlace(n)
+        end
+      end,
+      railInfo = function(rail)
+        debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
+        if glob.railInfoLast.valid then
+          local pos = glob.railInfoLast.position
+          local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
+          debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
+          debugDump("Distance (util): "..util.distance(pos, rail.position),true)
+          local max = AStar.heuristic(glob.railInfoLast, rail)
+          debugDump("Distance (heuristic): "..max, true)
+        end
+        glob.railInfoLast = rail
+      end,
+      debugInfo = function()
+        saveVar(glob, "console")
+        --saveVar(glob.debug, "RailDebug")
+      end,
+      reset = function()
+        glob.farl = {}
+        if game.forces.player.technologies["rail-signals"].researched then
+          game.forces.player.recipes["farl"].enabled = true
+        end
+        for i,p in ipairs(game.players) do
+          if p.gui.left.farl then p.gui.left.farl.destroy() end
+          if p.gui.top.farl then p.gui.top.farl.destroy() end
+        end
+        initGlob()
+      end,
+      godmode = function(bool)
+        godmode = bool
+        godmodePoles = bool
+        godmodeSignals = bool
+      end,
+      setSpeed = function(speed)
+        glob.cruiseSpeed = speed
+      end,
+
+      setDriver = function(loco)
+        if loco.name == "farl" then
+          local i = FARL.findByLocomotive(loco)
+          local farl = glob.farl[i]
+          driver = setGhostDriver(loco)
+          farl.driver = driver
+          godmode = true
+          --farl:activate()
+          farl:toggleCruiseControl()
+          driver.ridingstate = {acceleration=1,direction=1}
+        end
+      end,
+
+      removeDriver = function(loco)
+        if loco.name == "farl" then
+          local farl = glob.farl[FARL.findByLocomotive(loco)]
+          if farl.driver.name == "farl_player" then
+            farl.cruise = false
+            farl:deactivate("", true)
+            farl.driver.destroy()
+            farl.driver = false
+          else
+            debugDump("No farl_player found",true)
+          end
+        end
+      end,
+
+      goLeft = function(loco)
+        local farl = glob.farl[FARL.findByLocomotive(loco)]
+        driverNextDir = 0
+      end,
+      goRight = function(loco)
+        local farl = glob.farl[FARL.findByLocomotive(loco)]
+        driverNextDir = 2
+      end,
+      activate = function(loco)
+        if loco.name == "farl" then
+          local farl = glob.farl[FARL.findByLocomotive(loco)]
+          if farl and not farl.active and farl.driver ~= nil then
+            farl:activate()
+          end
+        end
+      end,
+
+      course = function(loco)
+        local course =
+          {
+            {pos={x=83,y=9}, input=0},
+            {pos={x=107,y=-9}, input=0},
+            {pos={x=110,y=-14}, input=0},
+            {pos={x=110,y=-22}, input=0},
+            {pos={x=85,y=-29}, input=1}
+          }
+        if loco.name == "farl" then
+          local farl = glob.farl[FARL.findByLocomotive(loco)]
+          if farl and not farl.active and farl.driver ~= nil then
+            farl.course = course
+            farl:activate()
+          end
+        end
+      end,
+
+      tileAt = function(x,y)
+        debugDump(game.gettile(x, y).name,true)
+      end,
+
+      astar = function(rail, dir, max)
+        if not astarStart then
+          astarent1 = rail
+          astarStart = {name=rail.name, direction=rail.direction, position=rail.position, travelDir=dir}
+          return
+        end
+        if astarStart then
+          astarGoal = {name=rail.name, direction=rail.direction, position=rail.position, travelDir=dir}
+          astarent1.destroy()
+          rail.destroy()
+          debugDump("Starting pathfinder",true)
+          pathfinder = max or 200
+        end
+      end
+    --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
+    })
+
+  function removeTrees(pos, area)
     if not area then
       area = {{pos.x - 1.5, pos.y - 1.5}, {pos.x + 1.5, pos.y + 1.5}}
     else

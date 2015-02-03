@@ -43,11 +43,11 @@ AStar = {
   cachedNeighbors = {n=0},
 
   heuristic = function(a,b)
-    return  (((a.position.x - b.position.x)^2 + (a.position.y - b.position.y)^2)^0.5)
-      --  local dx = math.abs(a.position.x - b.position.x)
-      --  local dy = math.abs(a.position.y - b.position.y)
-      --  local max = dx > dy and dx or dy
-      --  return max
+--    return  (((a.position.x - b.position.x)^2 + (a.position.y - b.position.y)^2)^0.5) --#732, 733 #1317 1419 (#1371 1458 pen = 3)
+        local dx = math.abs(a.position.x - b.position.x)
+        local dy = math.abs(a.position.y - b.position.y)
+        local min = dx < dy and dx or dy
+      return 1.4*min+math.abs(dx-dy) --#667 692 #1049 1210 (#1059 1213 pen=3, squiggly)
   end,
 
   tiebreaker = function(current, start, goal)
@@ -60,7 +60,7 @@ AStar = {
   end,
 
   gcost = function(a,b, goal)
-    local penalty = a.travelDir ~= b.travelDir and 5 or 0
+    local penalty = a.travelDir ~= b.travelDir and 5 or 0 --
     return AStar.heuristic(a,b) + penalty
   end,
 
@@ -79,11 +79,12 @@ AStar = {
         if type(newTravel) == "number" then
           node.travelDir = newTravel
         else
-          node = node[2]
-          node.travelDir = newTravel[2]
+          node = node[1]
+          node.travelDir = newTravel[1]
         end
-        --debugDump(newTravel,true)
-        AStar.cachedNeighbors[key][i+1] = node
+        --if AStar.validNode(node) then
+          AStar.cachedNeighbors[key][i+1] = node
+        --end
       end
     end
     return AStar.cachedNeighbors[key]
@@ -93,14 +94,23 @@ AStar = {
     if game.canplaceentity{name= node.name, position = node.position} then
       return true
     else
-      local tiles = {}
-      for i=1,4 do
-        local tilename = game.gettile(node.x+v[i].x, node.y+v[i].y).name
-        if tileName == "out-of-map" and tileName == "deepwater" and tileName == "deepwater-green" and tileName == "water" and tileName == "water-green" then
-          return false
-        end
+      if node.name == "straight-rail" then
+--        local v = {{x=0,y=0},{x=-1,y=-1},{x=0,y=-1},{x=-1,y=0}}
+--        for i=1,4 do
+--          local tileName = game.gettile(node.position.x+v[i].x, node.position.y+v[i].y).name
+--          if tileName == "out-of-map" and tileName == "deepwater" and tileName == "deepwater-green" and tileName == "water" and tileName == "water-green" then
+--            return false
+--          end
+--        end
+      else
+--        for i=1,10 do
+--          local tileName = game.gettile(node.x+v[i].x, node.y+v[i].y).name
+--          if tileName == "out-of-map" and tileName == "deepwater" and tileName == "deepwater-green" and tileName == "water" and tileName == "water-green" then
+--            return false
+--          end
+--        end
       end
-      return true
+      return false
     end
   end,
 
@@ -115,25 +125,29 @@ AStar = {
     end
   end,
 
-  astar = function(start, goal)
+  astar = function(start, goal, frontier, cameFrom, cost_so_far, max)
     --AStar.cachedNeighbors = {n=0}
-    local frontier = PriorityQueue.new() -- open list
-    frontier:put(start, 0)
-    local cameFrom = {} --closed list
-    local cost_so_far = {}
-    cameFrom[start] = "Null"
-    cost_so_far[AStar.getKey(start)] = 0
+    local frontier = frontier -- open list
+    local cameFrom = cameFrom or {} 
+    local cost_so_far = cost_so_far or {} --closed list     
+    if not frontier then
+      frontier = PriorityQueue.new() 
+      frontier:put(start, 0)
+      cameFrom[start] = "Null"
+      cost_so_far[AStar.getKey(start)] = 0
+    end
     --debugDump({start,goal},true)
     local count = 1
-    local current
-    --while count < 400 do
-    count = count+1
-    while frontier.n > 0 do
+    local max = max or 200
+    local current, path
+    while frontier.n > 0 and count < max do
+      count = count+1
       current = frontier:get()
       -- done
       --debugDump({n=frontier.n, current},true)
       if current ~= nil then
         if AStar.goalReached(current, goal) then
+          path = AStar.getPath(start,current,cameFrom)
           break
         end
         -- get connected nodes from current
@@ -143,17 +157,19 @@ AStar = {
           local next = neighbors[i]
           local keyNext = AStar.getKey(next)
           local new_cost = cost_so_far[AStar.getKey(current)] + AStar.gcost(current, next, goal)
-          if not cost_so_far[AStar.getKey(next)] or new_cost < cost_so_far[keyNext] then
+          if not cost_so_far[keyNext] or new_cost < cost_so_far[keyNext] then
             cost_so_far[keyNext] = new_cost
-            local priority = new_cost + AStar.heuristic(goal, next) --+ tiebreaker(current,start,goal)
+            local priority = new_cost + AStar.heuristic(goal, next) + AStar.tiebreaker(current,start,goal)
+            -- w tiebreaker w penalty(2.5): #732, 733 (squiggly)
+            -- w/o tie w/o penalty : #806, 835 (squiggly)
+            -- w tie w/o pen: #806, 769
             frontier:put(next, priority)
             cameFrom[next] = current
           end
         end
       end
     end
-    debugDump("finished, cached Neighbors:"..AStar.cachedNeighbors.n, true)
-    return AStar.getPath(start, current, cameFrom), cost_so_far
+    return path, frontier, cameFrom, cost_so_far
   end,
 
   getPath = function(start, goal, cameFrom)
