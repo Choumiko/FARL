@@ -285,40 +285,6 @@ clearAreas =
     end
   end
 
-
-  farlRails = {}
-  local function onbuiltentity(event)
-    local ent = event.createdentity
-    if ent.name == "farl-rail" then
-      table.insert(farlRails, ent)
-      if #farlRails == 2 then
-        debugDump(farlRails[1].name.."@"..pos2Str(farlRails[1].position).." dir:"..farlRails[1].direction,true)
-        debugDump(farlRails[2].name.."@"..pos2Str(farlRails[2].position).." dir:"..farlRails[2].direction,true)
-        local diff= subPos(farlRails[1].position, farlRails[2].position)
-        local generalDir = ""
-        if diff.y < 0 then
-          generalDir = "S"
-        elseif diff.y > 0 then
-          generalDir = "N"
-        end
-        if diff.x < 0 then
-          generalDir = generalDir.."E"
-        elseif diff.x > 0 then
-          generalDir = generalDir.."W"
-        end
-        debugDump("Direction: "..generalDir,true)
-        debugDump("Offset: x="..diff.x..",y="..diff.y,true)
-        debugDump("Distance: "..util.distance(farlRails[1].position, farlRails[2].position),true)
-      end
-      if #farlRails > 2 then
-        farlRails[1].destroy()
-        farlRails[2].destroy()
-        farlRails = {}
-        table.insert(farlRails, ent)
-      end
-    end
-  end
-
   game.oninit(oninit)
   game.onload(onload)
   game.onevent(defines.events.ontick, onTick)

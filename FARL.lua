@@ -128,7 +128,7 @@ FARL = {
     local lastRail, travelDir, input = lastRail, travelDir, input
     if travelDir > 7 or travelDir < 0 then return false,false end
     if input > 2 or input < 0 then return false, false end
-    local data = inputToNewDir2[travelDir][input]
+    local data = inputToNewDir[travelDir][input]
     local input2dir = {[0]=-1,[1]=0,[2]=1}
     local newTravelDir = (travelDir + input2dir[input]) % 8
     local name = data.curve and "curved-rail" or "straight-rail"
