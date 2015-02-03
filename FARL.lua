@@ -1,41 +1,5 @@
 require "util"
 
-inputToNewDir2 =
-  {
-    [0] = {
-      [0]={pos={x=-1,y=-5},direction=0,curve={[4]={pos={x=-2,y=-8}},[5]={pos={x=0,y=-8}}}},
-      [1]={pos={x=0,y=-2},direction=0, shift={[4]={x=-1,y=-5},[5]={x=1,y=-5}}},
-      [2]={pos={x=1,y=-5},direction=1,curve={[4]={pos={x=0,y=-8}},[5]={pos={x=2,y=-8}}}}},
-    [1] = {
-      [0]={pos={x=3,y=-3},direction=5,curve={[1]={pos={x=4,y=-6}},[2]={diag=true}}, lastDir=3},
-      [1]={pos={x=0,y= -2},direction=3,connect={pos={x=3,y=-3},direction={[1]=7,[2]=3, [7]=5}}},
-      [2]={pos={x=3,y=-3},direction=6,curve={[1]={diag=true},[2]={pos={x=6,y=-4}}}, lastDir=7}},
-    [2] = {
-      [0]={pos={x=5,y=-1},direction=2,curve={[7]={pos={x=8,y=0}},[6]={pos={x=8,y=-2}}}},
-      [1]={pos={x=2,y=0},direction=2, shift={[6]={x=5,y=-1},[7]={x=5,y=1}}},
-      [2]={pos={x=5,y=1},direction=3,curve={[7]={pos={x=8,y=2}},[6]={pos={x=8,y=0}}}}},
-    [3] = {
-      [0]={pos={x=3,y=3},direction=7,curve={[4]={diag=true},[3]={pos={x=6,y=4}}}, lastDir=5},
-      [1]={pos={x=2,y=0},direction=5,connect={pos={x=3,y=3},direction={[3]=1,[4]=5}}},
-      [2]={pos={x=3,y=3},direction=0,curve={[4]={pos={x=4,y=6}},[3]={diag=true}}, lastDir=1}},
-    [4] = {
-      [0]={pos={x=1,y=5},direction=4,curve={[0]={pos={x=2,y=8}},[1]={pos={x=0,y=8}}}},
-      [1]={pos={x=0,y=2},direction=0, shift={[0]={x=1,y=5}, [1]={x=-1,y=5}}},
-      [2]={pos={x=-1,y=5},direction=5,curve={[0]={pos={x=0,y=8}},[1]={pos={x=-2,y=8}}}}},
-    [5] = {
-      [0]={pos={x=-3,y=3},direction=1,curve={[5]={pos={x=-4,y=6}},[6]={diag=true}}, lastDir=7},
-      [1]={pos={x= 0,y=2},direction=7,connect={pos={x=-3,y=3},direction={[5]=3,[6]=7, [7]=5}}},
-      [2]={pos={x=-3,y=3},direction=2,curve={[5]={diag=true},[6]={pos={x=-6,y=4}}}, lastDir=3}},
-    [6] = {
-      [0]={pos={x=-5,y=1},direction=6,curve={[3]={pos={x=-8,y=0}},[2]={pos={x=-8,y=2}}}},
-      [1]={pos={x=-2,y=0},direction=2, shift={[2]={x=-5,y=1},[3]={x=-5,y=-1}}},
-      [2]={pos={x=-5,y=-1},direction=7,curve={[3]={pos={x=-8,y=-2}},[2]={pos={x=-8,y=0}}}}},
-    [7] = {
-      [0]={pos={x=-3,y=-3},direction=3,curve={[0]={diag=true},[7]={pos={x=-6,y=-4}}}, lastDir=1},
-      [1]={pos={x=0,y=-2},direction=5,connect={pos={x=-3,y=-3},direction={[0]=1, [7]=5}}},
-      [2]={pos={x=-3,y=-3},direction=4,curve={[0]={pos={x=-4,y=-6}},[7]={diag=true}}, lastDir=5}}
-  }--{[]={pos={x=,y=},diag},[]={pos={x=,y=},diag}}
-
 function addPos(p1,p2)
   local p2 = p2 or {x=0,y=0}
   return {x=p1.x+p2.x, y=p1.y+p2.y}
@@ -59,9 +23,11 @@ function fixPos(pos)
   if pos.y then ret[2] = pos.y end
   return ret
 end
+
 local RED = {r = 0.9}
 local GREEN = {g = 0.7}
 local YELLOW = {r = 0.8, g = 0.8}
+
 FARL = {
   new = function(player)
     local new = {
@@ -231,81 +197,6 @@ FARL = {
     return retDir, retRail
   end,
 
-  sameResult = function(expDir, expRail, lastRail, travelDir, input)
-    local dir, rail = FARL.getRail2(lastRail, travelDir, input)
-    assert(expDir == dir)
-    if expDir and expRail then
-      if expRail.position then
-        assert(expRail.position.x == rail.position.x)
-        assert(expRail.position.y == rail.position.y)
-        assert(expRail.direction == rail.direction)
-        assert(expRail.name == rail.name)
-      end
-    else
-    
-    end
-  end,
-  getRail2 = function(lastRail, travelDir, input)
-    local lastRail, travelDir, input = lastRail, travelDir, input
-    if travelDir > 7 or travelDir < 0 then return false,false end
-    if input > 2 or input < 0 then return false, false end
-    local data = inputToNewDir[travelDir][input]
-    local input2dir = {[0]=-1,[1]=0,[2]=1}
-    local newTravelDir = (travelDir + input2dir[input]) % 8
-    local name = data.curve and "curved-rail" or "straight-rail"
-    if input ~= 1 then --left or right
-      local s = "Changing direction from "..travelDir.." to "..newTravelDir
-      if travelDir % 2 == 0 and lastRail.name == "straight-rail" then --curve after N/S, E/W tracks
-        local pos = addPos(lastRail.position,data.pos)
-        return newTravelDir, {name=name, position=pos, direction=data.direction}
-      elseif travelDir % 2 == 1 and lastRail.name == "straight-rail" then --curve after diagonal
-        local pos = {x=0,y=0}
-        local last = lastRail
-        if lastRail.direction ~= data.lastDir then -- need extra diagonal rail to connect
-          return false, "extra"
-        else
-          pos = addPos(lastRail.position, data.pos)
-          return newTravelDir, {name=name, position=pos, direction=data.direction}
-        end
-      elseif lastRail.name == "curved-rail" and name == "curved-rail" then
-        local pos
-        if not data.curve[lastRail.direction].diag then -- curves connect directly
-          pos = addPos(lastRail.position, data.curve[lastRail.direction].pos)
-          return newTravelDir, {name=name, position=pos, direction=data.direction}
-        else
-          return false, "extra"
-        end
-      end
-    elseif input == 1 then --straight
-      if travelDir % 2 == 1 then --diagonal travel
-        local newDir, pos = data.direction, data.pos
-        if lastRail.name == "straight-rail" then      --diagonal after diagonal
-          if data.direction == lastRail.direction then
-            local mul = 1
-            if travelDir == 1 or travelDir == 5 then mul = -1 end
-            newDir = (data.direction+4) % 8
-            pos = {x=data.pos.y*mul, y=data.pos.x*mul}
-        end
-        pos = addPos(lastRail.position, pos)
-        return newTravelDir, {name=name, position=pos, direction=newDir}
-        elseif lastRail.name == "curved-rail" then --diagonal after curve
-          pos = addPos(lastRail.position, data.connect.pos)
-          newDir = data.connect.direction[lastRail.direction]
-          return newTravelDir, {name=name, position=pos, direction=newDir}
-        end
-    else -- N/E/S/W travel
-      local pos = data.pos
-      local shift = ""
-      if lastRail.name == "curved-rail" then --straight after curve
-        pos = data.shift[lastRail.direction]
-        shift = pos2Str(data.shift[lastRail.direction])
-      end
-      pos = addPos(lastRail.position, pos)
-      return newTravelDir, {name=name, position=pos, direction=data.direction}
-    end
-    end
-  end,
-
   cruiseControl = function(self)
     if self.cruise then
       local limit = self.active and glob.cruiseSpeed or 0.9
@@ -344,12 +235,6 @@ FARL = {
         end
         local count = (self.input == 1 and self.direction%2==1) and 1 or 1
         local dir, last = self:placeRails(self.lastrail, self.direction, self.input, count)
---        if dir and last == "extra" and self.active then
---          dir, last = self:placeRails(self.lastrail, self.direction, 1)
---          if dir and last then
---            dir, last = self:placeRails(last, dir, self.input)
---          end
---        end
         if dir then
           self.direction, self.lastrail = dir, last
         else
