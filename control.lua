@@ -124,6 +124,39 @@ clearAreas =
         [7]={x = 1, y = -1}
       }
   }
+  poleMedium = {
+ data = {
+ [0]={x = 1.5, y = 0.5},
+ [1]={x=1.5,y=1.5, [3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}},
+ [2]={x = 0.5, y = 1.5},
+ [3]={x=1.5,y=1.5, [1]={x=0.5,y=0.5},[5]={x=1.5,y=1.5}},
+ [4]={x = 1.5, y = 0.5},
+ [5]={x=1.5,y=1.5, [3]={x=0.5,y=0.5}, [7]={x=1.5,y=1.5}},
+ [6]={x = 0.5, y = 1.5},
+ [7]={x=1.5,y=1.5, [1]={x=1.5,y=1.5},[5]={x=0.5,y=0.5}},
+ },
+
+ curves = {
+ [0]={x=1.5,y=0.5},
+ [1]={x=1.5,y=0.5},
+ [2]={x=0.5,y=1.5},
+ [3]={x=0.5,y=1.5},
+ [4]={x=1.5,y=0.5},
+ [5]={x=1.5,y=0.5},
+ [6]={x=0.5,y=1.5},
+ [7]={x=0.5,y=1.5}
+ },
+ dir = {
+ [0]={x = 1, y = -1},
+ [1]={x = 1, y = 1},
+ [2]={x = 1, y = 1},
+ [3]={x = -1, y = 1},
+ [4]={x = -1, y = 1},
+ [5]={x = -1, y = -1},
+ [6]={x = -1, y = -1},
+ [7]={x = 1, y = -1}
+ }
+} 
   --[traveldir] ={[raildir]
   signalOffset =
     {
@@ -201,11 +234,6 @@ clearAreas =
     for i, farl in ipairs(glob.farl) do
       farl:update(event)
       if farl.driver and farl.driver.name ~= "farl_player" then
-        if glob.version < "0.1.4" then
-          GUI.destroyGui(farl.driver)
-          GUI.createGui(farl.driver)
-          glob.version = "0.1.4"
-        end
         GUI.updateGui(farl)
       end
     end
@@ -227,6 +255,9 @@ clearAreas =
     glob.settings.poleSide = glob.settings.poleSide or 1
     glob.settings.signalDistance = glob.settings.signalDistance or 15
     glob.settings.curvedWeight = glob.settings.curvedWeight or 4
+    if glob.medium == nil then
+      glob.medium = false
+    end
     if glob.signals == nil then
       glob.signals = true
     end
@@ -248,7 +279,13 @@ clearAreas =
       end
       farl.index = nil
     end
-    glob.version = "0.1.3"
+    if glob.version < "0.1.4" then
+      for i=1,#game.players do
+        GUI.destroyGui(game.players[i])
+      end
+      glob.version = "0.1.4"
+    end
+    glob.version = "0.1.4"
   end
 
   local function oninit() initGlob() end
@@ -260,12 +297,6 @@ clearAreas =
   local function onGuiClick(event)
     local index = event.playerindex or event.name
     local player = game.players[index]
-    if glob.version < "0.1.4" then
-      GUI.destroyGui(player)
-      GUI.createGui(player)
-      glob.version = "0.1.4"
-      return
-    end
     if player.gui.left.farl ~= nil then
       local farl = FARL.findByPlayer(player)
       if farl then
@@ -281,17 +312,31 @@ clearAreas =
     local ent = event.entity
     local cname = ent.name
     if ent.type == "locomotive" and cname == "farl" then
-      table.remove(glob.farl, FARL.findByLocomotive(ent))
+      for i=1,#glob.farl do
+        if glob.farl[i].name == ent.backername then
+          glob.farl[i].delete = true
+        end
+      end
     end
   end
 
+  function onplayermineditem(event)
+    if event.itemstack.name == "farl" then
+      for i=#glob.farl,1,-1 do
+        if glob.farl[i].delete then
+          table.remove(glob.farl, i)
+        end
+      end
+    end
+  end
+  
   game.oninit(oninit)
   game.onload(onload)
   game.onevent(defines.events.ontick, onTick)
   game.onevent(defines.events.onguiclick, onGuiClick)
   --game.onevent(defines.events.ontrainchangedstate, function(event) ontrainchangedstate(event) end)
-  --game.onevent(defines.events.onplayermineditem, function(event) onplayermineditem(event) end)
-  game.onevent(defines.events.onpreplayermineditem, function(event) onpreplayermineditem(event) end)
+  game.onevent(defines.events.onplayermineditem, onplayermineditem)
+  game.onevent(defines.events.onpreplayermineditem, onpreplayermineditem)
   game.onevent(defines.events.onbuiltentity, onbuiltentity)
 
   local function onplayercreated(event)
