@@ -24,6 +24,10 @@ function fixPos(pos)
   return ret
 end
 
+local RED = {r = 0.9}
+local GREEN = {g = 0.7}
+local YELLOW = {r = 0.8, g = 0.8}
+
 FARL = {
   new = function(player)
     local new = {
@@ -35,7 +39,7 @@ FARL = {
     setmetatable(new, {__index=FARL})
     return new
   end,
-  
+
   onPlayerEnter = function(player)
     local i = FARL.findByLocomotive(player.vehicle)
     if i then
@@ -54,7 +58,7 @@ FARL = {
       end
     end
   end,
-  
+
   findByLocomotive = function(loco)
     for i,f in ipairs(glob.farl) do
       if f.locomotive.equals(loco) then
@@ -63,7 +67,7 @@ FARL = {
     end
     return false
   end,
-  
+
   findByPlayer = function(player)
     for i,f in ipairs(glob.farl) do
       if f.locomotive.equals(player.vehicle) then
@@ -120,7 +124,7 @@ FARL = {
     end
   end,
 
-  getRail = function(self,lastRail, travelDir, input)
+  getRail = function(lastRail, travelDir, input)
     local lastRail, travelDir, input = lastRail, travelDir, input
     if travelDir > 7 or travelDir < 0 then return false,false end
     if input > 2 or input < 0 then return false, false end
@@ -128,32 +132,10 @@ FARL = {
     local input2dir = {[0]=-1,[1]=0,[2]=1}
     local newTravelDir = (travelDir + input2dir[input]) % 8
     local name = data.curve and "curved-rail" or "straight-rail"
-    if input ~= 1 then --left or right
-      local s = "Changing direction from "..travelDir.." to "..newTravelDir
-      if travelDir % 2 == 0 and lastRail.name == "straight-rail" then --curve after N/S, E/W tracks
-        local pos = addPos(lastRail.position,data.pos)
-        return newTravelDir, {name=name, position=pos, direction=data.direction}
-      elseif travelDir % 2 == 1 and lastRail.name == "straight-rail" then --curve after diagonal
-        local pos = {x=0,y=0}
-        local last = lastRail
-        if lastRail.direction ~= data.lastDir then -- need extra diagonal rail to connect
-          return false, "extra"
-        else
-          pos = addPos(lastRail.position, data.pos)
-          return newTravelDir, {name=name, position=pos, direction=data.direction}
-        end
-      elseif lastRail.name == "curved-rail" and name == "curved-rail" then
-        local pos
-        if not data.curve[lastRail.direction].diag then -- curves connect directly
-          pos = addPos(lastRail.position, data.curve[lastRail.direction].pos)
-          return newTravelDir, {name=name, position=pos, direction=data.direction}
-        else
-          return false, "extra"
-        end
-      end
-    elseif input == 1 then --straight
+    local retDir, retRail
+    if input == 1 then --straight
+      local newDir, pos = data.direction, data.pos
       if travelDir % 2 == 1 then --diagonal travel
-        local newDir, pos = data.direction, data.pos
         if lastRail.name == "straight-rail" then      --diagonal after diagonal
           if data.direction == lastRail.direction then
             local mul = 1
@@ -162,23 +144,57 @@ FARL = {
             pos = {x=data.pos.y*mul, y=data.pos.x*mul}
         end
         pos = addPos(lastRail.position, pos)
-        return newTravelDir, {name=name, position=pos, direction=newDir}
-        elseif lastRail.name == "curved-rail" then --diagonal after curve
-          pos = addPos(lastRail.position, data.connect.pos)
-          newDir = data.connect.direction[lastRail.direction]
-          return newTravelDir, {name=name, position=pos, direction=newDir}
-        end
-    else -- N/E/S/W travel
-      local pos = data.pos
-      local shift = ""
-      if lastRail.name == "curved-rail" then --straight after curve
-        pos = data.shift[lastRail.direction]
-        shift = pos2Str(data.shift[lastRail.direction])
+      elseif lastRail.name == "curved-rail" then --diagonal after curve
+        pos = addPos(lastRail.position, data.connect.pos)
+        newDir = data.connect.direction[lastRail.direction]
       end
-      pos = addPos(lastRail.position, pos)
-      return newTravelDir, {name=name, position=pos, direction=data.direction}
+      else -- N/E/S/W travel
+        local shift = ""
+        if lastRail.name == "curved-rail" then --straight after curve
+          pos = data.shift[lastRail.direction]
+          shift = pos2Str(data.shift[lastRail.direction])
+        end
+        pos = addPos(lastRail.position, pos)
+      end
+      retDir, retRail = newTravelDir, {name=name, position=pos, direction=newDir}
     end
+    if input ~= 1 then --left or right
+      local s = "Changing direction from "..travelDir.." to "..newTravelDir
+      if travelDir % 2 == 0 and lastRail.name == "straight-rail" then --curve after N/S, E/W tracks
+        local pos = addPos(lastRail.position,data.pos)
+        retDir, retRail = newTravelDir, {name=name, position=pos, direction=data.direction}
+      elseif travelDir % 2 == 1 and lastRail.name == "straight-rail" then --curve after diagonal
+        local pos = {x=0,y=0}
+        local last = lastRail
+        if lastRail.direction ~= data.lastDir then -- need extra diagonal rail to connect
+          local testD, testR = FARL.getRail(lastRail,travelDir,1)
+          local d2, r2 = FARL.getRail(testR,testD,input)
+          --debugDump({testD, testR},true)
+          --debugDump({d2, r2},true)
+          retDir = {testD, d2}
+          retRail = {testR, r2}
+          --retDir, retRail = false, "extra"
+        else
+          pos = addPos(lastRail.position, data.pos)
+          retDir, retRail = newTravelDir, {name=name, position=pos, direction=data.direction}
+        end
+      elseif lastRail.name == "curved-rail" and name == "curved-rail" then
+        local pos
+        if not data.curve[lastRail.direction].diag then -- curves connect directly
+          pos = addPos(lastRail.position, data.curve[lastRail.direction].pos)
+          retDir, retRail = newTravelDir, {name=name, position=pos, direction=data.direction}
+        else
+          local testD, testR = FARL.getRail(lastRail,travelDir,1)
+          local d2, r2 = FARL.getRail(testR,testD,input)
+          --debugDump({testD, testR},true)
+          --debugDump({d2, r2},true)
+          retDir = {testD, d2}
+          retRail = {testR, r2}
+          --retDir, retRail = false, "extra"
+        end
+      end
     end
+    return retDir, retRail
   end,
 
   cruiseControl = function(self)
@@ -208,18 +224,24 @@ FARL = {
       self.acc = self.driver.ridingstate.acceleration
       if self.acc ~= 3 and util.distance(self.lastrail.position, self.locomotive.position) < 6 then
         self.input = self.driver.ridingstate.direction
-        local count = (self.input == 1 and self.direction%2==1) and 1 or 1
-        local dir, last = self:placeRails(self.lastrail, self.direction, self.input, count)
-        if dir and last == "extra" and self.active then
-          dir, last = self:placeRails(self.lastrail, self.direction, 1)
-          if dir and last then
-            dir, last = self:placeRails(last, dir, self.input)
+        if self.driver.name == "farl_player" then
+          if self.course and self.course[1] then
+            local diff = subPos(self.lastrail.position, self.course[1].pos)
+            if diff.x == 0 and diff.y == 0 then
+              self.input = self.course[1].input
+              table.remove(self.course, 1)
+            end
           end
         end
+        local count = (self.input == 1 and self.direction%2==1) and 1 or 1
+        local dir, last = self:placeRails(self.lastrail, self.direction, self.input, count)
         if dir then
           self.direction, self.lastrail = dir, last
         else
           self:deactivate()
+        end
+        if self.driver.name == "farl_player" and #self.course == 0 then
+          self:deactivate("Course done", true)
         end
       end
     end
@@ -243,10 +265,10 @@ FARL = {
       if self.direction and self.lastPole and self.lastCheckPole then
         self.active = true
       else
-        self.driver.print("Error activating, drive on straight rails and try again")
+        self:print("Error activating, drive on straight rails and try again")
       end
     else
-      self:deactivate("Error (no valid rail found)", true) 
+      self:deactivate("Error (no valid rail found)", true)
     end
   end,
 
@@ -255,7 +277,7 @@ FARL = {
     self.input = nil
     self.cruise = false
     if reason then
-      self.driver.print("Deactivated: "..reason)
+      self:print("Deactivated: "..reason)
     end
     if full then
       self.lastrail = nil
@@ -301,7 +323,8 @@ FARL = {
       if limit and count == limit then
         return last
       end
-      local _, next = self:getRail(last,trainDir,1)
+      local _, next = FARL.getRail(last,trainDir,1)
+      next = next[1] or next
       local pos = fixPos(next.position)
       local area = {{pos[1]-0.4,pos[2]-0.4},{pos[1]+0.4,pos[2]+0.4}}
       local found = false
@@ -356,7 +379,10 @@ FARL = {
   end,
 
   updateCargo = function(self)
-    local types = {"straight-rail", "curved-rail", "big-electric-pole", "medium-electric-pole", "rail-signal", "small-lamp"}
+    local types = { "straight-rail", "curved-rail","rail-signal",
+      "big-electric-pole", "medium-electric-pole", "small-lamp",
+      "green-wire", "red-wire"
+    }
     for _,type in pairs(types) do
       self[type] = 0
       for i, wagon in ipairs(self.train.carriages) do
@@ -380,12 +406,13 @@ FARL = {
     end
   end,
 
-  genericPlace = function(arg)
+  genericPlace = function(arg, ignore)
     local canPlace = FARL.genericCanPlace(arg)
     local entity
-    if canPlace then
+    if canPlace or ignore then
       local direction = arg.direction or 0
       local force = arg.force or game.forces.player
+      arg.force = force
       entity = game.createentity(arg)
     end
     return canPlace, entity
@@ -404,17 +431,22 @@ FARL = {
     if dir then
       self.direction, self.lastrail = dir, last
     else
-      self.driver.print("Couldn't create junction")
+      self:print("Couldn't create junction")
     end
   end,
 
-  placeRails = function(self,lastRail, travelDir, input, trackCount)
+  placeRails = function(self,lastRail, travelDir, input)
     local trackCount = trackCount or 1
     local lastRail = lastRail
-    local newTravelDir, nextRail
-    for i=1,trackCount do
-      if i>1 then lastRail = nextRail end
-      newTravelDir, nextRail = self:getRail(lastRail,travelDir,input)
+    local newTravelDirs, nextRails
+    newTravelDirs, nextRails = FARL.getRail(lastRail,travelDir,input)
+    if type(newTravelDirs) == "number" then
+      newTravelDirs = {newTravelDirs}
+      nextRails = {nextRails}
+    end
+    local retDir, retRail = newTravelDirs[1], nextRails[1]
+    for i=1,#newTravelDirs do
+      local newTravelDir, nextRail = newTravelDirs[i], nextRails[i]
       if newTravelDir and nextRail.position then
         local newDir = nextRail.direction
         local newPos = nextRail.position
@@ -442,6 +474,7 @@ FARL = {
               if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
             end
           end
+          retDir, retRail = newTravelDir, nextRail
         elseif not canplace then
           self:deactivate("Can't place rail", true)
           return false, false
@@ -459,12 +492,11 @@ FARL = {
         end
       end
     end
-    return newTravelDir, nextRail
+    return retDir, retRail
   end,
 
   calcPole = function(self,lastrail, traveldir)
     local placement = glob.medium and poleMedium or polePlacement
-  
     local data = placement.data[traveldir]
     local offset = addPos(data, {x=0,y=0})
     local distance, side, dir = glob.settings.poleDistance, glob.settings.poleSide, placement.dir[traveldir]
@@ -513,6 +545,34 @@ FARL = {
     end
   end,
 
+  connectCCNet = function(self, pole)
+    if glob.settings.ccNet and pole.neighbours[1] then
+      if godmode  or (glob.settings.ccWires == 1 and self["red-wire"] > 0)
+        or (glob.settings.ccWires == 2 and self["green-wire"] > 0)
+        or (glob.settings.ccWires == 3 and (self["red-wire"] > 0 or self["green-wire"] > 0)) then
+        local c = {}
+        local items = {}
+        if glob.settings.ccWires == 1 then
+          c = {defines.circuitconnector.red}
+          items = {"red-wire"}
+        elseif glob.settings.ccWires == 2 then
+          c = {defines.circuitconnector.green}
+          items = {"green-wire"}
+        else
+          c = {defines.circuitconnector.red, defines.circuitconnector.green}
+          items = {"red-wire", "green-wire"}
+        end
+        for i=1,#c do
+          if self[items[i]] > 0 or godmode then
+            pole.connectneighbour(self.ccNetPole, c[i])
+            self:removeItemFromCargo(items[i], 1)
+          end
+        end
+      end
+    end
+    self.ccNetPole = pole
+  end,
+
   placePole = function(self,traveldir, lastrail)
     local name = glob.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = glob.medium and 9 or 30
@@ -520,13 +580,15 @@ FARL = {
     local area = {{tmp.x-reach,tmp.y-reach},{tmp.x+reach,tmp.y+reach}}
     local minDist, minPos = util.distance(tmp, self.lastPole), false
     --debugDump("Distance to last:"..minDist,true)
-    for i,p in ipairs(game.findentitiesfiltered{area=area, name=name}) do
-      local dist = util.distance(p.position, tmp)
-      local diff = subPos(p.position,self.lastPole.position)
-      if dist < minDist then
-        --if dist < minDist and diff.x == 0 and diff.y == 0 then
-        minDist = dist
-        minPos = p.position
+    if not glob.settings.ccNet and glob.minPoles then
+      for i,p in ipairs(game.findentitiesfiltered{area=area, name=name}) do
+        local dist = util.distance(p.position, tmp)
+        local diff = subPos(p.position,self.lastPole.position)
+        if dist < minDist then
+          --if dist < minDist and diff.x == 0 and diff.y == 0 then
+          minDist = dist
+          minPos = p.position
+        end
       end
     end
     if minPos then self.lastPole = minPos end
@@ -539,16 +601,17 @@ FARL = {
       self[name] = self[name] or 0
       local canplace = game.canplaceentity{name = name, position = tmp}
       if canplace and (self[name] > 0 or godmode or godmodePoles) then
-        game.createentity{name = name, position = tmp, force = game.forces.player}
+        local pole = game.createentity{name = name, position = tmp, force = game.forces.player}
         if godmode or self["small-lamp"] > 0 then
           self:placeLamp(traveldir, tmp)
         end
         self:removeItemFromCargo(name, 1)
+        self:connectCCNet(pole)
         self.lastPole = tmp
         self[name] = self[name] - 1
         return true
       else
-      --self.driver.print("Can`t place pole@"..pos2Str(tmp))
+      --self:print("Can`t place pole@"..pos2Str(tmp))
       --debugDump(glob.lastCheckRail,true)
       end
     end
@@ -576,7 +639,7 @@ FARL = {
         self["rail-signal"] = self["rail-signal"] - 1
         return success, entity
       else
-        --self.driver.print("Can't place signal@"..pos2Str(pos))
+        --self:print("Can't place signal@"..pos2Str(pos))
         return success, entity
       end
     end
@@ -584,7 +647,7 @@ FARL = {
   end,
 
   findLastPole = function(self)
-    local name = glob.medium and "medium-electric-pole" or "big-electric-pole" 
+    local name = glob.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = medium and 9 or 30
     local locomotive = self.locomotive
     local pos = {locomotive.position.x, locomotive.position.y}
@@ -661,12 +724,20 @@ FARL = {
     if curves[1] then self:deactivate("Can't start on curves", true) end
     return false
   end,
-  
+
+  print = function(self, msg)
+    if self.driver.name ~= "farl_player" then
+      self.driver.print(msg)
+    else
+      self:flyingText(msg, RED, true)
+    end
+  end,
+
   flyingText = function(self, line, color, show)
-  if show then
-    local pos = addPos(self.locomotive.position, {x=0,y=-1})
-    color = color or RED
-    game.createentity({name="flying-text", position=pos, text=line, color=color})
-  end
-end
+    if show then
+      local pos = addPos(self.locomotive.position, {x=0,y=-1})
+      color = color or RED
+      game.createentity({name="flying-text", position=pos, text=line, color=color})
+    end
+  end,
 }

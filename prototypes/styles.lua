@@ -41,9 +41,15 @@ data.raw["gui-style"].default["farl_textfield_small"] =
     minimal_width = 30,
     font = "farl-small"
   }
-  data.raw["gui-style"].default["farl_button"] =
+data.raw["gui-style"].default["farl_button"] =
   {
     type = "button_style",
     parent = "default",
     font = "farl-small-bold"
+  }
+data.raw["gui-style"].default["farl_checkbox"] =
+  {
+    type = "checkbox_style",
+    parent = "checkbox_style",
+    font = "farl-small",
   }

@@ -195,5 +195,50 @@ data:extend(
       open_sound = { filename = "__base__/sound/car-door-open.ogg", volume=0.7 },
       close_sound = { filename = "__base__/sound/car-door-close.ogg", volume = 0.7 },
       sound_minimum_speed = 0.5
-    }
+    },
+    {
+      type = "rail",
+      name = "straight-rail2",
+      icon = "__FARL__/graphics/icons/straight-rail.png",
+      flags = {"placeable-neutral", "player-creation", "building-direction-8-way"},
+      minable = {mining_time = 1, result = "straight-rail2"},
+      max_health = 100,
+      corpse = "straight-rail-remnants",
+      bending_type = "straight",
+      rail_category = "regular",
+      pictures = railpictures()
+    },
+    {
+      type = "rail",
+      name = "curved-rail2",
+      icon = "__base__/graphics/icons/curved-rail.png",
+      flags = {"placeable-neutral", "player-creation", "building-direction-8-way"},
+      minable = {mining_time = 1, result = "curved-rail2"},
+      max_health = 200,
+      corpse = "curved-rail-remnants",
+      secondary_collision_box = {{0,0}, {0, 0}},
+      selection_box = {{-1.7, -0.8}, {1.7, 0.8}},
+      bending_type = "turn",
+      rail_category = "regular",
+      pictures = railpictures()
+    },
+    {type = "item",
+      name = "straight-rail2",
+      icon = "__base__/graphics/icons/straight-rail.png",
+      flags = {"goes-to-quickbar"},
+      subgroup = "transport",
+      order = "a[train-system]-a[straight-rail]",
+      place_result = "straight-rail2",
+      stack_size = 50
+    },
+    {
+      type = "item",
+      name = "curved-rail2",
+      icon = "__base__/graphics/icons/curved-rail.png",
+      flags = {"goes-to-quickbar"},
+      subgroup = "transport",
+      order = "a[train-system]-b[curved-rail]",
+      place_result = "curved-rail2",
+      stack_size = 50
+    },
   })
