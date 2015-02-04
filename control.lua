@@ -1,7 +1,6 @@
 require "defines"
 require "FARL"
 require "GUI"
-require "astar"
 
 godmode = false
 godmodePoles = false
@@ -177,47 +176,7 @@ clearAreas =
     }
   }
 
-  local pathfinder = false
-  local astarStart, astarGoal, astarent1, astarent2
-  local path, frontier, cameFrom, cost_so_far
-  local ghosts = {}
   local function onTick(event)
-
-    if pathfinder and event.tick % 30 == 0 then
-      for _,g in pairs(ghosts) do
-        if g.valid then
-          g.destroy()
-        end
-      end
-      path, frontier, cameFrom, cost_so_far = AStar.astar(astarStart, astarGoal, frontier, cameFrom, cost_so_far, pathfinder)
-      debugDump("#"..frontier.n,true)
-      for i, ncost in pairs(frontier.nodes) do
-        for j, node in pairs(ncost) do
-          if game.canplaceentity{name = "ghost", position = node.position, innername = node.name.."2", direction = node.direction, force = game.player.force} then
-            table.insert(ghosts, game.createentity{name = "ghost", position = node.position, innername = node.name.."2", direction = node.direction, force = game.player.force})
-          end
-        end
-      end
-      if path then
-        pathfinder = false
-        debugDump("finished, cached Neighbors:"..AStar.cachedNeighbors.n, true)
-        debugDump("---------",true)
-        for i=1,#path do
-          removeTrees(path[i].position)
-          if path[i].name == "curved-rail" then
-            local areas = clearAreas[path[i].direction%4]
-            for i=1,6 do
-              removeTrees(path[i].position, areas[i])
-            end
-          end
-          FARL.genericPlace(path[i])
-          --game.player.print(path[i].name.."@"..pos2Str(path[i].position).." dir:"..path[i].direction)
-        end
-        astarStart, astarGoal = nil, nil
-        path, frontier, cameFrom, cost_so_far = nil,nil,nil,nil
-        --debugDump(path,true)
-      end
-    end
 
     if event.tick % 10 == 0  then
       for pi, player in ipairs(game.players) do
@@ -437,37 +396,5 @@ clearAreas =
         debugDump(game.gettile(x, y).name,true)
       end,
 
-      astar = function(rail, dir, max)
-        if not astarStart then
-          astarent1 = rail
-          astarStart = {name=rail.name, direction=rail.direction, position=rail.position, travelDir=dir}
-          return
-        end
-        if astarStart then
-          astarGoal = {name=rail.name, direction=rail.direction, position=rail.position, travelDir=dir}
-          astarent1.destroy()
-          rail.destroy()
-          debugDump("Starting pathfinder",true)
-          pathfinder = max or 200
-        end
-      end
     --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
     })
-
-  function removeTrees(pos, area)
-    if not area then
-      area = {{pos.x - 1.5, pos.y - 1.5}, {pos.x + 1.5, pos.y + 1.5}}
-    else
-      local tl, lr = fixPos(addPos(pos,area[1])), fixPos(addPos(pos,area[2]))
-      area = {{tl[1]-1,tl[2]-1},{lr[1]+1,lr[2]+1}}
-    end
-
-    for _, entity in ipairs(game.findentitiesfiltered{area = area, type = "tree"}) do
-      entity.die()
-    end
-    if removeStone then
-      for _, entity in ipairs(game.findentitiesfiltered{area = area, name = "stone-rock"}) do
-        entity.die()
-      end
-    end
-  end
