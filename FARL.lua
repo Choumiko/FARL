@@ -554,10 +554,10 @@ FARL = {
         local items = {}
         if glob.settings.ccWires == 1 then
           c = {defines.circuitconnector.red}
-          items = {"green-wire"}
+          items = {"red-wire"}
         elseif glob.settings.ccWires == 2 then
           c = {defines.circuitconnector.green}
-          items = {"red-wire"}
+          items = {"green-wire"}
         else
           c = {defines.circuitconnector.red, defines.circuitconnector.green}
           items = {"red-wire", "green-wire"}
@@ -580,7 +580,7 @@ FARL = {
     local area = {{tmp.x-reach,tmp.y-reach},{tmp.x+reach,tmp.y+reach}}
     local minDist, minPos = util.distance(tmp, self.lastPole), false
     --debugDump("Distance to last:"..minDist,true)
-    if not glob.settings.ccNet then
+    if not glob.settings.ccNet and glob.minPoles then
       for i,p in ipairs(game.findentitiesfiltered{area=area, name=name}) do
         local dist = util.distance(p.position, tmp)
         local diff = subPos(p.position,self.lastPole.position)

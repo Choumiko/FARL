@@ -259,6 +259,9 @@ clearAreas =
     glob.settings.curvedWeight = glob.settings.curvedWeight or 4
     glob.settings.ccNet = glob.settings.ccNet or false
     glob.settings.ccWires = glob.settings.ccWires or 1
+    if glob.minPoles == nil then
+      glob.minPoles = true
+    end
     if glob.medium == nil then
       glob.medium = false
     end
@@ -271,6 +274,7 @@ clearAreas =
     if glob.flipSignals == nil then
       glob.flipSignals = false
     end
+    glob.flipSignals = false
     glob.farl = glob.farl or {}
     glob.railInfoLast = glob.railInfoLast or {}
     glob.debug = glob.debug or {}

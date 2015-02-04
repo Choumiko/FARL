@@ -77,7 +77,7 @@ GUI = {
       elseif name == "ccNetWires" then
         glob.settings.ccWires = glob.settings.ccWires % 3 + 1
         event.element.caption = GUI.ccWires[glob.settings.ccWires]
-      elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "medium" then
+      elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "medium" or name == "minPoles" then
         glob[name] = not glob[name]
       elseif name == "ccNet" then
         glob.settings.ccNet = not glob.settings.ccNet
@@ -123,6 +123,9 @@ GUI = {
         local row1 = GUI.add(settings,{type="table", name="row2", colspan=2})
         GUI.add(row1, {type="label", caption={"stg-poleSide"}})
         GUI.add(row1, {type="button", name="side", caption=captionSide})
+        
+        GUI.add(settings, {type="checkbox", name="minPoles", caption={"stg-minPoles"}}, "minPoles")
+        GUI.add(settings, {type="label", caption=""})
 
         GUI.add(settings, {type="checkbox", name="ccNet", caption={"stg-ccNet"}, state=glob.settings.ccNet})
         local row2 = GUI.add(settings, {type="table", name="row3", colspan=2})
