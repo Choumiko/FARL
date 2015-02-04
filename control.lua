@@ -257,6 +257,8 @@ clearAreas =
     glob.settings.poleSide = glob.settings.poleSide or 1
     glob.settings.signalDistance = glob.settings.signalDistance or 15
     glob.settings.curvedWeight = glob.settings.curvedWeight or 4
+    glob.settings.ccNet = glob.settings.ccNet or false
+    glob.settings.ccWires = glob.settings.ccWires or 1
     if glob.medium == nil then
       glob.medium = false
     end
@@ -336,7 +338,7 @@ clearAreas =
   game.onload(onload)
   game.onevent(defines.events.ontick, onTick)
   game.onevent(defines.events.onguiclick, onGuiClick)
-  --game.onevent(defines.events.ontrainchangedstate, function(event) ontrainchangedstate(event) end)
+  --game.onevent(defines.events.ontrainchangedstate, ontrainchangedstate)
   game.onevent(defines.events.onplayermineditem, onplayermineditem)
   game.onevent(defines.events.onpreplayermineditem, onpreplayermineditem)
   game.onevent(defines.events.onbuiltentity, onbuiltentity)
@@ -373,21 +375,21 @@ clearAreas =
     --game.makefile("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
   end
 
-  driverNextDir = 1
-
-  function setGhostDriver(locomotive)
-    local ghost = newGhostDriverEntity(game.player.position)
-    locomotive.passenger = ghost
-    return ghost
-  end
-
-  function newGhostDriverEntity(position)
-    game.createentity({name="farl_player", position=position, force=game.forces.player})
-    local entities = game.findentitiesfiltered({area={{position.x, position.y},{position.x, position.y}}, name="farl_player"})
-    if entities[1] ~= nil then
-      return entities[1]
-    end
-  end
+--  driverNextDir = 1
+--
+--  function setGhostDriver(locomotive)
+--    local ghost = newGhostDriverEntity(game.player.position)
+--    locomotive.passenger = ghost
+--    return ghost
+--  end
+--
+--  function newGhostDriverEntity(position)
+--    game.createentity({name="farl_player", position=position, force=game.forces.player})
+--    local entities = game.findentitiesfiltered({area={{position.x, position.y},{position.x, position.y}}, name="farl_player"})
+--    if entities[1] ~= nil then
+--      return entities[1]
+--    end
+--  end
 
   remote.addinterface("farl",
     {

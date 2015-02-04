@@ -142,12 +142,12 @@ FARL = {
             if travelDir == 1 or travelDir == 5 then mul = -1 end
             newDir = (data.direction+4) % 8
             pos = {x=data.pos.y*mul, y=data.pos.x*mul}
-          end
-          pos = addPos(lastRail.position, pos)
-        elseif lastRail.name == "curved-rail" then --diagonal after curve
-          pos = addPos(lastRail.position, data.connect.pos)
-          newDir = data.connect.direction[lastRail.direction]
         end
+        pos = addPos(lastRail.position, pos)
+      elseif lastRail.name == "curved-rail" then --diagonal after curve
+        pos = addPos(lastRail.position, data.connect.pos)
+        newDir = data.connect.direction[lastRail.direction]
+      end
       else -- N/E/S/W travel
         local shift = ""
         if lastRail.name == "curved-rail" then --straight after curve
@@ -379,7 +379,10 @@ FARL = {
   end,
 
   updateCargo = function(self)
-    local types = {"straight-rail", "curved-rail", "big-electric-pole", "medium-electric-pole", "rail-signal", "small-lamp"}
+    local types = { "straight-rail", "curved-rail","rail-signal",
+      "big-electric-pole", "medium-electric-pole", "small-lamp",
+      "green-wire", "red-wire"
+    }
     for _,type in pairs(types) do
       self[type] = 0
       for i, wagon in ipairs(self.train.carriages) do
@@ -542,6 +545,34 @@ FARL = {
     end
   end,
 
+  connectCCNet = function(self, pole)
+    if glob.settings.ccNet and pole.neighbours[1] then
+      if godmode  or (glob.settings.ccWires == 1 and self["red-wire"] > 0)
+        or (glob.settings.ccWires == 2 and self["green-wire"] > 0)
+        or (glob.settings.ccWires == 3 and (self["red-wire"] > 0 or self["green-wire"] > 0)) then
+        local c = {}
+        local items = {}
+        if glob.settings.ccWires == 1 then
+          c = {defines.circuitconnector.red}
+          items = {"green-wire"}
+        elseif glob.settings.ccWires == 2 then
+          c = {defines.circuitconnector.green}
+          items = {"red-wire"}
+        else
+          c = {defines.circuitconnector.red, defines.circuitconnector.green}
+          items = {"red-wire", "green-wire"}
+        end
+        for i=1,#c do
+          if self[items[i]] > 0 or godmode then
+            pole.connectneighbour(self.ccNetPole, c[i])
+            self:removeItemFromCargo(items[i], 1)
+          end
+        end
+      end
+    end
+    self.ccNetPole = pole
+  end,
+
   placePole = function(self,traveldir, lastrail)
     local name = glob.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = glob.medium and 9 or 30
@@ -549,13 +580,15 @@ FARL = {
     local area = {{tmp.x-reach,tmp.y-reach},{tmp.x+reach,tmp.y+reach}}
     local minDist, minPos = util.distance(tmp, self.lastPole), false
     --debugDump("Distance to last:"..minDist,true)
-    for i,p in ipairs(game.findentitiesfiltered{area=area, name=name}) do
-      local dist = util.distance(p.position, tmp)
-      local diff = subPos(p.position,self.lastPole.position)
-      if dist < minDist then
-        --if dist < minDist and diff.x == 0 and diff.y == 0 then
-        minDist = dist
-        minPos = p.position
+    if not glob.settings.ccNet then
+      for i,p in ipairs(game.findentitiesfiltered{area=area, name=name}) do
+        local dist = util.distance(p.position, tmp)
+        local diff = subPos(p.position,self.lastPole.position)
+        if dist < minDist then
+          --if dist < minDist and diff.x == 0 and diff.y == 0 then
+          minDist = dist
+          minPos = p.position
+        end
       end
     end
     if minPos then self.lastPole = minPos end
@@ -568,11 +601,12 @@ FARL = {
       self[name] = self[name] or 0
       local canplace = game.canplaceentity{name = name, position = tmp}
       if canplace and (self[name] > 0 or godmode or godmodePoles) then
-        game.createentity{name = name, position = tmp, force = game.forces.player}
+        local pole = game.createentity{name = name, position = tmp, force = game.forces.player}
         if godmode or self["small-lamp"] > 0 then
           self:placeLamp(traveldir, tmp)
         end
         self:removeItemFromCargo(name, 1)
+        self:connectCCNet(pole)
         self.lastPole = tmp
         self[name] = self[name] - 1
         return true
