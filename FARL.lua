@@ -546,7 +546,7 @@ FARL = {
   end,
 
   connectCCNet = function(self, pole)
-    if glob.settings.ccNet and pole.neighbours[1] then
+    if glob.settings.ccNet and pole.neighbours[1] and self.ccNetPole then
       if godmode  or (glob.settings.ccWires == 1 and self["red-wire"] > 0)
         or (glob.settings.ccWires == 2 and self["green-wire"] > 0)
         or (glob.settings.ccWires == 3 and (self["red-wire"] > 0 or self["green-wire"] > 0)) then
@@ -656,7 +656,7 @@ FARL = {
     for i=1, #poles do
       local dist = math.abs(util.distance(locomotive.position,poles[i].position))
       if min > dist then
-        pole = poles[i].position
+        pole = poles[i]
         min = dist
       end
     end
@@ -665,8 +665,9 @@ FARL = {
       local offset = self:calcPole(self.lastrail, self:calcTrainDir())
       self.lastCheckPole = addPos(self.lastrail.position, offset)
     else
-      self.lastPole = pole
-      self.lastCheckPole = {x=pole.x,y=pole.y}
+      self.ccNetPole = pole
+      self.lastPole = pole.position
+      self.lastCheckPole = {x=pole.position.x,y=pole.position.y}
     end
   end,
 
