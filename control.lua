@@ -145,13 +145,13 @@ clearAreas =
   poleMedium = {
     data = {
       [0]={x = 1.5, y = 0.5},
-      [1]={x=1.5,y=1.5, [3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}},
+      [1]={x=0.5,y=0.5, [3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}},
       [2]={x = 0.5, y = 1.5},
-      [3]={x=1.5,y=1.5, [1]={x=0.5,y=0.5},[5]={x=1.5,y=1.5}},
+      [3]={x=-1,y=0.5, [1]={x=0.5,y=0.5},[5]={x=1.5,y=1.5}},
       [4]={x = 1.5, y = 0.5},
-      [5]={x=1.5,y=1.5, [3]={x=0.5,y=0.5}, [7]={x=1.5,y=1.5}},
+      [5]={x=0.5,y=0.5, [3]={x=0.5,y=0.5}, [7]={x=1.5,y=1.5}},
       [6]={x = 0.5, y = 1.5},
-      [7]={x=1.5,y=1.5, [1]={x=1.5,y=1.5},[5]={x=0.5,y=0.5}},
+      [7]={x=0.5,y=0.5, [1]={x=1.5,y=1.5},[5]={x=0.5,y=0.5}},
     },
 
     curves = {
@@ -363,8 +363,10 @@ clearAreas =
           local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
           debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
           debugDump("Distance (util): "..util.distance(pos, rail.position),true)
-          local max = AStar.heuristic(glob.railInfoLast, rail)
-          debugDump("Distance (heuristic): "..max, true)
+          if AStar then
+            local max = AStar.heuristic(glob.railInfoLast, rail)
+            debugDump("Distance (heuristic): "..max, true)
+          end
         end
         glob.railInfoLast = rail
       end,

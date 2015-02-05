@@ -596,19 +596,22 @@ FARL = {
     self.lastCheckPole = addPos(lastrail.position, offset)
     local distance = util.distance(self.lastPole, self.lastCheckPole)
     if distance > reach then
-      if name ~= "big-electric-pole" and traveldir % 2 == 0 then
+      if name ~= "big-electric-pole" and traveldir % 2 == 0 and lastrail.name ~= "curved-rail" then
         if not self.switch then 
           local fix = util.moveposition({tmp.x, tmp.y}, traveldir, 1)
           tmp = {x=fix[1], y=fix[2]}
         end
         self.switch = not self.switch
       end      
-      debugDump({dist=distance, lr=lastrail, dir=traveldir, offset=offset},true)
+      --debugDump({dist=distance, lr=lastrail, dir=traveldir, offset=offset},true)
       self:removeTrees(tmp)
       self[name] = self[name] or 0
       local canplace = game.canplaceentity{name = name, position = tmp}
       if canplace and (self[name] > 0 or godmode or godmodePoles) then
         local pole = game.createentity{name = name, position = tmp, force = game.forces.player}
+        if not pole.neighbours[1] then
+          self:flyingText("Placed unconnected pole", RED, true)
+        end
         if godmode or self["small-lamp"] > 0 then
           self:placeLamp(traveldir, tmp)
         end
