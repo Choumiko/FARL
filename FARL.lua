@@ -596,7 +596,14 @@ FARL = {
     self.lastCheckPole = addPos(lastrail.position, offset)
     local distance = util.distance(self.lastPole, self.lastCheckPole)
     if distance > reach then
-      --debugDump({lr=lastrail, dir=traveldir, offset=offset},true)
+      if name ~= "big-electric-pole" and traveldir % 2 == 0 then
+        if not self.switch then 
+          local fix = util.moveposition({tmp.x, tmp.y}, traveldir, 1)
+          tmp = {x=fix[1], y=fix[2]}
+        end
+        self.switch = not self.switch
+      end      
+      debugDump({dist=distance, lr=lastrail, dir=traveldir, offset=offset},true)
       self:removeTrees(tmp)
       self[name] = self[name] or 0
       local canplace = game.canplaceentity{name = name, position = tmp}
