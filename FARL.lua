@@ -10,6 +10,19 @@ function subPos(p1,p2)
   return {x=p1.x-p2.x, y=p1.y-p2.y}
 end
 
+function rotate(pos, traveldir)
+  local rot = {[0] = {{x=1,y=0},{x=0,y=1}},--0
+               [2] = {{x=0,y=-1},{x=1,y=0}}, --90
+               [4] = {{x=-1,y=0},{x=0,y=-1}},--180
+               [6] = {{x=0,y=1},{x=-1,y=0}} --270
+  }
+  local ret = {x=0,y=0}
+  
+  ret.x = pos.x * rot[traveldir][1].x + pos.y * rot[traveldir][1].y
+  ret.y = pos.x * rot[traveldir][2].x + pos.y * rot[traveldir][2].y
+  return ret
+end
+
 function pos2Str(pos)
   if not pos.x or not pos.y then
     pos = {x=0,y=0}
@@ -417,6 +430,52 @@ FARL = {
     end
     return canPlace, entity
   end,
+  
+  parseBlueprint = function(self, bp)
+    local e = bp.getblueprintentities()
+    local offsets = {}
+    local rail
+    local n = 0
+    for i=1,#e do
+      if not rail and e[i].name == "straight-rail" then
+        rail = {direction = e[i].direction, name = e[i].name, position = e[i].position}
+      end
+      if e[i].name ~= "straight-rail" then
+        table.insert(offsets, {name = e[i].name, direction = e[i].direction, position = e[i].position})
+        n = n + 1
+      end
+    end
+    if rail then
+      local lamps = {}
+      local polePos
+      for i=1,n do
+        offsets[i].position = subPos(offsets[i].position,rail.position)
+        if offsets[i].name == "big-electric-pole" then
+          glob.settings.poleDistance = math.abs(math.abs(offsets[i].position.x) - 2)
+          glob.medium = false
+        elseif offsets[i].name == "medium-electric-pole" then
+          glob.settings.poleDistance = math.abs(math.abs(offsets[i].position.x) - 1.5)
+          glob.medium = true
+        end
+        if offsets[i].name == "big-electric-pole" or offsets[i].name == "medium-electric-pole" then
+          polePos = offsets[i].position
+          glob.settings.poleSide = offsets[i].position.x > 0 and 1 or -1
+        end
+        if offsets[i].name == "small-lamp" then
+          self.lamps = {}
+          table.insert(lamps, offsets[i])
+        end
+      end
+      for i=1,#lamps do
+        self.lamps[i] = subPos(lamps[i].position,polePos)
+      end
+    else
+      self:print("No rail in blueprint")
+    end
+    debugDump(rail, true)
+    debugDump(offsets, true)
+    debugDump(self.lamps, true)
+  end,
 
   createJunction = function(self, input)
     self:activate()
@@ -527,21 +586,33 @@ FARL = {
   end,
 
   placeLamp = function(self,traveldir,pole)
-    local offset ={
-      [0] = {x=-0.5,y=1.5},
-      [1] = {x=-1.5,y=1.5},
-      [2] = {x=-1.5,y=-0.5},
-      [3] = {x=-1.5,y=-1.5},
-      [4] = {x=0.5,y=-1.5},
-      [5] = {x=1.5,y=-1.5},
-      [6] = {x=1.5,y=0.5},
-      [7] = {x=1.5,y=1.5},
-    }
-    local pos = addPos(pole, offset[traveldir])
-    local canplace = game.canplaceentity{name = "small-lamp", position = pos}
-    if canplace then
-      game.createentity{name = "small-lamp", position = pos, direction=0,force = game.forces.player}
-      self:removeItemFromCargo("small-lamp", 1)
+    if not self.lamps or traveldir % 2 == 1 then
+      local offset ={
+        [0] = {x=-0.5,y=1.5},
+        [1] = {x=-1.5,y=1.5},
+        [2] = {x=-1.5,y=-0.5},
+        [3] = {x=-1.5,y=-1.5},
+        [4] = {x=0.5,y=-1.5},
+        [5] = {x=1.5,y=-1.5},
+        [6] = {x=1.5,y=0.5},
+        [7] = {x=1.5,y=1.5},
+      }
+      local pos = addPos(pole, offset[traveldir])
+      local canplace = game.canplaceentity{name = "small-lamp", position = pos}
+      if canplace then
+        game.createentity{name = "small-lamp", position = pos, direction=0,force = game.forces.player}
+        self:removeItemFromCargo("small-lamp", 1)
+      end
+    elseif self.lamps and traveldir % 2 == 0 then
+
+      for i=1,#self.lamps do
+        local pos = addPos(pole, rotate(self.lamps[i], traveldir))
+        local canplace = game.canplaceentity{name = "small-lamp", position = pos}
+        if canplace and (self["small-lamp"] > 1 or godmode) then
+          game.createentity{name = "small-lamp", position = pos, direction=0,force = game.forces.player}
+          self:removeItemFromCargo("small-lamp", 1)
+        end
+      end
     end
   end,
 
