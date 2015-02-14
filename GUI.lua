@@ -207,22 +207,23 @@ GUI = {
       return blueprints
     end,
 
-    findSetupBlueprintInHotbar = function(player)
+    findSetupBlueprintsInHotbar = function(player)
       local blueprints = GUI.findBlueprintsInHotbar(player)
       if blueprints ~= nil then
+        local ret = {}
         for i, blueprint in ipairs(blueprints) do
           if blueprint.isblueprintsetup() then
-            return blueprint
+            table.insert(ret, blueprint)
           end
         end
+        return ret
       end
     end,
 
     readBlueprint = function(event, farl, player)
-      local bp = GUI.findSetupBlueprintInHotbar(player)
+      local bp = GUI.findSetupBlueprintsInHotbar(player)
       if bp then
-        debugDump(bp.getblueprintentities(),true)
-        farl:parseBlueprint(bp)
+        farl:parseBlueprints(bp)
         GUI.destroyGui(player)
         GUI.createGui(player)
         return

@@ -6,28 +6,6 @@ godmode = false
 godmodePoles = false
 godmodeSignals = false
 removeStone = true
---do local blueprintData={
---    icons={[1]={name="straight-rail",index=1},[2]={name="big-electric-pole",index=2}},
---    entities={[1]={entitynumber=1,name="straight-rail",position={x=-1,y=1},direction=0},
---              [2]={entitynumber=2,name="big-electric-pole",position={x=2,y=1}},
---              [3]={entitynumber=3,name="rail-signal",position={x=0.5,y=1.5},direction=4},
---              [4]={entitynumber=4,name="small-lamp",position={x=1.5,y=2.5}}},name="_New 01"};
---              return blueprintData;end
---do local blueprintData={
---    icons={[1]={name="straight-rail",index=1}},
---    entities={[1]={entitynumber=1,name="straight-rail",position={x=-1,y=-1},direction=3},
---              [2]={entitynumber=2,name="big-electric-pole",position={x=2,y=2}},
---              [3]={entitynumber=3,name="rail-signal",position={x=0.5,y=0.5},direction=5},
---              [4]={entitynumber=4,name="small-lamp",position={x=0.5,y=2.5}}},name="_New 02"};
---              return blueprintData;end
---do local blueprintData={
---    icons={[1]={name="big-electric-pole",index=1}},
---    entities={
---    [1]={entitynumber=1,name="straight-rail",position={x=-1,y=1},direction=7},
---    [2]={entitynumber=2,name="rail-signal",position={x=-0.5,y=1.5},direction=5},
---    [3]={entitynumber=3,name="small-lamp",position={x=-0.5,y=3.5}},
---    [4]={entitynumber=4,name="big-electric-pole",position={x=1,y=3}}},name="_New 03"};
---    return blueprintData;end
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 
 input2dir = {[0]=-1,[1]=0,[2]=1}
@@ -218,6 +196,8 @@ clearAreas =
     glob.settings.curvedWeight = glob.settings.curvedWeight or 4
     glob.settings.ccNet = glob.settings.ccNet or false
     glob.settings.ccWires = glob.settings.ccWires or 1
+    glob.settings.straight = glob.settings.straight or {}
+    glob.settings.diagonal = glob.settings.diagonal or {}
     if glob.minPoles == nil then
       glob.minPoles = true
     end

@@ -10,16 +10,19 @@ function subPos(p1,p2)
   return {x=p1.x-p2.x, y=p1.y-p2.y}
 end
 
-function rotate(pos, traveldir)
-  local rot = {[0] = {{x=1,y=0},{x=0,y=1}},--0
-               [2] = {{x=0,y=-1},{x=1,y=0}}, --90
-               [4] = {{x=-1,y=0},{x=0,y=-1}},--180
-               [6] = {{x=0,y=1},{x=-1,y=0}} --270
-  }
+function rotate(pos, rad)
+  local cos, sin = math.cos(rad), math.sin(rad)
+  local signCos = cos < 0 and -1 or 1
+  local signSin = sin < 0 and -1 or 1
+--  cos = traveldir % 2 == 1 and signCos * 0.5 or cos
+--  sin = traveldir % 2 == 1 and signSin * 0.5 or sin
+  local rot = {{x=cos,y=-sin},{x=sin,y=cos}}
   local ret = {x=0,y=0}
-  
-  ret.x = pos.x * rot[traveldir][1].x + pos.y * rot[traveldir][1].y
-  ret.y = pos.x * rot[traveldir][2].x + pos.y * rot[traveldir][2].y
+  debugDump({cos=cos,sin=sin},true)
+  --ret.x = pos.x * rot[traveldir][1].x + pos.y * rot[traveldir][1].y
+  --ret.y = pos.x * rot[traveldir][2].x + pos.y * rot[traveldir][2].y
+  ret.x = pos.x * rot[1].x + pos.y * rot[1].y
+  ret.y = pos.x * rot[2].x + pos.y * rot[2].y
   return ret
 end
 
@@ -431,52 +434,66 @@ FARL = {
     return canPlace, entity
   end,
   
-  parseBlueprint = function(self, bp)
-    local e = bp.getblueprintentities()
-    local offsets = {}
-    local rail
-    local n = 0
-    for i=1,#e do
-      if not rail and e[i].name == "straight-rail" then
-        rail = {direction = e[i].direction, name = e[i].name, position = e[i].position}
-      end
-      if e[i].name ~= "straight-rail" then
-        table.insert(offsets, {name = e[i].name, direction = e[i].direction, position = e[i].position})
-        n = n + 1
-      end
-    end
-    if rail then
-      local lamps = {}
-      local polePos
-      for i=1,n do
-        offsets[i].position = subPos(offsets[i].position,rail.position)
-        if offsets[i].name == "big-electric-pole" then
-          glob.settings.poleDistance = math.abs(math.abs(offsets[i].position.x) - 2)
-          glob.medium = false
-        elseif offsets[i].name == "medium-electric-pole" then
-          glob.settings.poleDistance = math.abs(math.abs(offsets[i].position.x) - 1.5)
-          glob.medium = true
+  parseBlueprints = function(self, bp)
+    glob.settings.bp = #bp == 2 and true or false
+    for j=1,#bp do
+      local e = bp[j].getblueprintentities()
+      local offsets = {}
+      local rail
+      local n = 0
+      for i=1,#e do
+        if not rail and e[i].name == "straight-rail" then
+          rail = {direction = e[i].direction, name = e[i].name, position = e[i].position}
         end
-        if offsets[i].name == "big-electric-pole" or offsets[i].name == "medium-electric-pole" then
-          polePos = offsets[i].position
-          glob.settings.poleSide = offsets[i].position.x > 0 and 1 or -1
-        end
-        if offsets[i].name == "small-lamp" then
-          self.lamps = {}
-          table.insert(lamps, offsets[i])
+        if e[i].name ~= "straight-rail" then
+          table.insert(offsets, {name = e[i].name, direction = e[i].direction, position = e[i].position})
+          n = n + 1
         end
       end
-      for i=1,#lamps do
-        self.lamps[i] = subPos(lamps[i].position,polePos)
+      if rail then
+        local type = rail.direction == 0 and "straight" or "diagonal"
+        local lamps = {}
+        local polePos
+        glob.settings[type].direction = rail.direction
+        for i=1,n do
+          offsets[i].position = subPos(offsets[i].position,rail.position)
+          if offsets[i].name == "big-electric-pole" then
+            glob.settings.poleDistance = math.abs(math.abs(offsets[i].position.x) - 2)
+            glob.medium = false
+          elseif offsets[i].name == "medium-electric-pole" then
+            glob.settings.poleDistance = math.abs(math.abs(offsets[i].position.x) - 1.5)
+            glob.medium = true
+          end
+          if offsets[i].name == "big-electric-pole" or offsets[i].name == "medium-electric-pole" then
+            polePos = offsets[i].position
+            glob.settings[type].pole = offsets[i]
+            glob.settings.poleSide = offsets[i].position.x > 0 and 1 or -1
+          end
+          if offsets[i].name == "small-lamp" then
+            self.lamps = {}
+            glob.settings[type].lamps = {}
+            table.insert(lamps, offsets[i])
+          end
+        end
+        for i=1,#lamps do
+          glob.settings[type].lamps[i] = subPos(lamps[i].position,polePos)
+          self.lamps[i] = subPos(lamps[i].position,polePos)
+        end
+      else
+        self:print("No rail in blueprint #"..j)
+        glob.settings.bp = false
       end
-    else
-      self:print("No rail in blueprint")
-    end
+          
     debugDump(rail, true)
     debugDump(offsets, true)
     debugDump(self.lamps, true)
+    end
   end,
 
+  parseOffsets = function(self, data)
+  
+  end,
+  
   createJunction = function(self, input)
     self:activate()
     self.last = self:findLastRail(3)
@@ -586,7 +603,7 @@ FARL = {
   end,
 
   placeLamp = function(self,traveldir,pole)
-    if not self.lamps or traveldir % 2 == 1 then
+    if not glob.settings.bp then--or traveldir % 2 == 1 then
       local offset ={
         [0] = {x=-0.5,y=1.5},
         [1] = {x=-1.5,y=1.5},
@@ -603,10 +620,13 @@ FARL = {
         game.createentity{name = "small-lamp", position = pos, direction=0,force = game.forces.player}
         self:removeItemFromCargo("small-lamp", 1)
       end
-    elseif self.lamps and traveldir % 2 == 0 then
-
-      for i=1,#self.lamps do
-        local pos = addPos(pole, rotate(self.lamps[i], traveldir))
+    elseif glob.settings.bp then--and traveldir % 2 == 0 then
+      local lamps = traveldir % 2 == 0 and glob.settings.straight.lamps or glob.settings.diagonal.lamps
+      local diff = traveldir % 2 == 0 and traveldir or traveldir-1
+      local rad = diff * (math.pi/4)
+      for i=1,#lamps do
+        local pos = addPos(pole, rotate(lamps[i], rad))
+        debugDump(pos, true)
         local canplace = game.canplaceentity{name = "small-lamp", position = pos}
         if canplace and (self["small-lamp"] > 1 or godmode) then
           game.createentity{name = "small-lamp", position = pos, direction=0,force = game.forces.player}
