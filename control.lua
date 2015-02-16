@@ -196,8 +196,8 @@ clearAreas =
     glob.settings.curvedWeight = glob.settings.curvedWeight or 4
     glob.settings.ccNet = glob.settings.ccNet or false
     glob.settings.ccWires = glob.settings.ccWires or 1
-    glob.settings.straight = glob.settings.straight or {}
-    glob.settings.diagonal = glob.settings.diagonal or {}
+    glob.settings.straight = glob.settings.straight or {pole=false, lamps={}}
+    glob.settings.diagonal = glob.settings.diagonal or {pole=false, lamps={}}
     if glob.minPoles == nil then
       glob.minPoles = true
     end

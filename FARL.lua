@@ -10,19 +10,18 @@ function subPos(p1,p2)
   return {x=p1.x-p2.x, y=p1.y-p2.y}
 end
 
+local rot = {}
+for i=0,7 do
+  local rad = i* (math.pi/4)
+  rot[rad] = {cos=math.cos(rad),sin=math.sin(rad)}
+end
+
 function rotate(pos, rad)
-  local cos, sin = math.cos(rad), math.sin(rad)
-  local signCos = cos < 0 and -1 or 1
-  local signSin = sin < 0 and -1 or 1
---  cos = traveldir % 2 == 1 and signCos * 0.5 or cos
---  sin = traveldir % 2 == 1 and signSin * 0.5 or sin
-  local rot = {{x=cos,y=-sin},{x=sin,y=cos}}
+  local cos, sin = rot[rad].cos, rot[rad].sin
+  local r = {{x=cos,y=-sin},{x=sin,y=cos}}
   local ret = {x=0,y=0}
-  debugDump({cos=cos,sin=sin},true)
-  --ret.x = pos.x * rot[traveldir][1].x + pos.y * rot[traveldir][1].y
-  --ret.y = pos.x * rot[traveldir][2].x + pos.y * rot[traveldir][2].y
-  ret.x = pos.x * rot[1].x + pos.y * rot[1].y
-  ret.y = pos.x * rot[2].x + pos.y * rot[2].y
+  ret.x = pos.x * r[1].x + pos.y * r[1].y
+  ret.y = pos.x * r[2].x + pos.y * r[2].y
   return ret
 end
 
@@ -436,57 +435,49 @@ FARL = {
   
   parseBlueprints = function(self, bp)
     glob.settings.bp = #bp == 2 and true or false
+    glob.settings.diagonal.lamps = {}
+    glob.settings.straight.lamps = {}
     for j=1,#bp do
       local e = bp[j].getblueprintentities()
-      local offsets = {}
+      local offsets = {pole=false, lamps={}}
       local rail
-      local n = 0
+
       for i=1,#e do
         if not rail and e[i].name == "straight-rail" then
           rail = {direction = e[i].direction, name = e[i].name, position = e[i].position}
         end
-        if e[i].name ~= "straight-rail" then
-          table.insert(offsets, {name = e[i].name, direction = e[i].direction, position = e[i].position})
-          n = n + 1
+        if e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
+          offsets.pole = {name = e[i].name, direction = e[i].direction, position = e[i].position}
+        end
+        if e[i].name == "small-lamp" then
+          table.insert(offsets.lamps, {name = e[i].name, direction = e[i].direction, position = e[i].position})
         end
       end
-      if rail then
+      if rail and offsets.pole then
         local type = rail.direction == 0 and "straight" or "diagonal"
-        local lamps = {}
-        local polePos
         glob.settings[type].direction = rail.direction
-        for i=1,n do
-          offsets[i].position = subPos(offsets[i].position,rail.position)
-          if offsets[i].name == "big-electric-pole" then
-            glob.settings.poleDistance = math.abs(math.abs(offsets[i].position.x) - 2)
-            glob.medium = false
-          elseif offsets[i].name == "medium-electric-pole" then
-            glob.settings.poleDistance = math.abs(math.abs(offsets[i].position.x) - 1.5)
-            glob.medium = true
-          end
-          if offsets[i].name == "big-electric-pole" or offsets[i].name == "medium-electric-pole" then
-            polePos = offsets[i].position
-            glob.settings[type].pole = offsets[i]
-            glob.settings.poleSide = offsets[i].position.x > 0 and 1 or -1
-          end
-          if offsets[i].name == "small-lamp" then
-            self.lamps = {}
-            glob.settings[type].lamps = {}
-            table.insert(lamps, offsets[i])
-          end
+        for _, l in ipairs(offsets.lamps) do
+          table.insert(glob.settings[type].lamps, subPos(l.position, offsets.pole.position))
         end
-        for i=1,#lamps do
-          glob.settings[type].lamps[i] = subPos(lamps[i].position,polePos)
-          self.lamps[i] = subPos(lamps[i].position,polePos)
+        glob.medium = offsets.pole.name == "medium-electric-pole" and true or false
+        local railPos = rail.position
+        if type == "diagonal" then
+          local x,y = 0,0
+          if rail.direction == 3 then
+            x = rail.position.x + 0.5
+            y = rail.position.y + 0.5
+          elseif rail.direction == 7 then
+            x = rail.position.x - 0.5
+            y = rail.position.y - 0.5
+          end
+          railPos = {x=x,y=y}
         end
+        offsets.pole.position = subPos(offsets.pole.position,railPos)        
+        glob.settings[type].pole = offsets.pole
       else
         self:print("No rail in blueprint #"..j)
         glob.settings.bp = false
       end
-          
-    debugDump(rail, true)
-    debugDump(offsets, true)
-    debugDump(self.lamps, true)
     end
   end,
 
@@ -578,12 +569,38 @@ FARL = {
     local distance, side, dir = glob.settings.poleDistance, glob.settings.poleSide, placement.dir[traveldir]
     local lookup = lastrail.direction
     if lastrail.name ~= "curved-rail" then
-      if data[lastrail.direction] then
-        local flip = side == -1 and true or false
-        if flip then lookup = (lookup+4)%8 end
-        offset = addPos(data[lookup])
+      if glob.settings.bp then
+        local diagonal = traveldir % 2 == 1 and true or false
+        local pole = not diagonal and glob.settings.straight.pole or glob.settings.diagonal.pole
+        local pos = addPos(pole.position)
+        local diff = not diagonal and traveldir or traveldir-1
+        local rad = diff * (math.pi/4)
+        offset = rotate(pos, rad)
+        if diagonal then
+          local x,y = 0,0
+          -- 1 +x -y
+          if lastrail.direction == 1 then
+            x, y = 0.5, - 0.5
+          elseif lastrail.direction == 3 then
+            x, y = 0.5, 0.5
+          -- 5 -x +y
+          elseif lastrail.direction == 5 then
+            x, y = - 0.5, 0.5
+          elseif lastrail.direction == 7 then
+            x, y = - 0.5, - 0.5
+          end
+          local railPos = {x=x,y=y}
+          offset = addPos(railPos, offset)
+        end
+        return offset
       else
-        offset = addPos(data)
+        if data[lastrail.direction] then
+          local flip = side == -1 and true or false
+          if flip then lookup = (lookup+4)%8 end
+          offset = addPos(data[lookup])
+        else
+          offset = addPos(data)
+        end
       end
     else
       offset = glob.medium and {x=0,y=0} or offset
@@ -626,7 +643,7 @@ FARL = {
       local rad = diff * (math.pi/4)
       for i=1,#lamps do
         local pos = addPos(pole, rotate(lamps[i], rad))
-        debugDump(pos, true)
+        --debugDump(pos, true)
         local canplace = game.canplaceentity{name = "small-lamp", position = pos}
         if canplace and (self["small-lamp"] > 1 or godmode) then
           game.createentity{name = "small-lamp", position = pos, direction=0,force = game.forces.player}
