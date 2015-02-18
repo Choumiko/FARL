@@ -101,6 +101,8 @@ GUI = {
         glob[name] = not glob[name]
       elseif name == "ccNet" then
         glob.settings.ccNet = not glob.settings.ccNet
+      elseif name == "flipPoles" then
+        glob.settings.flipPoles = not glob.settings.flipPoles
       elseif name == "junctionLeft" then
         farl:createJunction(0)
       elseif name == "junctionRight" then
@@ -135,39 +137,32 @@ GUI = {
 
     toggleSettingsWindow = function(event, farl, player)
       local row = player.gui.left.farl.rows
-      local captionSide
-      if glob.settings.poleSide == 1 then
-        captionSide = {"stg-side-right"}
-      else
-        captionSide = {"stg-side-left"}
-      end
+--      local captionSide
+--      if glob.settings.poleSide == 1 then
+--        captionSide = {"stg-side-right"}
+--      else
+--        captionSide = {"stg-side-left"}
+--      end
 
       if row.settings ~= nil then
         local s = row.settings
-        local pDistance = tonumber(s.poleDistance.text) or glob.settings.poleDistance
-        pDistance = pDistance < 0 and 1 or pDistance
-        pDistance = pDistance >= 5 and 5 or pDistance
         local sDistance = tonumber(s.signalDistance.text) or glob.settings.signalDistance
         sDistance = sDistance < 0 and 0 or sDistance
-        local weight = tonumber(s.curvedWeight.text) or glob.settings.curvedWeight
-        weight = weight < 0 and 1 or weight
         player.gui.left.farl.rows.buttons.settings.caption={"text-settings"}
-        GUI.saveSettings{poleDistance=pDistance, signalDistance=sDistance, curvedWeight=weight}
+        GUI.saveSettings{signalDistance=sDistance}
         row.settings.destroy()
       else
         local settings = row.add({type="table", name="settings", colspan=2})
         player.gui.left.farl.rows.buttons.settings.caption={"text-save"}
 
-        GUI.add(settings, {type="label", caption={"stg-poleDistance"}})
-        GUI.add(settings, {type="textfield", name="poleDistance", style="farl_textfield_small"}, glob.settings.poleDistance)
-
         GUI.add(settings, {type="label", caption={"stg-signalDistance"}})
         GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, glob.settings.signalDistance)
-
-        GUI.add(settings, {type="checkbox", name="medium", caption={"stg-mediumPoles"}},"medium")
-        local row1 = GUI.add(settings,{type="table", name="row2", colspan=2})
-        GUI.add(row1, {type="label", caption={"stg-poleSide"}})
-        GUI.addButton(row1, {name="side", caption=captionSide}, GUI.toggleSide)
+        
+--        GUI.add(settings, {type="checkbox", name="medium", caption={"stg-mediumPoles"}},"medium")
+--        local row1 = GUI.add(settings,{type="table", name="row2", colspan=2})
+        GUI.add(settings, {type="label", caption={"stg-poleSide"}})
+        GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=glob.settings.flipPoles})
+--        GUI.addButton(row1, {name="side", caption=captionSide}, GUI.toggleSide)
 
         GUI.add(settings, {type="checkbox", name="minPoles", caption={"stg-minPoles"}}, "minPoles")
         GUI.add(settings, {type="label", caption=""})
@@ -176,9 +171,6 @@ GUI = {
         local row2 = GUI.add(settings, {type="table", name="row3", colspan=2})
         GUI.add(row2, {type="label", caption={"stg-ccNetWire"}})
         GUI.addButton(row2, {name="ccNetWires", caption=GUI.ccWires[glob.settings.ccWires]}, GUI.toggleWires)
-
-        GUI.add(settings, {type="label", caption={"stg-curvedWeight"}})
-        GUI.add(settings, {type="textfield", name="curvedWeight", style="farl_textfield_small"}, glob.settings.curvedWeight)
 
         GUI.add(settings, {type="label", caption={"stg-blueprint"}})
         GUI.addButton(settings, {name="blueprint", caption={"stg-blueprint-empty"}} ,GUI.readBlueprint)
@@ -243,9 +235,6 @@ GUI = {
       if farl.driver.name ~= "farl_player" then
         farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
-        if farl.driver.gui.left.farl.rows.settings ~= nil then
-          
-        end
       end
     end,
 }

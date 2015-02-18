@@ -65,43 +65,32 @@ clearAreas =
       {{x=0.5,y=-1.5},{x=0.5,y=2.5}},{{x=-0.5,y=-2.5},{x=-0.5,y=1.5}},
       {{x=-1.5,y=-3.5},{x=-1.5,y=1.5}},{{x=-3.5,y=-3.5},{x=-2.5,y=0.5}}}
   }
-
-  polePlacement = {
-
-      data = {
-        [0]={x = 2, y = 0},
-        [1]={x=3,y=1, [3]={x=2,y=2}, [7]={x=1,y=1}},
-        [2]={x = 0, y = 2},
-        [3]={x=3,y=1, [1]={x=1,y=1},[5]={x=2,y=2}},
-        [4]={x = 2, y = 0},
-        [5]={x=3,y=1, [3]={x=1,y=1}, [7]={x=2,y=2}},
-        [6]={x = 0, y = 2},
-        [7]={x=3,y=1, [1]={x=2,y=2},[5]={x=1,y=1}},
-      },
-
-      curves = {
-        [0]={x=2,y=0},
-        [1]={x=2,y=0},
-        [2]={x=0,y=2},
-        [3]={x=0,y=2},
-        [4]={x=2,y=0},
-        [5]={x=2,y=0},
-        [6]={x=0,y=2},
-        [7]={x=0,y=2}
-      },
-
-      dir = {
-        [0]={x = 1, y = 1},
-        [1]={x = 1, y = 1},
-        [2]={x = 1, y = 1},
-        [3]={x = -1, y = 1},
-        [4]={x = -1, y = 1},
-        [5]={x = -1, y = -1},
-        [6]={x = 1, y = -1},
-        [7]={x = 1, y = -1}
-      }
+  
+  --poleDistance = 1, side = right
+  defaultsDiagonal = {
+      direction = 3,
+      lamps = {{x = -1.5, y = 1.5}},
+      pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}}
   }
-
+ 
+  defaultsStraight = {
+      direction = 0,
+      lamps = {{x = -0.5, y = 1.5}},
+      pole = {name = "big-electric-pole", position = {x = 3, y = 0}}
+  }
+  
+  defaultsMediumDiagonal = { 
+    direction = 7,
+    lamps = {{x = -1, y = 1}},
+    pole = {name = "medium-electric-pole", position = {x = 2, y = 1}}
+  }
+  
+  defaultsMediumStraight = {
+    direction = 0,
+    lamps = {{x = 0,y = 1}},
+    pole = {name = "medium-electric-pole", position = {x = 2.5,y = -0.5}}
+  }
+  
   --[traveldir] ={[raildir]
   signalOffset =
     {
@@ -119,40 +108,6 @@ clearAreas =
     setmetatable(o,{__index=mt})
     return o
   end
-
-  poleMedium = {
-    data = {
-      [0]={x = 1.5, y = 0.5},
-      [1]={x=0.5,y=0.5, [3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}},
-      [2]={x = 0.5, y = 1.5},
-      [3]={x=-1,y=0.5, [1]={x=0.5,y=0.5},[5]={x=1.5,y=1.5}},
-      [4]={x = 1.5, y = 0.5},
-      [5]={x=0.5,y=0.5, [3]={x=0.5,y=0.5}, [7]={x=1.5,y=1.5}},
-      [6]={x = 0.5, y = 1.5},
-      [7]={x=0.5,y=0.5, [1]={x=1.5,y=1.5},[5]={x=0.5,y=0.5}},
-    },
-
-    curves = {
-      [0]={x=1.5,y=0.5},
-      [1]={x=1.5,y=0.5},
-      [2]={x=0.5,y=1.5},
-      [3]={x=0.5,y=1.5},
-      [4]={x=1.5,y=0.5},
-      [5]={x=1.5,y=0.5},
-      [6]={x=0.5,y=1.5},
-      [7]={x=0.5,y=1.5}
-    },
-    dir = {
-      [0]={x = 1, y = -1},
-      [1]={x = 1, y = 1},
-      [2]={x = 1, y = 1},
-      [3]={x = -1, y = 1},
-      [4]={x = -1, y = 1},
-      [5]={x = -1, y = -1},
-      [6]={x = -1, y = -1},
-      [7]={x = 1, y = -1}
-    }
-  }
 
   local function onTick(event)
 
@@ -183,21 +138,18 @@ clearAreas =
       glob = {}
       if game.forces.player.technologies["rail-signals"].researched then
         game.forces.player.recipes["farl"].enabled = true
-        glob.signals = true
-        glob.poles = true
       end
       glob.settings = {}
       glob.version = "0.1.1"
     end
     glob.settings = glob.settings or {}
-    glob.settings.poleDistance = glob.settings.poleDistance or 1
-    glob.settings.poleSide = glob.settings.poleSide or 1
     glob.settings.signalDistance = glob.settings.signalDistance or 15
     glob.settings.curvedWeight = glob.settings.curvedWeight or 4
     glob.settings.ccNet = glob.settings.ccNet or false
     glob.settings.ccWires = glob.settings.ccWires or 1
-    glob.settings.straight = glob.settings.straight or {pole=false, lamps={}}
-    glob.settings.diagonal = glob.settings.diagonal or {pole=false, lamps={}}
+    glob.settings.straight = glob.settings.straight or defaultsStraight
+    glob.settings.diagonal = glob.settings.diagonal or defaultsDiagonal
+
     if glob.minPoles == nil then
       glob.minPoles = true
     end
@@ -213,6 +165,10 @@ clearAreas =
     if glob.flipSignals == nil then
       glob.flipSignals = false
     end
+    if glob.settings.flipPoles == nil then
+      glob.settings.flipPoles = false
+    end
+        
     glob.flipSignals = false
     glob.farl = glob.farl or {}
     glob.railInfoLast = glob.railInfoLast or {}
@@ -231,6 +187,17 @@ clearAreas =
         GUI.destroyGui(game.players[i])
       end
       glob.version = "0.1.4"
+    end
+    if glob.version < "0.1.8" then
+      glob.settings.poleDistance = nil
+      glob.settings.poleSide = nil
+      if glob.medium then
+        glob.settings.straight = defaultsMediumStraight
+        glob.settings.diagonal = defaultsMediumDiagonal
+      else
+        glob.settings.straight = defaultsStraight
+        glob.settings.diagonal = defaultsDiagonal      
+      end
     end
     GUI.init()
     glob.version = "0.1.5"
@@ -366,6 +333,24 @@ clearAreas =
         end
         initGlob()
       end,
+      
+      useMediumPoles = function()
+        glob.settings.straight = defaultsMediumStraight
+        glob.settings.diagonal = defaultsMediumDiagonal
+        glob.medium = true
+      end,
+      
+      useBigPoles = function()
+        glob.settings.straight = defaultsStraight
+        glob.settings.diagonal = defaultsDiagonal
+        glob.medium = false      
+      end,
+      
+      setCurvedWeight = function(weight)
+        local w = tonumber(weight) or glob.settings.curvedWeight
+        glob.settings.curvedWeight = w < 0 and 1 or w
+      end,
+      
       godmode = function(bool)
         godmode = bool
         godmodePoles = bool
@@ -378,6 +363,15 @@ clearAreas =
       tileAt = function(x,y)
         debugDump(game.gettile(x, y).name,true)
       end,
+      
+      quickstart = function()
+        local items = {"farl", "curved-rail", "straight-rail", "medium-electric-pole", "big-electric-pole",
+        "small-lamp", "solid-fuel", "rail-signal", "blueprint"}
+        local count = {5,50,50,50,50,50,50,50,10}
+        for i=1,#items do
+          game.player.insert{name=items[i], count=count[i]}
+        end
+      end
 
     --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
     })

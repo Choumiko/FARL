@@ -531,7 +531,7 @@ FARL = {
           self:removeItemFromCargo(nextRail.name, 1)
           if glob.poles then
             if godmodePoles or self["big-electric-pole"] > 0 or self["medium-electric-pole"] > 0 then
-              self:placePole(newTravelDir, nextRail)
+              self:placePole(newTravelDir, nextRail, travelDir)
             end
           end
           if glob.signals then
@@ -561,94 +561,72 @@ FARL = {
     end
     return retDir, retRail
   end,
-
-  calcPole = function(self,lastrail, traveldir)
-    local placement = glob.medium and poleMedium or polePlacement
-    local data = placement.data[traveldir]
-    local offset = addPos(data, {x=0,y=0})
-    local distance, side, dir = glob.settings.poleDistance, glob.settings.poleSide, placement.dir[traveldir]
-    local lookup = lastrail.direction
+  
+  calcPole = function(self,lastrail, traveldir, oldDir)
+    local offset
+    local curvePositions = {
+      [0] = {straight={dir=0, off={x=1,y=3}}, diagonal = {dir=5, off={x=-1,y=-3}}},
+      [1] = {straight={dir=0, off={x=-1,y=3}}, diagonal = {dir=3, off={x=1,y=-3}}},
+      [2] = {straight={dir=2, off={x=-3,y=1}}, diagonal = {dir=7, off={x=3,y=-1}}},
+      [3] = {straight={dir=2, off={x=-3,y=-1}}, diagonal = {dir=5, off={x=3,y=1}}},
+      [4] = {straight={dir=0, off={x=-1,y=-3}}, diagonal = {dir=1, off={x=1,y=3}}},
+      [5] = {straight={dir=0, off={x=1,y=-3}}, diagonal = {dir=7, off={x=-1,y=3}}},
+      [6] = {straight={dir=2, off={x=3,y=-1}}, diagonal = {dir=3, off={x=-3,y=1}}},
+      [7] = {straight={dir=2, off={x=3,y=1}}, diagonal = {dir=1, off={x=-3,y=-1}}}
+    }
+    
     if lastrail.name ~= "curved-rail" then
-      if glob.settings.bp then
-        local diagonal = traveldir % 2 == 1 and true or false
-        local pole = not diagonal and glob.settings.straight.pole or glob.settings.diagonal.pole
-        local pos = addPos(pole.position)
-        local diff = not diagonal and traveldir or traveldir-1
-        local rad = diff * (math.pi/4)
-        offset = rotate(pos, rad)
-        if diagonal then
-          local x,y = 0,0
-          -- 1 +x -y
-          if lastrail.direction == 1 then
-            x, y = 0.5, - 0.5
-          elseif lastrail.direction == 3 then
-            x, y = 0.5, 0.5
-          -- 5 -x +y
-          elseif lastrail.direction == 5 then
-            x, y = - 0.5, 0.5
-          elseif lastrail.direction == 7 then
-            x, y = - 0.5, - 0.5
-          end
-          local railPos = {x=x,y=y}
-          offset = addPos(railPos, offset)
+      local diagonal = traveldir % 2 == 1 and true or false
+      local pole = not diagonal and glob.settings.straight.pole or glob.settings.diagonal.pole
+      local pos = addPos(pole.position)
+      local diff = not diagonal and traveldir or traveldir-1
+      local rad = diff * (math.pi/4)
+      offset = rotate(pos, rad)
+      if glob.settings.flipPoles then
+        offset = rotate(offset, 4*(math.pi/4))
+      end
+      if diagonal then
+        local x,y = 0,0
+        -- 1 +x -y
+        if lastrail.direction == 1 then
+          x, y = 0.5, - 0.5
+        elseif lastrail.direction == 3 then
+          x, y = 0.5, 0.5
+        -- 5 -x +y
+        elseif lastrail.direction == 5 then
+          x, y = - 0.5, 0.5
+        elseif lastrail.direction == 7 then
+          x, y = - 0.5, - 0.5
         end
-        return offset
-      else
-        if data[lastrail.direction] then
-          local flip = side == -1 and true or false
-          if flip then lookup = (lookup+4)%8 end
-          offset = addPos(data[lookup])
-        else
-          offset = addPos(data)
-        end
+        local railPos = {x=x,y=y}
+        offset = addPos(railPos, offset)
       end
     else
-      offset = glob.medium and {x=0,y=0} or offset
-      offset = addPos(offset,placement.curves[lastrail.direction])
-      --dir = polePlacement.dir[lastrail.direction]
-      distance = distance > 1 and distance - 1 or 1
-    end
-    --  if  lastrail.name == "curved-rail" then dir = {x=1,y=1} end
-    offset.x = (offset.x + distance) * side * dir.x
-    offset.y = (offset.y + distance) * side * dir.y
-    if lastrail.name == "curved-rail" then
-    --debugDump({lr=lastrail, off=offset, tr=traveldir},true)
-    --debugDump({dist=distance,side=side,dir=dir},true)
-    --debugDump("Result:"..pos2Str( addPos(lastrail.position, offset)),true)
+      local tracks = curvePositions[lastrail.direction]
+      offset = {}
+      local d = {name="straight-rail", direction=tracks.diagonal.dir, position=addPos(lastrail.position,tracks.diagonal.off)}
+      local s = {name="straight-rail", direction=tracks.straight.dir, position=addPos(lastrail.position,tracks.straight.off)}
+
+      local dDir = traveldir % 2 == 1 and traveldir or oldDir
+      local sDir = traveldir % 2 == 0 and traveldir or oldDir
+      offset[1] = {rail=d, dir = dDir}
+      offset[2] = {rail=s, dir = sDir}
     end
     return offset
   end,
 
   placeLamp = function(self,traveldir,pole)
-    if not glob.settings.bp then--or traveldir % 2 == 1 then
-      local offset ={
-        [0] = {x=-0.5,y=1.5},
-        [1] = {x=-1.5,y=1.5},
-        [2] = {x=-1.5,y=-0.5},
-        [3] = {x=-1.5,y=-1.5},
-        [4] = {x=0.5,y=-1.5},
-        [5] = {x=1.5,y=-1.5},
-        [6] = {x=1.5,y=0.5},
-        [7] = {x=1.5,y=1.5},
-      }
-      local pos = addPos(pole, offset[traveldir])
+    local lamps = traveldir % 2 == 0 and glob.settings.straight.lamps or glob.settings.diagonal.lamps
+    local diff = traveldir % 2 == 0 and traveldir or traveldir-1
+    local rad = diff * (math.pi/4)
+    for i=1,#lamps do
+      local offset = rotate(lamps[i], rad)
+      local pos = addPos(pole, offset)
+      --debugDump(pos, true)
       local canplace = game.canplaceentity{name = "small-lamp", position = pos}
-      if canplace then
+      if canplace and (self["small-lamp"] > 1 or godmode) then
         game.createentity{name = "small-lamp", position = pos, direction=0,force = game.forces.player}
         self:removeItemFromCargo("small-lamp", 1)
-      end
-    elseif glob.settings.bp then--and traveldir % 2 == 0 then
-      local lamps = traveldir % 2 == 0 and glob.settings.straight.lamps or glob.settings.diagonal.lamps
-      local diff = traveldir % 2 == 0 and traveldir or traveldir-1
-      local rad = diff * (math.pi/4)
-      for i=1,#lamps do
-        local pos = addPos(pole, rotate(lamps[i], rad))
-        --debugDump(pos, true)
-        local canplace = game.canplaceentity{name = "small-lamp", position = pos}
-        if canplace and (self["small-lamp"] > 1 or godmode) then
-          game.createentity{name = "small-lamp", position = pos, direction=0,force = game.forces.player}
-          self:removeItemFromCargo("small-lamp", 1)
-        end
       end
     end
   end,
@@ -681,7 +659,7 @@ FARL = {
     self.ccNetPole = pole
   end,
 
-  placePole = function(self,traveldir, lastrail)
+  placePole = function(self,traveldir, lastrail, oldDir)
     local name = glob.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = glob.medium and 9 or 30
     local tmp = {x=self.lastCheckPole.x,y=self.lastCheckPole.y}
@@ -700,13 +678,28 @@ FARL = {
       end
     end
     if minPos then self.lastPole = minPos end
-    local offset = self:calcPole(lastrail, traveldir)
+    local offset = self:calcPole(lastrail, traveldir, oldDir)
+    if not offset.x then
+      local d1 = util.distance(offset[1].rail.position,self.lastPole)
+      local d2 = util.distance(offset[2].rail.position,self.lastPole)
+      local first = d1 < d2 and offset[1] or offset[2]
+      local second = d1 < d2 and offset[2] or offset[1]
+      
+      self:placePole(first.dir, first.rail)
+      self:placePole(second.dir, second.rail)
+      return
+    end
+    
     self.lastCheckPole = addPos(lastrail.position, offset)
     local distance = util.distance(self.lastPole, self.lastCheckPole)
     if distance > reach then
       if name ~= "big-electric-pole" and traveldir % 2 == 0 and lastrail.name ~= "curved-rail" then
         if not self.switch then 
           local fix = util.moveposition({tmp.x, tmp.y}, traveldir, 1)
+          if util.distance(self.lastPole, {x=fix[1],y=fix[2]}) > reach then
+            fix = {tmp.x,tmp.y}
+            self.switch = not self.switch
+          end
           tmp = {x=fix[1], y=fix[2]}
         end
         self.switch = not self.switch
@@ -766,7 +759,7 @@ FARL = {
 
   findLastPole = function(self)
     local name = glob.medium and "medium-electric-pole" or "big-electric-pole"
-    local reach = medium and 9 or 30
+    local reach = glob.medium and 9 or 30
     local locomotive = self.locomotive
     local pos = {locomotive.position.x, locomotive.position.y}
     local poles = game.findentitiesfiltered{area={{pos[1]-reach,pos[2]-reach},{pos[1]+reach,pos[2]+reach}}, name=name}
