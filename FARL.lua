@@ -434,7 +434,7 @@ FARL = {
   end,
   
   parseBlueprints = function(self, bp)
-    glob.settings.bp = #bp == 2 and true or false
+    glob.settings.bp = #bp >= 2 and true or false
     glob.settings.diagonal.lamps = {}
     glob.settings.straight.lamps = {}
     for j=1,#bp do
@@ -583,7 +583,7 @@ FARL = {
       local rad = diff * (math.pi/4)
       offset = rotate(pos, rad)
       if glob.settings.flipPoles then
-        offset = rotate(offset, 4*(math.pi/4))
+        offset = rotate(offset, math.pi)
       end
       if diagonal then
         local x,y = 0,0

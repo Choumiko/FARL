@@ -136,9 +136,6 @@ clearAreas =
   local function initGlob()
     if glob.version == nil or glob.version < "0.1.1" then
       glob = {}
-      if game.forces.player.technologies["rail-signals"].researched then
-        game.forces.player.recipes["farl"].enabled = true
-      end
       glob.settings = {}
       glob.version = "0.1.1"
     end
@@ -198,9 +195,10 @@ clearAreas =
         glob.settings.straight = defaultsStraight
         glob.settings.diagonal = defaultsDiagonal      
       end
+      glob.version = "0.1.8"
     end
     GUI.init()
-    glob.version = "0.1.5"
+    glob.version = "0.1.8"
   end
 
   local function oninit() initGlob() end
