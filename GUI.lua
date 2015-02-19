@@ -97,12 +97,10 @@ GUI = {
         --glob.debug = {}
         --glob.action = {}
         farl:debugInfo()
-      elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "medium" or name == "minPoles" then
+      elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles" then
         glob[name] = not glob[name]
-      elseif name == "ccNet" then
-        glob.settings.ccNet = not glob.settings.ccNet
-      elseif name == "flipPoles" then
-        glob.settings.flipPoles = not glob.settings.flipPoles
+      elseif name == "ccNet" or name == "flipPoles" then
+        glob.settings[name] = not glob.settings[name]
       elseif name == "junctionLeft" then
         farl:createJunction(0)
       elseif name == "junctionRight" then
@@ -112,6 +110,17 @@ GUI = {
 
     toggleStart = function(event, farl, player)
       farl:toggleActive()
+    end,
+
+    togglePole = function(event, farl, player)
+      glob.medium = not glob.medium
+      if glob.medium then
+        glob.activeBP = glob.settings.bp.medium
+        event.element.caption = {"stg-poleMedium"}
+      else
+        glob.activeBP = glob.settings.bp.big
+        event.element.caption = {"stg-poleBig"}
+      end
     end,
 
     toggleSide = function(event, farl, player)
@@ -152,14 +161,16 @@ GUI = {
         GUI.saveSettings{signalDistance=sDistance}
         row.settings.destroy()
       else
+        local captionPole = glob.medium and {"stg-poleMedium"} or {"stg-poleBig"}
         local settings = row.add({type="table", name="settings", colspan=2})
         player.gui.left.farl.rows.buttons.settings.caption={"text-save"}
 
         GUI.add(settings, {type="label", caption={"stg-signalDistance"}})
         GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, glob.settings.signalDistance)
         
---        GUI.add(settings, {type="checkbox", name="medium", caption={"stg-mediumPoles"}},"medium")
---        local row1 = GUI.add(settings,{type="table", name="row2", colspan=2})
+        GUI.add(settings, {type="label", caption={"stg-poleType"}})
+        GUI.addButton(settings, {name="poleType", caption=captionPole}, GUI.togglePole)
+        
         GUI.add(settings, {type="label", caption={"stg-poleSide"}})
         GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=glob.settings.flipPoles})
 --        GUI.addButton(row1, {name="side", caption=captionSide}, GUI.toggleSide)
@@ -173,7 +184,9 @@ GUI = {
         GUI.addButton(row2, {name="ccNetWires", caption=GUI.ccWires[glob.settings.ccWires]}, GUI.toggleWires)
 
         GUI.add(settings, {type="label", caption={"stg-blueprint"}})
-        GUI.addButton(settings, {name="blueprint", caption={"stg-blueprint-empty"}} ,GUI.readBlueprint)
+        local row3 = GUI.add(settings, {type="table", name="row4", colspan=2})
+        GUI.addButton(row3, {name="blueprint", caption={"stg-blueprint-read"}}, GUI.readBlueprint)
+        GUI.addButton(row3, {name="bpClear", caption={"stg-blueprint-clear"}}, GUI.clearBlueprints)
       end
     end,
 
@@ -220,6 +233,14 @@ GUI = {
         GUI.createGui(player)
         return
       end
+    end,
+
+    clearBlueprints = function(event, farl, player)
+      glob.settings.bp = {medium= {diagonal=defaultsMediumDiagonal,
+                                   straight=defaultsMediumStraight},
+                          big=    {diagonal=defaultsDiagonal,
+                                   straight=defaultsStraight}}
+      glob.activeBP = glob.medium and glob.settings.bp.medium or glob.settings.bp.big                                   
     end,
 
     saveSettings = function(s)

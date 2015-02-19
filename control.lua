@@ -139,14 +139,22 @@ clearAreas =
       glob.settings = {}
       glob.version = "0.1.1"
     end
+    if glob.version < "0.1.9" then
+      glob.settings.bp = nil
+      glob.settings.straight = nil
+      glob.settings.diagonal = nil
+    end
     glob.settings = glob.settings or {}
     glob.settings.signalDistance = glob.settings.signalDistance or 15
     glob.settings.curvedWeight = glob.settings.curvedWeight or 4
     glob.settings.ccNet = glob.settings.ccNet or false
     glob.settings.ccWires = glob.settings.ccWires or 1
-    glob.settings.straight = glob.settings.straight or defaultsStraight
-    glob.settings.diagonal = glob.settings.diagonal or defaultsDiagonal
-
+    glob.settings.bp = glob.settings.bp or {medium= {diagonal=defaultsMediumDiagonal,
+                                                     straight=defaultsMediumStraight},
+                                            big=    {diagonal=defaultsDiagonal,
+                                                     straight=defaultsStraight}}
+    glob.rail = glob.rail or {curved = "curved-rail", straight = "straight-rail"}
+    
     if glob.minPoles == nil then
       glob.minPoles = true
     end
@@ -165,7 +173,7 @@ clearAreas =
     if glob.settings.flipPoles == nil then
       glob.settings.flipPoles = false
     end
-        
+    glob.activeBP = glob.medium and glob.settings.bp.medium or glob.settings.bp.big
     glob.flipSignals = false
     glob.farl = glob.farl or {}
     glob.railInfoLast = glob.railInfoLast or {}
@@ -330,18 +338,6 @@ clearAreas =
           if p.gui.top.farl then p.gui.top.farl.destroy() end
         end
         initGlob()
-      end,
-      
-      useMediumPoles = function()
-        glob.settings.straight = defaultsMediumStraight
-        glob.settings.diagonal = defaultsMediumDiagonal
-        glob.medium = true
-      end,
-      
-      useBigPoles = function()
-        glob.settings.straight = defaultsStraight
-        glob.settings.diagonal = defaultsDiagonal
-        glob.medium = false      
       end,
       
       setCurvedWeight = function(weight)

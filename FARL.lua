@@ -146,12 +146,12 @@ FARL = {
     local data = inputToNewDir[travelDir][input]
     local input2dir = {[0]=-1,[1]=0,[2]=1}
     local newTravelDir = (travelDir + input2dir[input]) % 8
-    local name = data.curve and "curved-rail" or "straight-rail"
+    local name = data.curve and glob.rail.curved or glob.rail.straight
     local retDir, retRail
     if input == 1 then --straight
       local newDir, pos = data.direction, data.pos
       if travelDir % 2 == 1 then --diagonal travel
-        if lastRail.name == "straight-rail" then      --diagonal after diagonal
+        if lastRail.name == glob.rail.straight then      --diagonal after diagonal
           if data.direction == lastRail.direction then
             local mul = 1
             if travelDir == 1 or travelDir == 5 then mul = -1 end
@@ -159,13 +159,13 @@ FARL = {
             pos = {x=data.pos.y*mul, y=data.pos.x*mul}
         end
         pos = addPos(lastRail.position, pos)
-      elseif lastRail.name == "curved-rail" then --diagonal after curve
+      elseif lastRail.name == glob.rail.curved then --diagonal after curve
         pos = addPos(lastRail.position, data.connect.pos)
         newDir = data.connect.direction[lastRail.direction]
       end
       else -- N/E/S/W travel
         local shift = ""
-        if lastRail.name == "curved-rail" then --straight after curve
+        if lastRail.name == glob.rail.curved then --straight after curve
           pos = data.shift[lastRail.direction]
           shift = pos2Str(data.shift[lastRail.direction])
         end
@@ -175,10 +175,10 @@ FARL = {
     end
     if input ~= 1 then --left or right
       local s = "Changing direction from "..travelDir.." to "..newTravelDir
-      if travelDir % 2 == 0 and lastRail.name == "straight-rail" then --curve after N/S, E/W tracks
+      if travelDir % 2 == 0 and lastRail.name == glob.rail.straight then --curve after N/S, E/W tracks
         local pos = addPos(lastRail.position,data.pos)
         retDir, retRail = newTravelDir, {name=name, position=pos, direction=data.direction}
-      elseif travelDir % 2 == 1 and lastRail.name == "straight-rail" then --curve after diagonal
+      elseif travelDir % 2 == 1 and lastRail.name == glob.rail.straight then --curve after diagonal
         local pos = {x=0,y=0}
         local last = lastRail
         if lastRail.direction ~= data.lastDir then -- need extra diagonal rail to connect
@@ -193,7 +193,7 @@ FARL = {
           pos = addPos(lastRail.position, data.pos)
           retDir, retRail = newTravelDir, {name=name, position=pos, direction=data.direction}
         end
-      elseif lastRail.name == "curved-rail" and name == "curved-rail" then
+      elseif lastRail.name == glob.rail.curved and name == glob.rail.curved then
         local pos
         if not data.curve[lastRail.direction].diag then -- curves connect directly
           pos = addPos(lastRail.position, data.curve[lastRail.direction].pos)
@@ -333,7 +333,7 @@ FARL = {
     local test = self:railBelowTrain()
     local last = test
     local limit, count = limit, 1
-    while test and test.name ~= "curved-rail" do
+    while test and test.name ~= glob.rail.curved do
       last = test
       if limit and count == limit then
         return last
@@ -343,7 +343,7 @@ FARL = {
       local pos = fixPos(next.position)
       local area = {{pos[1]-0.4,pos[2]-0.4},{pos[1]+0.4,pos[2]+0.4}}
       local found = false
-      for i,rail in ipairs(game.findentitiesfiltered{area=area, name="straight-rail"}) do
+      for i,rail in ipairs(game.findentitiesfiltered{area=area, name=glob.rail.straight}) do
         local dirMatch = false
         if trainDir % 2 == 0 then
           dirMatch = rail.direction == trainDir or rail.direction+4%8 == trainDir
@@ -397,6 +397,7 @@ FARL = {
     local types = { "straight-rail", "curved-rail","rail-signal",
       "big-electric-pole", "medium-electric-pole", "small-lamp",
       "green-wire", "red-wire"
+--      "straight-power-rail", "curved-power-rail"
     }
     for _,type in pairs(types) do
       self[type] = 0
@@ -434,9 +435,6 @@ FARL = {
   end,
   
   parseBlueprints = function(self, bp)
-    glob.settings.bp = #bp >= 2 and true or false
-    glob.settings.diagonal.lamps = {}
-    glob.settings.straight.lamps = {}
     for j=1,#bp do
       local e = bp[j].getblueprintentities()
       local offsets = {pole=false, lamps={}}
@@ -455,11 +453,11 @@ FARL = {
       end
       if rail and offsets.pole then
         local type = rail.direction == 0 and "straight" or "diagonal"
-        glob.settings[type].direction = rail.direction
+        local lamps = {}
         for _, l in ipairs(offsets.lamps) do
-          table.insert(glob.settings[type].lamps, subPos(l.position, offsets.pole.position))
+          table.insert(lamps, subPos(l.position, offsets.pole.position))
         end
-        glob.medium = offsets.pole.name == "medium-electric-pole" and true or false
+        local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
         local railPos = rail.position
         if type == "diagonal" then
           local x,y = 0,0
@@ -473,18 +471,13 @@ FARL = {
           railPos = {x=x,y=y}
         end
         offsets.pole.position = subPos(offsets.pole.position,railPos)        
-        glob.settings[type].pole = offsets.pole
+        glob.settings.bp[poleType][type] = {direction=rail.direction, pole = offsets.pole, lamps = lamps}
       else
         self:print("No rail in blueprint #"..j)
-        glob.settings.bp = false
       end
     end
   end,
 
-  parseOffsets = function(self, data)
-  
-  end,
-  
   createJunction = function(self, input)
     self:activate()
     self.last = self:findLastRail(3)
@@ -518,7 +511,7 @@ FARL = {
         local newDir = nextRail.direction
         local newPos = nextRail.position
         self:removeTrees(newPos)
-        if nextRail.name == "curved-rail" then
+        if nextRail.name == glob.rail.curved then
           local areas = clearAreas[nextRail.direction%4]
           for i=1,6 do
             self:removeTrees(newPos, areas[i])
@@ -535,7 +528,7 @@ FARL = {
             end
           end
           if glob.signals then
-            local signalWeight = nextRail.name == "curved-rail" and glob.settings.curvedWeight or 1
+            local signalWeight = nextRail.name == glob.rail.curved and glob.settings.curvedWeight or 1
             self.signalCount = self.signalCount + signalWeight
             if godmodeSignals or self["rail-signal"] > 0 then
               if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
@@ -575,9 +568,9 @@ FARL = {
       [7] = {straight={dir=2, off={x=3,y=1}}, diagonal = {dir=1, off={x=-3,y=-1}}}
     }
     
-    if lastrail.name ~= "curved-rail" then
+    if lastrail.name ~= glob.rail.curved then
       local diagonal = traveldir % 2 == 1 and true or false
-      local pole = not diagonal and glob.settings.straight.pole or glob.settings.diagonal.pole
+      local pole = not diagonal and glob.activeBP.straight.pole or glob.activeBP.diagonal.pole
       local pos = addPos(pole.position)
       local diff = not diagonal and traveldir or traveldir-1
       local rad = diff * (math.pi/4)
@@ -604,8 +597,8 @@ FARL = {
     else
       local tracks = curvePositions[lastrail.direction]
       offset = {}
-      local d = {name="straight-rail", direction=tracks.diagonal.dir, position=addPos(lastrail.position,tracks.diagonal.off)}
-      local s = {name="straight-rail", direction=tracks.straight.dir, position=addPos(lastrail.position,tracks.straight.off)}
+      local d = {name=glob.rail.straight, direction=tracks.diagonal.dir, position=addPos(lastrail.position,tracks.diagonal.off)}
+      local s = {name=glob.rail.straight, direction=tracks.straight.dir, position=addPos(lastrail.position,tracks.straight.off)}
 
       local dDir = traveldir % 2 == 1 and traveldir or oldDir
       local sDir = traveldir % 2 == 0 and traveldir or oldDir
@@ -616,7 +609,7 @@ FARL = {
   end,
 
   placeLamp = function(self,traveldir,pole)
-    local lamps = traveldir % 2 == 0 and glob.settings.straight.lamps or glob.settings.diagonal.lamps
+    local lamps = traveldir % 2 == 0 and glob.activeBP.straight.lamps or glob.activeBP.diagonal.lamps
     local diff = traveldir % 2 == 0 and traveldir or traveldir-1
     local rad = diff * (math.pi/4)
     for i=1,#lamps do
@@ -693,7 +686,7 @@ FARL = {
     self.lastCheckPole = addPos(lastrail.position, offset)
     local distance = util.distance(self.lastPole, self.lastCheckPole)
     if distance > reach then
-      if name ~= "big-electric-pole" and traveldir % 2 == 0 and lastrail.name ~= "curved-rail" then
+      if name ~= "big-electric-pole" and traveldir % 2 == 0 and lastrail.name ~= glob.rail.curved then
         if not self.switch then 
           local fix = util.moveposition({tmp.x, tmp.y}, traveldir, 1)
           if util.distance(self.lastPole, {x=fix[1],y=fix[2]}) > reach then
@@ -729,7 +722,7 @@ FARL = {
   end,
 
   placeSignal = function(self,traveldir, rail)
-    if self.signalCount > glob.settings.signalDistance and rail.name ~= "curved-rail" then
+    if self.signalCount > glob.settings.signalDistance and rail.name ~= glob.rail.curved then
       local rail = rail
       local data = signalOffset[traveldir]
       local offset = data[rail.direction] or data.pos
@@ -819,7 +812,7 @@ FARL = {
     local trainDir = self:calcTrainDir()
     local curves ={}
     for i=1, #rails do
-      if rails[i].name == "curved-rail" then
+      if rails[i].name == glob.rail.curved then
         table.insert(curves, rails[i])
       end
       if trainDir % 2 == 0 then
