@@ -5,5 +5,5 @@
   "author": "Choumiko",
   "contact": "www.factorioforums.com",
   "description": "Fully automated rail-layer",
-  "dependencies": ["base"]
+  "dependencies": ["base >= 0.11.11"]
 } 

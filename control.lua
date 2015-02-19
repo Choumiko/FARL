@@ -365,6 +365,15 @@ clearAreas =
         for i=1,#items do
           game.player.insert{name=items[i], count=count[i]}
         end
+      end,
+      
+      quickstartElectric = function()
+        local items = {"farl", "curved-power-rail", "straight-power-rail", "medium-electric-pole", "big-electric-pole",
+        "small-lamp", "solid-fuel", "rail-signal", "blueprint", "electric-locomotive", "solar-panel", "basic-accumulator"}
+        local count = {5,50,50,50,50,50,50,50,10,2,50,50}
+        for i=1,#items do
+          game.player.insert{name=items[i], count=count[i]}
+        end
       end
 
     --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
