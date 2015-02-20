@@ -8,6 +8,10 @@ godmodeSignals = false
 removeStone = true
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 
+rails = {basic = {curved = "curved-rail", straight = "straight-rail"},
+         electric = {curved = "curved-power-rail", straight = "straight-power-rail"}
+}
+
 input2dir = {[0]=-1,[1]=0,[2]=1}
 -- inputToNewDir[oldDir][input] -> rail to new dir
 --shift[lastCurveDir]
@@ -139,7 +143,7 @@ clearAreas =
       glob.settings = {}
       glob.version = "0.1.1"
     end
-    if glob.version < "0.1.9" then
+    if glob.version == "0.1.8" then
       glob.settings.bp = nil
       glob.settings.straight = nil
       glob.settings.diagonal = nil
@@ -153,7 +157,15 @@ clearAreas =
                                                      straight=defaultsMediumStraight},
                                             big=    {diagonal=defaultsDiagonal,
                                                      straight=defaultsStraight}}
-    glob.rail = glob.rail or {curved = "curved-rail", straight = "straight-rail"}
+    glob.rail = glob.rail or rails.basic
+    glob.settings.electric = glob.settings.electric or false
+    if remote.interfaces.dim_trains then
+      glob.electricInstalled = true
+    else
+      glob.electricInstalled = false
+      glob.settings.electric = false
+      glob.rail = rails.basic
+    end
     
     if glob.minPoles == nil then
       glob.minPoles = true
@@ -206,7 +218,7 @@ clearAreas =
       glob.version = "0.1.8"
     end
     GUI.init()
-    glob.version = "0.1.8"
+    glob.version = "0.1.9"
   end
 
   local function oninit() initGlob() end

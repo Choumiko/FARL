@@ -101,6 +101,18 @@ GUI = {
         glob[name] = not glob[name]
       elseif name == "ccNet" or name == "flipPoles" then
         glob.settings[name] = not glob.settings[name]
+      elseif name == "poweredRails" then
+        if not remote.interfaces.dim_trains then
+          glob.rail = rails.basic
+          return
+        end
+        glob.settings.electric = not glob.settings.electric
+        if glob.settings.electric then
+          glob.rail = rails.electric
+        else
+          glob.rail = rails.basic        
+        end
+        farl.lastrail = false
       elseif name == "junctionLeft" then
         farl:createJunction(0)
       elseif name == "junctionRight" then
@@ -167,6 +179,11 @@ GUI = {
 
         GUI.add(settings, {type="label", caption={"stg-signalDistance"}})
         GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, glob.settings.signalDistance)
+        
+        if remote.interfaces.dim_trains then
+          GUI.add(settings,{type="checkbox", name="poweredRails", caption="use powered rails", state=glob.settings.electric})
+          GUI.add(settings, {type="label", caption=""})
+        end
         
         GUI.add(settings, {type="label", caption={"stg-poleType"}})
         GUI.addButton(settings, {name="poleType", caption=captionPole}, GUI.togglePole)

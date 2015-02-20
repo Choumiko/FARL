@@ -397,8 +397,14 @@ FARL = {
     local types = { "straight-rail", "curved-rail","rail-signal",
       "big-electric-pole", "medium-electric-pole", "small-lamp",
       "green-wire", "red-wire"
---      "straight-power-rail", "curved-power-rail"
     }
+    if remote.interfaces.dim_trains then
+      table.insert(types, "straight-power-rail")
+      table.insert(types, "curved-power-rail")
+    else
+      self["straight-power-rail"] = nil
+      self["curved-power-rail"] = nil
+    end
     for _,type in pairs(types) do
       self[type] = 0
       for i, wagon in ipairs(self.train.carriages) do
@@ -521,6 +527,9 @@ FARL = {
         local hasRail = self[nextRail.name] > 0 or godmode
         if canplace and hasRail then
           game.createentity{name = nextRail.name, position = newPos, direction = newDir, force = game.forces.player}
+          if glob.settings.electric then
+            remote.call("dim_trains", "railCreated", newPos)
+          end 
           self:removeItemFromCargo(nextRail.name, 1)
           if glob.poles then
             if godmodePoles or self["big-electric-pole"] > 0 or self["medium-electric-pole"] > 0 then
