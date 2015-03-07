@@ -299,6 +299,7 @@ FARL = {
       self.direction = nil
       self.lastPole, self.lastCheckPole = nil,nil
     end
+    self:updateCargo()
   end,
 
   toggleActive = function(self)
@@ -387,10 +388,11 @@ FARL = {
         local inv = entity.getinventory(1).getcontents()
         if inv[item] then
           entity.getinventory(1).remove({name=item, count=count})
+          if self[item] and self[item] >= count then self[item] = self[item] - count end
+          return
         end
       end
     end
-    if self[item] and self[item] >= count then self[item] = self[item] - count end
   end,
 
   updateCargo = function(self)
@@ -439,7 +441,7 @@ FARL = {
     end
     return canPlace, entity
   end,
-  
+
   parseBlueprints = function(self, bp)
     for j=1,#bp do
       local e = bp[j].getblueprintentities()
@@ -476,7 +478,7 @@ FARL = {
           end
           railPos = {x=x,y=y}
         end
-        offsets.pole.position = subPos(offsets.pole.position,railPos)        
+        offsets.pole.position = subPos(offsets.pole.position,railPos)
         glob.settings.bp[poleType][type] = {direction=rail.direction, pole = offsets.pole, lamps = lamps}
       else
         self:print("No rail in blueprint #"..j)
@@ -529,7 +531,7 @@ FARL = {
           game.createentity{name = nextRail.name, position = newPos, direction = newDir, force = game.forces.player}
           if glob.settings.electric then
             remote.call("dim_trains", "railCreated", newPos)
-          end 
+          end
           self:removeItemFromCargo(nextRail.name, 1)
           if glob.poles then
             if godmodePoles or self["big-electric-pole"] > 0 or self["medium-electric-pole"] > 0 then
@@ -563,7 +565,7 @@ FARL = {
     end
     return retDir, retRail
   end,
-  
+
   calcPole = function(self,lastrail, traveldir, oldDir)
     local offset
     local curvePositions = {
@@ -576,7 +578,7 @@ FARL = {
       [6] = {straight={dir=2, off={x=3,y=-1}}, diagonal = {dir=3, off={x=-3,y=1}}},
       [7] = {straight={dir=2, off={x=3,y=1}}, diagonal = {dir=1, off={x=-3,y=-1}}}
     }
-    
+
     if lastrail.name ~= glob.rail.curved then
       local diagonal = traveldir % 2 == 1 and true or false
       local pole = not diagonal and glob.activeBP.straight.pole or glob.activeBP.diagonal.pole
@@ -594,7 +596,7 @@ FARL = {
           x, y = 0.5, - 0.5
         elseif lastrail.direction == 3 then
           x, y = 0.5, 0.5
-        -- 5 -x +y
+          -- 5 -x +y
         elseif lastrail.direction == 5 then
           x, y = - 0.5, 0.5
         elseif lastrail.direction == 7 then
@@ -686,17 +688,17 @@ FARL = {
       local d2 = util.distance(offset[2].rail.position,self.lastPole)
       local first = d1 < d2 and offset[1] or offset[2]
       local second = d1 < d2 and offset[2] or offset[1]
-      
+
       self:placePole(first.dir, first.rail)
       self:placePole(second.dir, second.rail)
       return
     end
-    
+
     self.lastCheckPole = addPos(lastrail.position, offset)
     local distance = util.distance(self.lastPole, self.lastCheckPole)
     if distance > reach then
       if name ~= "big-electric-pole" and traveldir % 2 == 0 and lastrail.name ~= glob.rail.curved then
-        if not self.switch then 
+        if not self.switch then
           local fix = util.moveposition({tmp.x, tmp.y}, traveldir, 1)
           if util.distance(self.lastPole, {x=fix[1],y=fix[2]}) > reach then
             fix = {tmp.x,tmp.y}
@@ -705,7 +707,7 @@ FARL = {
           tmp = {x=fix[1], y=fix[2]}
         end
         self.switch = not self.switch
-      end      
+      end
       --debugDump({dist=distance, lr=lastrail, dir=traveldir, offset=offset},true)
       self:removeTrees(tmp)
       self[name] = self[name] or 0
