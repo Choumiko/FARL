@@ -371,7 +371,7 @@ FARL = {
     local count = count or 1
     local wagon = self.train.carriages
     for _, entity in ipairs(wagon) do
-      if entity.name == "cargo-wagon" then
+      if entity.type == "cargo-wagon" and entity.name ~= "rail-tanker" then
         if entity.getinventory(1).caninsert({name = item, count = count}) then
           entity.getinventory(1).insert({name = item, count = count})
           return
@@ -387,7 +387,7 @@ FARL = {
     local count = count or 1
     local wagons = self.train.carriages
     for _,entity in ipairs(wagons) do
-      if entity.name == "cargo-wagon" then
+      if entity.type == "cargo-wagon" and entity.name ~= "rail-tanker" then
         local inv = entity.getinventory(1).getcontents()
         if inv[item] then
           entity.getinventory(1).remove({name=item, count=count})
@@ -413,7 +413,7 @@ FARL = {
     for _,type in pairs(types) do
       self[type] = 0
       for i, wagon in ipairs(self.train.carriages) do
-        if wagon.type == "cargo-wagon" then
+        if wagon.type == "cargo-wagon"  and wagon.name ~= "rail-tanker" then
           self[type] = self[type] + wagon.getinventory(1).getitemcount(type)
         end
       end
