@@ -334,8 +334,10 @@ FARL = {
     local test = self:railBelowTrain()
     local last = test
     local limit, count = limit, 1
+    local ret = last
     while test and test.name ~= glob.rail.curved do
       last = test
+      ret = last
       if limit and count == limit then
         return last
       end
@@ -359,9 +361,10 @@ FARL = {
         end
       end
       count = count + 1
-      if not found then return last end
+      if not found then break end
     end
-    return last
+    self:flyingText("Last", RED, false, ret.position)
+    return ret
   end,
 
   addItemToCargo = function(self,item, count)
@@ -849,9 +852,9 @@ FARL = {
     end
   end,
 
-  flyingText = function(self, line, color, show)
+  flyingText = function(self, line, color, show, pos)
     if show then
-      local pos = addPos(self.locomotive.position, {x=0,y=-1})
+      local pos = pos or addPos(self.locomotive.position, {x=0,y=-1})
       color = color or RED
       game.createentity({name="flying-text", position=pos, text=line, color=color})
     end
