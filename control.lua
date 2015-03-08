@@ -386,7 +386,12 @@ clearAreas =
         for i=1,#items do
           game.player.insert{name=items[i], count=count[i]}
         end
-      end
+      end,
 
+      wagons = function()
+        for i,w in ipairs(game.player.selected.train.carriages) do
+          debugDump({i=i,type=w.type},true)
+        end
+      end
     --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
     })

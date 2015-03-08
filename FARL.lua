@@ -106,6 +106,13 @@ FARL = {
         if event.tick % 60 == 0 then
           self:updateCargo()
         end
+        self.frontmover = false
+        for i,l in ipairs(self.train.locomotives.frontmovers) do
+          if l.equals(self.locomotive) then
+            self.frontmover = true
+            break
+          end        
+        end
         self.cruiseInterrupt = self.driver.ridingstate.acceleration
         self:layRails()
       end
@@ -213,6 +220,7 @@ FARL = {
   end,
 
   cruiseControl = function(self)
+    local acc = self.frontmover and defines.riding.acceleration.accelerating or defines.riding.acceleration.reversing 
     if self.cruise then
       local limit = self.active and glob.cruiseSpeed or 0.9
       if self.cruiseInterrupt == 2 then
@@ -220,7 +228,7 @@ FARL = {
         return
       end
       if self.train.speed < limit then
-        self.driver.ridingstate = {acceleration = 1, direction = self.driver.ridingstate.direction}
+        self.driver.ridingstate = {acceleration = acc, direction = self.driver.ridingstate.direction}
       elseif self.active and self.train.speed > limit + 0.1 then
         self.driver.ridingstate = {acceleration = 2, direction = self.driver.ridingstate.direction}
       else
@@ -237,7 +245,8 @@ FARL = {
     if self.active and self.lastrail and self.train then
       self.direction = self.direction or self:calcTrainDir()
       self.acc = self.driver.ridingstate.acceleration
-      if self.acc ~= 3 and util.distance(self.lastrail.position, self.locomotive.position) < 6 then
+      local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
+      if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and util.distance(self.lastrail.position, firstWagon.position) < 6 then
         self.input = self.driver.ridingstate.direction
         if self.driver.name == "farl_player" then
           if self.course and self.course[1] then
@@ -263,13 +272,6 @@ FARL = {
   end,
 
   activate = function(self)
-    if self.lastrail and self.direction and self.locomotive.valid then
-      if self.direction == self:calcTrainDir() and util.distance(self.lastrail.position, self.locomotive.position) < 6 then
-        self:updateCargo()
-        self.active = true
-        return
-      end
-    end
     self.lastrail = false
     self.signalCount = 0
     self.lastrail = self:findLastRail()
@@ -294,11 +296,9 @@ FARL = {
     if reason then
       self:print("Deactivated: "..reason)
     end
-    if full then
-      self.lastrail = nil
-      self.direction = nil
-      self.lastPole, self.lastCheckPole = nil,nil
-    end
+    self.lastrail = nil
+    self.direction = nil
+    self.lastPole, self.lastCheckPole = nil,nil
     self:updateCargo()
   end,
 
@@ -363,7 +363,9 @@ FARL = {
       count = count + 1
       if not found then break end
     end
-    self:flyingText("Last", RED, false, ret.position)
+    if type(ret) == "table" then
+      self:flyingText("Last", RED, true, ret.position)
+    end
     return ret
   end,
 
