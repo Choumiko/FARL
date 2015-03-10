@@ -108,6 +108,8 @@ clearAreas =
       [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
     }
 
+  landfillInstalled = game.entityprototypes["landfill2by2"] and true or false
+
   function resetMetatable(o, mt)
     setmetatable(o,{__index=mt})
     return o
@@ -178,6 +180,9 @@ clearAreas =
     end
     if glob.poles == nil then
       glob.poles = true
+    end
+    if glob.bridge == nil or not landfillInstalled then
+      glob.bridge = false
     end
     if glob.flipSignals == nil then
       glob.flipSignals = false

@@ -41,7 +41,8 @@ GUI = {
         flipSignals = glob.flipSignals,
         medium = glob.medium,
         minPoles = glob.minPoles,
-        ccNet = glob.settings.ccNet
+        ccNet = glob.settings.ccNet,
+        bridge = glob.bridge
       }
     end,
 
@@ -80,6 +81,9 @@ GUI = {
       GUI.addButton(buttons, {name="settings", caption={"text-settings"}}, GUI.toggleSettingsWindow)
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
+      if landfillInstalled then
+        GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
+      end
     end,
 
     destroyGui = function(player)
@@ -101,6 +105,12 @@ GUI = {
         glob[name] = not glob[name]
       elseif name == "ccNet" or name == "flipPoles" then
         glob.settings[name] = not glob.settings[name]
+      elseif name == "bridge" then
+        if landfillInstalled then
+          glob.bridge = not glob.bridge
+        else
+          glob.bridge = false
+        end
       elseif name == "poweredRails" then
         if not remote.interfaces.dim_trains then
           glob.rail = rails.basic

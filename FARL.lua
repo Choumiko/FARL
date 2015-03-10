@@ -137,6 +137,39 @@ FARL = {
         entity.die()
       end
     end
+    self:fillWater(area)
+  end,
+  
+  fillWater = function(self, area)
+    if landfillInstalled then
+    -- check if bridging is turned on in settings
+      if glob.bridge then
+     -- following code mostly pulled from landfill mod itself and adjusted to fit
+        local tiles = {}
+        local st, ft = area[1],area[2]
+        for x = st[1], ft[1], 1 do
+          for y = st[2], ft[2], 1 do
+            local tileName = game.gettile(x, y).name
+      -- check that tile is water, if it is add it to a list of tiles to be changed to grass
+            if tileName == "water" or tileName == "deepwater" then
+              table.insert(tiles,{name="grass", position={x, y}})
+            end
+          end
+        end
+     -- check to make sure water tiles were found
+        if #tiles ~= 0 then
+     -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
+          local lfills = math.ceil(#tiles/4)
+      -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
+          if godmode or self["landfill2by2"] > lfills then
+            game.settiles(tiles)
+            self:removeItemFromCargo("landfill2by2", lfills)
+          else
+            self:print("Out of 2 by 2 Landfill")
+          end
+        end
+      end
+    end
   end,
 
   pickupItems = function(self,pos, area)
@@ -412,6 +445,9 @@ FARL = {
       self["straight-power-rail"] = nil
       self["curved-power-rail"] = nil
     end
+    if landfillInstalled then
+      table.insert(types, "landfill2by2")
+    end
     for _,type in pairs(types) do
       self[type] = 0
       for i, wagon in ipairs(self.train.carriages) do
@@ -509,7 +545,6 @@ FARL = {
   end,
 
   placeRails = function(self,lastRail, travelDir, input)
-    local trackCount = trackCount or 1
     local lastRail = lastRail
     local newTravelDirs, nextRails
     newTravelDirs, nextRails = FARL.getRail(lastRail,travelDir,input)
