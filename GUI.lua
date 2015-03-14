@@ -42,7 +42,9 @@ GUI = {
         medium = glob.medium,
         minPoles = glob.minPoles,
         ccNet = glob.settings.ccNet,
-        bridge = glob.bridge
+        bridge = glob.bridge,
+        collectWood = glob.settings.collectWood,
+        dropWood = glob.settings.dropWood
       }
     end,
 
@@ -103,7 +105,7 @@ GUI = {
         farl:debugInfo()
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles" then
         glob[name] = not glob[name]
-      elseif name == "ccNet" or name == "flipPoles" then
+      elseif name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" then
         glob.settings[name] = not glob.settings[name]
       elseif name == "bridge" then
         if landfillInstalled then
@@ -187,6 +189,9 @@ GUI = {
         local settings = row.add({type="table", name="settings", colspan=2})
         player.gui.left.farl.rows.buttons.settings.caption={"text-save"}
 
+        GUI.add(settings,{type="checkbox", name="dropWood", caption={"stg-dropWood"}, state = glob.settings.dropWood})
+        GUI.add(settings,{type="checkbox", name="collectWood", caption={"stg-collectWood"}}, glob.settings.collectWood)
+        
         GUI.add(settings, {type="label", caption={"stg-signalDistance"}})
         GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, glob.settings.signalDistance)
         

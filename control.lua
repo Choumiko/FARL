@@ -73,25 +73,25 @@ clearAreas =
   --poleDistance = 1, side = right
   defaultsDiagonal = {
       direction = 3,
-      lamps = {{x = -1.5, y = 1.5}},
+      lamps = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
       pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}}
   }
  
   defaultsStraight = {
       direction = 0,
-      lamps = {{x = -0.5, y = 1.5}},
+      lamps = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
       pole = {name = "big-electric-pole", position = {x = 3, y = 0}}
   }
   
   defaultsMediumDiagonal = { 
     direction = 7,
-    lamps = {{x = -1, y = 1}},
+    lamps = {{name = "small-lamp", position = {x = -1, y = 1}}},
     pole = {name = "medium-electric-pole", position = {x = 2, y = 1}}
   }
   
   defaultsMediumStraight = {
     direction = 0,
-    lamps = {{x = 0,y = 1}},
+    lamps = {{name = "small-lamp", position = {x = 0,y = 1}}},
     pole = {name = "medium-electric-pole", position = {x = 2.5,y = -0.5}}
   }
   
@@ -155,6 +155,12 @@ clearAreas =
     glob.settings.curvedWeight = glob.settings.curvedWeight or 4
     glob.settings.ccNet = glob.settings.ccNet or false
     glob.settings.ccWires = glob.settings.ccWires or 1
+    glob.settings.collectWood = glob.settings.collectWood or true
+    glob.settings.dropWood = glob.settings.dropWood or false
+    if glob.version < "0.2.4" then
+      glob.settings.bp = nil
+      glob.version = "0.2.4"
+    end
     glob.settings.bp = glob.settings.bp or {medium= {diagonal=defaultsMediumDiagonal,
                                                      straight=defaultsMediumStraight},
                                             big=    {diagonal=defaultsDiagonal,
@@ -223,7 +229,7 @@ clearAreas =
       glob.version = "0.1.8"
     end
     GUI.init()
-    glob.version = "0.1.9"
+    glob.version = "0.2.4"
   end
 
   local function oninit() initGlob() end

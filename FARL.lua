@@ -1,5 +1,18 @@
 require "util"
 
+cargoTypes = { ["straight-rail"] = true, ["curved-rail"] = true,["rail-signal"] = true,
+  ["big-electric-pole"] = true, ["medium-electric-pole"] = true, ["small-lamp"] = true,
+  ["green-wire"] = true, ["red-wire"] = true
+}
+if remote.interfaces.dim_trains then
+  cargoTypes["straight-power-rail"] = true
+  cargoTypes["curved-power-rail"] = true
+end
+
+if landfillInstalled then
+  cargoTypes["landfill2by2"] = true
+end
+    
 function addPos(p1,p2)
   local p2 = p2 or {x=0,y=0}
   return {x=p1.x+p2.x, y=p1.y+p2.y}
@@ -129,7 +142,7 @@ FARL = {
 
     for _, entity in ipairs(game.findentitiesfiltered{area = area, type = "tree"}) do
       entity.die()
-      if not godmode then self:addItemToCargo("raw-wood", 1) end
+      if not godmode and not glob.settings.collectWood then self:addItemToCargo("raw-wood", 1) end
     end
     self:pickupItems(pos, area)
     if removeStone then
@@ -413,8 +426,10 @@ FARL = {
         end
       end
     end
-    local position = game.findnoncollidingposition("item-on-ground", self.driver.position, 100, 0.5)
-    game.createentity{name = "item-on-ground", position = position, stack = {name = item, count = count}}
+    if glob.settings.dropWood then
+      local position = game.findnoncollidingposition("item-on-ground", self.driver.position, 100, 0.5)
+      game.createentity{name = "item-on-ground", position = position, stack = {name = item, count = count}}
+    end
   end,
 
   removeItemFromCargo = function(self,item, count)
@@ -434,21 +449,7 @@ FARL = {
   end,
 
   updateCargo = function(self)
-    local types = { "straight-rail", "curved-rail","rail-signal",
-      "big-electric-pole", "medium-electric-pole", "small-lamp",
-      "green-wire", "red-wire"
-    }
-    if remote.interfaces.dim_trains then
-      table.insert(types, "straight-power-rail")
-      table.insert(types, "curved-power-rail")
-    else
-      self["straight-power-rail"] = nil
-      self["curved-power-rail"] = nil
-    end
-    if landfillInstalled then
-      table.insert(types, "landfill2by2")
-    end
-    for _,type in pairs(types) do
+    for type,b in pairs(cargoTypes) do
       self[type] = 0
       for i, wagon in ipairs(self.train.carriages) do
         if wagon.type == "cargo-wagon"  and wagon.name ~= "rail-tanker" then
@@ -490,13 +491,15 @@ FARL = {
       local rail
 
       for i=1,#e do
-        if not rail and e[i].name == "straight-rail" then
-          rail = {direction = e[i].direction, name = e[i].name, position = e[i].position}
-        end
-        if e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
-          offsets.pole = {name = e[i].name, direction = e[i].direction, position = e[i].position}
-        end
-        if e[i].name == "small-lamp" then
+        if e[i].name == "straight-rail" or e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
+          if not rail and e[i].name == "straight-rail" then
+            rail = {direction = e[i].direction, name = e[i].name, position = e[i].position}
+          end
+          if e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
+            offsets.pole = {name = e[i].name, direction = e[i].direction, position = e[i].position}
+          end
+        else
+          cargoTypes[e[i].name] = true
           table.insert(offsets.lamps, {name = e[i].name, direction = e[i].direction, position = e[i].position})
         end
       end
@@ -504,7 +507,7 @@ FARL = {
         local type = rail.direction == 0 and "straight" or "diagonal"
         local lamps = {}
         for _, l in ipairs(offsets.lamps) do
-          table.insert(lamps, subPos(l.position, offsets.pole.position))
+          table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position)})
         end
         local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
         local railPos = rail.position
@@ -521,6 +524,7 @@ FARL = {
         end
         offsets.pole.position = subPos(offsets.pole.position,railPos)
         glob.settings.bp[poleType][type] = {direction=rail.direction, pole = offsets.pole, lamps = lamps}
+        self:updateCargo()
       else
         self:print("No rail in blueprint #"..j)
       end
@@ -664,13 +668,16 @@ FARL = {
     local diff = traveldir % 2 == 0 and traveldir or traveldir-1
     local rad = diff * (math.pi/4)
     for i=1,#lamps do
-      local offset = rotate(lamps[i], rad)
-      local pos = addPos(pole, offset)
-      --debugDump(pos, true)
-      local canplace = game.canplaceentity{name = "small-lamp", position = pos}
-      if canplace and (self["small-lamp"] > 1 or godmode) then
-        game.createentity{name = "small-lamp", position = pos, direction=0,force = game.forces.player}
-        self:removeItemFromCargo("small-lamp", 1)
+      if godmode or self[lamps[i].name] > 1 then
+        local offset = rotate(lamps[i].position, rad)
+        local pos = addPos(pole, offset)
+        --debugDump(pos, true)
+        self:removeTrees(pos)
+        local canplace = game.canplaceentity{name = lamps[i].name, position = pos}
+        if canplace then
+          game.createentity{name = lamps[i].name, position = pos, direction=0,force = game.forces.player}
+          self:removeItemFromCargo(lamps[i].name, 1)
+        end
       end
     end
   end,
@@ -757,9 +764,7 @@ FARL = {
         if not pole.neighbours[1] then
           self:flyingText("Placed unconnected pole", RED, true)
         end
-        if godmode or self["small-lamp"] > 0 then
-          self:placeLamp(traveldir, tmp)
-        end
+        self:placeLamp(traveldir, tmp)
         self:removeItemFromCargo(name, 1)
         self:connectCCNet(pole)
         self.lastPole = tmp
