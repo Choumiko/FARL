@@ -1,18 +1,5 @@
 require "util"
 
-cargoTypes = { ["straight-rail"] = true, ["curved-rail"] = true,["rail-signal"] = true,
-  ["big-electric-pole"] = true, ["medium-electric-pole"] = true, ["small-lamp"] = true,
-  ["green-wire"] = true, ["red-wire"] = true
-}
-if remote.interfaces.dim_trains then
-  cargoTypes["straight-power-rail"] = true
-  cargoTypes["curved-power-rail"] = true
-end
-
-if landfillInstalled then
-  cargoTypes["landfill2by2"] = true
-end
-    
 function addPos(p1,p2)
   local p2 = p2 or {x=0,y=0}
   return {x=p1.x+p2.x, y=p1.y+p2.y}

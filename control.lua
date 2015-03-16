@@ -8,6 +8,11 @@ godmodeSignals = false
 removeStone = true
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 
+cargoTypes = { ["straight-rail"] = true, ["curved-rail"] = true,["rail-signal"] = true,
+  ["big-electric-pole"] = true, ["medium-electric-pole"] = true, ["small-lamp"] = true,
+  ["green-wire"] = true, ["red-wire"] = true
+}
+
 rails = {basic = {curved = "curved-rail", straight = "straight-rail"},
          electric = {curved = "curved-power-rail", straight = "straight-power-rail"}
 }
@@ -190,6 +195,15 @@ clearAreas =
     if glob.bridge == nil or not landfillInstalled then
       glob.bridge = false
     end
+    
+    if landfillInstalled then
+      cargoTypes["landfill2by2"] = true
+    end
+    if remote.interfaces.dim_trains then
+      cargoTypes["straight-power-rail"] = true
+      cargoTypes["curved-power-rail"] = true
+    end
+    
     if glob.flipSignals == nil then
       glob.flipSignals = false
     end
