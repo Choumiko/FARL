@@ -7,12 +7,19 @@ godmodePoles = false
 godmodeSignals = false
 removeStone = true
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
+landfillInstalled = game.entityprototypes["landfill2by2"] and true or false
 
 cargoTypes = { ["straight-rail"] = true, ["curved-rail"] = true,["rail-signal"] = true,
   ["big-electric-pole"] = true, ["medium-electric-pole"] = true, ["small-lamp"] = true,
   ["green-wire"] = true, ["red-wire"] = true
 }
-
+  if landfillInstalled then
+    cargoTypes["landfill2by2"] = true
+  end
+  if remote.interfaces.dim_trains then
+    cargoTypes["straight-power-rail"] = true
+    cargoTypes["curved-power-rail"] = true
+  end
 rails = {basic = {curved = "curved-rail", straight = "straight-rail"},
          electric = {curved = "curved-power-rail", straight = "straight-power-rail"}
 }
@@ -113,8 +120,6 @@ clearAreas =
       [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
     }
 
-  landfillInstalled = game.entityprototypes["landfill2by2"] and true or false
-
   function resetMetatable(o, mt)
     setmetatable(o,{__index=mt})
     return o
@@ -194,14 +199,6 @@ clearAreas =
     end
     if glob.bridge == nil or not landfillInstalled then
       glob.bridge = false
-    end
-    
-    if landfillInstalled then
-      cargoTypes["landfill2by2"] = true
-    end
-    if remote.interfaces.dim_trains then
-      cargoTypes["straight-power-rail"] = true
-      cargoTypes["curved-power-rail"] = true
     end
     
     if glob.flipSignals == nil then
