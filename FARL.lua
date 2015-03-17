@@ -1,6 +1,9 @@
 require "util"
 
 function addPos(p1,p2)
+  if not p1.x then
+    error("Invalid position", 2)
+  end
   local p2 = p2 or {x=0,y=0}
   return {x=p1.x+p2.x, y=p1.y+p2.y}
 end
@@ -448,9 +451,9 @@ FARL = {
 
   genericCanPlace = function(arg)
     if not arg.position or not arg.position.x or not arg.position.y then
-      error("invalid position")
+      error("invalid position", 2)
     elseif not arg.name then
-      error("no name")
+      error("no name", 2)
     end
     if not arg.direction then
       return game.canplaceentity{name = arg.name, position = arg.position}
@@ -549,17 +552,27 @@ FARL = {
       if newTravelDir and nextRail.position then
         local newDir = nextRail.direction
         local newPos = nextRail.position
-        self:removeTrees(newPos)
-        if nextRail.name == glob.rail.curved then
-          local areas = clearAreas[nextRail.direction%4]
-          for i=1,6 do
-            self:removeTrees(newPos, areas[i])
+        local newRail = {name = nextRail.name, position = newPos, direction = newDir}
+        local canplace = FARL.genericCanPlace(newRail)
+        if not canplace then
+          self:removeTrees(newPos)
+          if not FARL.genericCanPlace(newRail) then
+            if nextRail.name == glob.rail.curved then
+              local areas = clearAreas[nextRail.direction%4]
+              for i=1,6 do
+                self:removeTrees(newPos, areas[i])
+                if FARL.genericCanPlace(newRail) then
+                  break
+                end
+              end
+            end
           end
         end
-        local canplace = game.canplaceentity{name = nextRail.name, position = newPos, direction = newDir}
         local hasRail = self[nextRail.name] > 0 or godmode
+        canplace = FARL.genericCanPlace(newRail)
         if canplace and hasRail then
-          game.createentity{name = nextRail.name, position = newPos, direction = newDir, force = game.forces.player}
+          newRail.force = game.forces.player
+          FARL.genericPlace(newRail)
           if glob.settings.electric then
             remote.call("dim_trains", "railCreated", newPos)
           end
@@ -659,10 +672,13 @@ FARL = {
         local offset = rotate(lamps[i].position, rad)
         local pos = addPos(pole, offset)
         --debugDump(pos, true)
-        self:removeTrees(pos)
-        local canplace = game.canplaceentity{name = lamps[i].name, position = pos}
-        if canplace then
-          game.createentity{name = lamps[i].name, position = pos, direction=0,force = game.forces.player}
+        local lamp = {name = lamps[i].name, position = pos}
+        local canplace = FARL.genericCanPlace(lamp)
+        if not canplace then
+          self:removeTrees(pos)
+        end
+        if FARL.genericCanPlace(lamp) then
+          FARL.genericPlace{name = lamps[i].name, position = pos, direction=0,force = game.forces.player}
           self:removeItemFromCargo(lamps[i].name, 1)
         end
       end
@@ -743,11 +759,13 @@ FARL = {
         self.switch = not self.switch
       end
       --debugDump({dist=distance, lr=lastrail, dir=traveldir, offset=offset},true)
-      self:removeTrees(tmp)
+      local pole = {name = name, position = tmp}
+      if not FARL.genericCanPlace(pole) then
+        self:removeTrees(tmp)
+      end
       self[name] = self[name] or 0
-      local canplace = game.canplaceentity{name = name, position = tmp}
-      if canplace and (self[name] > 0 or godmode or godmodePoles) then
-        local pole = game.createentity{name = name, position = tmp, force = game.forces.player}
+      if FARL.genericCanPlace(pole) and (self[name] > 0 or godmode or godmodePoles) then
+        local success, pole = FARL.genericPlace{name = name, position = tmp, force = game.forces.player}
         if not pole.neighbours[1] then
           self:flyingText("Placed unconnected pole", RED, true)
         end
@@ -779,11 +797,14 @@ FARL = {
         dir = (dir + 4) % 8
       end
       local pos = addPos(rail.position, offset)
-      self:removeTrees(pos)
-      local success, entity = FARL.genericPlace{name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
+      local signal = {name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
+      if not FARL.genericCanPlace(signal) then
+        self:removeTrees(pos)
+      end
+      local success, entity = FARL.genericPlace(signal)
       if success then
-        self:removeItemFromCargo("rail-signal", 1)
-        self["rail-signal"] = self["rail-signal"] - 1
+        self:removeItemFromCargo(signal.name, 1)
+        self["rail-signal"] = self[signal.name] - 1
         return success, entity
       else
         --self:print("Can't place signal@"..pos2Str(pos))
