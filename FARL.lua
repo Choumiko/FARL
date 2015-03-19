@@ -132,7 +132,7 @@ FARL = {
 
     for _, entity in ipairs(game.findentitiesfiltered{area = area, type = "tree"}) do
       entity.die()
-      if not godmode and not glob.settings.collectWood then self:addItemToCargo("raw-wood", 1) end
+      if not godmode and glob.settings.collectWood then self:addItemToCargo("raw-wood", 1) end
     end
     self:pickupItems(pos, area)
     if removeStone then

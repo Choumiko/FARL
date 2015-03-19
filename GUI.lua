@@ -189,8 +189,8 @@ GUI = {
         local settings = row.add({type="table", name="settings", colspan=2})
         player.gui.left.farl.rows.buttons.settings.caption={"text-save"}
 
-        GUI.add(settings,{type="checkbox", name="dropWood", caption={"stg-dropWood"}, state = glob.settings.dropWood})
-        GUI.add(settings,{type="checkbox", name="collectWood", caption={"stg-collectWood"}}, glob.settings.collectWood)
+        GUI.add(settings,{type="checkbox", name="dropWood", caption={"stg-dropWood"}}, "dropWood")
+        GUI.add(settings,{type="checkbox", name="collectWood", caption={"stg-collectWood"}}, "collectWood")
         
         GUI.add(settings, {type="label", caption={"stg-signalDistance"}})
         GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, glob.settings.signalDistance)
