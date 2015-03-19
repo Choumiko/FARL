@@ -114,7 +114,7 @@ FARL = {
           if l.equals(self.locomotive) then
             self.frontmover = true
             break
-          end        
+          end
         end
         self.cruiseInterrupt = self.driver.ridingstate.acceleration
         self:layRails()
@@ -142,28 +142,28 @@ FARL = {
     end
     self:fillWater(area)
   end,
-  
+
   fillWater = function(self, area)
     if landfillInstalled then
-    -- check if bridging is turned on in settings
+      -- check if bridging is turned on in settings
       if glob.bridge then
-     -- following code mostly pulled from landfill mod itself and adjusted to fit
+        -- following code mostly pulled from landfill mod itself and adjusted to fit
         local tiles = {}
         local st, ft = area[1],area[2]
         for x = st[1], ft[1], 1 do
           for y = st[2], ft[2], 1 do
             local tileName = game.gettile(x, y).name
-      -- check that tile is water, if it is add it to a list of tiles to be changed to grass
+            -- check that tile is water, if it is add it to a list of tiles to be changed to grass
             if tileName == "water" or tileName == "deepwater" then
               table.insert(tiles,{name="grass", position={x, y}})
             end
           end
         end
-     -- check to make sure water tiles were found
+        -- check to make sure water tiles were found
         if #tiles ~= 0 then
-     -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
+          -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
           local lfills = math.ceil(#tiles/4)
-      -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
+          -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
           if godmode or self["landfill2by2"] > lfills then
             game.settiles(tiles)
             self:removeItemFromCargo("landfill2by2", lfills)
@@ -256,7 +256,7 @@ FARL = {
   end,
 
   cruiseControl = function(self)
-    local acc = self.frontmover and defines.riding.acceleration.accelerating or defines.riding.acceleration.reversing 
+    local acc = self.frontmover and defines.riding.acceleration.accelerating or defines.riding.acceleration.reversing
     if self.cruise then
       local limit = self.active and glob.cruiseSpeed or 0.9
       if self.cruiseInterrupt == 2 then

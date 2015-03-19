@@ -13,16 +13,18 @@ cargoTypes = { ["straight-rail"] = true, ["curved-rail"] = true,["rail-signal"] 
   ["big-electric-pole"] = true, ["medium-electric-pole"] = true, ["small-lamp"] = true,
   ["green-wire"] = true, ["red-wire"] = true
 }
-  if landfillInstalled then
-    cargoTypes["landfill2by2"] = true
-  end
-  if remote.interfaces.dim_trains then
-    cargoTypes["straight-power-rail"] = true
-    cargoTypes["curved-power-rail"] = true
-  end
-rails = {basic = {curved = "curved-rail", straight = "straight-rail"},
-         electric = {curved = "curved-power-rail", straight = "straight-power-rail"}
-}
+if landfillInstalled then
+  cargoTypes["landfill2by2"] = true
+end
+
+if remote.interfaces.dim_trains then
+  cargoTypes["straight-power-rail"] = true
+  cargoTypes["curved-power-rail"] = true
+end
+
+rails = {
+  basic = {curved = "curved-rail", straight = "straight-rail"},
+  electric = {curved = "curved-power-rail", straight = "straight-power-rail"}}
 
 input2dir = {[0]=-1,[1]=0,[2]=1}
 -- inputToNewDir[oldDir][input] -> rail to new dir
@@ -81,32 +83,32 @@ clearAreas =
       {{x=0.5,y=-1.5},{x=0.5,y=2.5}},{{x=-0.5,y=-2.5},{x=-0.5,y=1.5}},
       {{x=-1.5,y=-3.5},{x=-1.5,y=1.5}},{{x=-3.5,y=-3.5},{x=-2.5,y=0.5}}}
   }
-  
+
   --poleDistance = 1, side = right
   defaultsDiagonal = {
-      direction = 3,
-      lamps = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
-      pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}}
+    direction = 3,
+    lamps = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
+    pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}}
   }
- 
+
   defaultsStraight = {
-      direction = 0,
-      lamps = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
-      pole = {name = "big-electric-pole", position = {x = 3, y = 0}}
+    direction = 0,
+    lamps = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
+    pole = {name = "big-electric-pole", position = {x = 3, y = 0}}
   }
-  
-  defaultsMediumDiagonal = { 
+
+  defaultsMediumDiagonal = {
     direction = 7,
     lamps = {{name = "small-lamp", position = {x = -1, y = 1}}},
     pole = {name = "medium-electric-pole", position = {x = 2, y = 1}}
   }
-  
+
   defaultsMediumStraight = {
     direction = 0,
     lamps = {{name = "small-lamp", position = {x = 0,y = 1}}},
     pole = {name = "medium-electric-pole", position = {x = 2.5,y = -0.5}}
   }
-  
+
   --[traveldir] ={[raildir]
   signalOffset =
     {
@@ -171,10 +173,9 @@ clearAreas =
       glob.settings.bp = nil
       glob.version = "0.2.4"
     end
-    glob.settings.bp = glob.settings.bp or {medium= {diagonal=defaultsMediumDiagonal,
-                                                     straight=defaultsMediumStraight},
-                                            big=    {diagonal=defaultsDiagonal,
-                                                     straight=defaultsStraight}}
+    glob.settings.bp = glob.settings.bp or {
+      medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight},
+      big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}}
     glob.rail = glob.rail or rails.basic
     glob.settings.electric = glob.settings.electric or false
     if remote.interfaces.dim_trains then
@@ -184,7 +185,7 @@ clearAreas =
       glob.settings.electric = false
       glob.rail = rails.basic
     end
-    
+
     if glob.minPoles == nil then
       glob.minPoles = true
     end
@@ -200,7 +201,7 @@ clearAreas =
     if glob.bridge == nil or not landfillInstalled then
       glob.bridge = false
     end
-    
+
     if glob.flipSignals == nil then
       glob.flipSignals = false
     end
@@ -235,7 +236,7 @@ clearAreas =
         glob.settings.diagonal = defaultsMediumDiagonal
       else
         glob.settings.straight = defaultsStraight
-        glob.settings.diagonal = defaultsDiagonal      
+        glob.settings.diagonal = defaultsDiagonal
       end
       glob.version = "0.1.8"
     end
@@ -373,12 +374,12 @@ clearAreas =
         end
         initGlob()
       end,
-      
+
       setCurvedWeight = function(weight)
         local w = tonumber(weight) or glob.settings.curvedWeight
         glob.settings.curvedWeight = w < 0 and 1 or w
       end,
-      
+
       godmode = function(bool)
         godmode = bool
         godmodePoles = bool
@@ -391,19 +392,19 @@ clearAreas =
       tileAt = function(x,y)
         debugDump(game.gettile(x, y).name,true)
       end,
-      
+
       quickstart = function()
         local items = {"farl", "curved-rail", "straight-rail", "medium-electric-pole", "big-electric-pole",
-        "small-lamp", "solid-fuel", "rail-signal", "blueprint"}
+          "small-lamp", "solid-fuel", "rail-signal", "blueprint"}
         local count = {5,50,50,50,50,50,50,50,10}
         for i=1,#items do
           game.player.insert{name=items[i], count=count[i]}
         end
       end,
-      
+
       quickstartElectric = function()
         local items = {"farl", "curved-power-rail", "straight-power-rail", "medium-electric-pole", "big-electric-pole",
-        "small-lamp", "solid-fuel", "rail-signal", "blueprint", "electric-locomotive", "solar-panel", "basic-accumulator"}
+          "small-lamp", "solid-fuel", "rail-signal", "blueprint", "electric-locomotive", "solar-panel", "basic-accumulator"}
         local count = {5,50,50,50,50,50,50,50,10,2,50,50}
         for i=1,#items do
           game.player.insert{name=items[i], count=count[i]}

@@ -122,7 +122,7 @@ GUI = {
         if glob.settings.electric then
           glob.rail = rails.electric
         else
-          glob.rail = rails.basic        
+          glob.rail = rails.basic
         end
         farl.lastrail = false
       elseif name == "junctionLeft" then
@@ -170,13 +170,6 @@ GUI = {
 
     toggleSettingsWindow = function(event, farl, player)
       local row = player.gui.left.farl.rows
---      local captionSide
---      if glob.settings.poleSide == 1 then
---        captionSide = {"stg-side-right"}
---      else
---        captionSide = {"stg-side-left"}
---      end
-
       if row.settings ~= nil then
         local s = row.settings
         local sDistance = tonumber(s.signalDistance.text) or glob.settings.signalDistance
@@ -191,21 +184,20 @@ GUI = {
 
         GUI.add(settings,{type="checkbox", name="dropWood", caption={"stg-dropWood"}}, "dropWood")
         GUI.add(settings,{type="checkbox", name="collectWood", caption={"stg-collectWood"}}, "collectWood")
-        
+
         GUI.add(settings, {type="label", caption={"stg-signalDistance"}})
         GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, glob.settings.signalDistance)
-        
+
         if remote.interfaces.dim_trains then
           GUI.add(settings,{type="checkbox", name="poweredRails", caption="use powered rails", state=glob.settings.electric})
           GUI.add(settings, {type="label", caption=""})
         end
-        
+
         GUI.add(settings, {type="label", caption={"stg-poleType"}})
         GUI.addButton(settings, {name="poleType", caption=captionPole}, GUI.togglePole)
-        
+
         GUI.add(settings, {type="label", caption={"stg-poleSide"}})
         GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=glob.settings.flipPoles})
---        GUI.addButton(row1, {name="side", caption=captionSide}, GUI.toggleSide)
 
         GUI.add(settings, {type="checkbox", name="minPoles", caption={"stg-minPoles"}}, "minPoles")
         GUI.add(settings, {type="label", caption=""})
@@ -268,11 +260,10 @@ GUI = {
     end,
 
     clearBlueprints = function(event, farl, player)
-      glob.settings.bp = {medium= {diagonal=defaultsMediumDiagonal,
-                                   straight=defaultsMediumStraight},
-                          big=    {diagonal=defaultsDiagonal,
-                                   straight=defaultsStraight}}
-      glob.activeBP = glob.medium and glob.settings.bp.medium or glob.settings.bp.big                                   
+      glob.settings.bp = {
+        medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight},
+        big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}}
+      glob.activeBP = glob.medium and glob.settings.bp.medium or glob.settings.bp.big
     end,
 
     saveSettings = function(s)
