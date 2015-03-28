@@ -212,10 +212,8 @@ FARL = {
         newDir = data.connect.direction[lastRail.direction]
       end
       else -- N/E/S/W travel
-        local shift = ""
         if lastRail.name == glob.rail.curved then --straight after curve
           pos = data.shift[lastRail.direction]
-          shift = pos2Str(data.shift[lastRail.direction])
         end
         pos = addPos(lastRail.position, pos)
       end
@@ -885,15 +883,16 @@ FARL = {
     for i=1, #rails do
       if rails[i].name == glob.rail.curved then
         table.insert(curves, rails[i])
-      end
-      if trainDir % 2 == 0 then
-        if rails[i].direction == trainDir or (rails[i].direction + 4) % 8 == trainDir then
-          return rails[i]
-        end
       else
-        local dir = (trainDir+2)%8
-        if rails[i].direction == dir or rails[i].direction == (dir+4)%8 then
-          return rails[i]
+        if trainDir % 2 == 0 then
+          if rails[i].direction == trainDir or (rails[i].direction + 4) % 8 == trainDir then
+            return rails[i]
+          end
+        else
+          local dir = (trainDir+2)%8
+          if rails[i].direction == dir or rails[i].direction == (dir+4)%8 then
+            return rails[i]
+          end
         end
       end
     end
