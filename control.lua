@@ -286,6 +286,16 @@ clearAreas =
     end
   end
 
+  function onentitydied(event)
+    local ent = event.entity
+    if ent.type == "locomotive" and ent.name == "farl" then
+      local i = FARL.findByLocomotive(event.entity)
+      if i then
+        table.remove(glob.farl, i)
+      end
+    end
+  end
+
   game.oninit(oninit)
   game.onload(onload)
   game.onevent(defines.events.ontick, onTick)
@@ -294,6 +304,7 @@ clearAreas =
   game.onevent(defines.events.onplayermineditem, onplayermineditem)
   game.onevent(defines.events.onpreplayermineditem, onpreplayermineditem)
   game.onevent(defines.events.onbuiltentity, onbuiltentity)
+  game.onevent(defines.events.onentitydied, onentitydied)
 
   local function onplayercreated(event)
     local player = game.getplayer(event.playerindex)
@@ -301,7 +312,7 @@ clearAreas =
     if gui.top.farl ~= nil then
       gui.top.farl.destroy()
     end
-    debugDump("onplayercreated",true)
+    --debugDump("onplayercreated",true)
   end
 
   game.onevent(defines.events.onplayercreated, onplayercreated)
@@ -327,21 +338,21 @@ clearAreas =
     --game.makefile("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
   end
 
---  driverNextDir = 1
---
---  function setGhostDriver(locomotive)
---    local ghost = newGhostDriverEntity(game.player.position)
---    locomotive.passenger = ghost
---    return ghost
---  end
---
---  function newGhostDriverEntity(position)
---    game.createentity({name="farl_player", position=position, force=game.forces.player})
---    local entities = game.findentitiesfiltered({area={{position.x, position.y},{position.x, position.y}}, name="farl_player"})
---    if entities[1] ~= nil then
---      return entities[1]
---    end
---  end
+  --  driverNextDir = 1
+  --
+  --  function setGhostDriver(locomotive)
+  --    local ghost = newGhostDriverEntity(game.player.position)
+  --    locomotive.passenger = ghost
+  --    return ghost
+  --  end
+  --
+  --  function newGhostDriverEntity(position)
+  --    game.createentity({name="farl_player", position=position, force=game.forces.player})
+  --    local entities = game.findentitiesfiltered({area={{position.x, position.y},{position.x, position.y}}, name="farl_player"})
+  --    if entities[1] ~= nil then
+  --      return entities[1]
+  --    end
+  --  end
 
   remote.addinterface("farl",
     {

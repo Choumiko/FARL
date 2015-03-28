@@ -29,6 +29,9 @@ function rotate(pos, rad)
 end
 
 function pos2Str(pos)
+  if not pos then
+    error("Position is nil", 2)
+  end
   if not pos.x or not pos.y then
     pos = {x=0,y=0}
   end
@@ -70,8 +73,10 @@ FARL = {
   onPlayerLeave = function(player)
     for i,f in ipairs(glob.farl) do
       if f.driver and f.driver.name == player.name then
-        f:deactivate()
-        f.driver = false
+        --if f.train.valid then
+          f:deactivate()
+          f.driver = false
+        --end
         break
       end
     end
@@ -335,7 +340,9 @@ FARL = {
     self.lastrail = nil
     self.direction = nil
     self.lastPole, self.lastCheckPole = nil,nil
-    self:updateCargo()
+    if self.train.valid then
+      self:updateCargo()
+    end
   end,
 
   toggleActive = function(self)

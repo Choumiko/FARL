@@ -276,7 +276,7 @@ GUI = {
 
     updateGui = function(farl)
       GUI.init()
-      if farl.driver.name ~= "farl_player" then
+      if farl.driver.name ~= "farl_player" and farl.driver.gui.left.farl then
         farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
       end
