@@ -1,6 +1,7 @@
 require "defines"
 require "FARL"
 require "GUI"
+require "Settings"
 
 godmode = false
 godmodePoles = false
@@ -8,6 +9,7 @@ godmodeSignals = false
 removeStone = true
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 landfillInstalled = game.entityprototypes["landfill2by2"] and true or false
+electricInstalled = game.entityprototypes["straight-power-rail"] and true or false
 
 cargoTypes = { ["straight-rail"] = true, ["curved-rail"] = true,["rail-signal"] = true,
   ["big-electric-pole"] = true, ["medium-electric-pole"] = true, ["small-lamp"] = true,
@@ -17,7 +19,7 @@ if landfillInstalled then
   cargoTypes["landfill2by2"] = true
 end
 
-if remote.interfaces.dim_trains then
+if electricInstalled then
   cargoTypes["straight-power-rail"] = true
   cargoTypes["curved-power-rail"] = true
 end
@@ -122,6 +124,29 @@ clearAreas =
       [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
     }
 
+  defaultSettings = {
+    activeBP = {},
+    bp = {
+      medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight},
+      big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}},
+    ccNet = false,
+    ccWires = 1,
+    collectWood = true,
+    curvedWeight = 4,
+    dropWood = true,
+    electric = false,
+    flipPoles = false,
+    flipSignals = false,
+    signalDistance = 15,
+    medium = false,
+    minPoles = true,
+    poles = true,
+    rail = rails.basic,
+    signals = true,
+    bridge = false
+  }
+  defaultSettings.activeBP = defaultSettings.bp.big
+
   function resetMetatable(o, mt)
     setmetatable(o,{__index=mt})
     return o
@@ -162,6 +187,7 @@ clearAreas =
       glob.settings.straight = nil
       glob.settings.diagonal = nil
     end
+    glob.players = glob.players or {}
     glob.settings = glob.settings or {}
     glob.settings.signalDistance = glob.settings.signalDistance or 15
     glob.settings.curvedWeight = glob.settings.curvedWeight or 4
@@ -178,11 +204,11 @@ clearAreas =
       big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}}
     glob.rail = glob.rail or rails.basic
     glob.settings.electric = glob.settings.electric or false
-    if remote.interfaces.dim_trains then
+    if electricInstalled then
       glob.electricInstalled = true
     else
       glob.electricInstalled = false
-      glob.settings.electric = false
+      glob.settings.electric = nil
       glob.rail = rails.basic
     end
 
@@ -240,7 +266,53 @@ clearAreas =
       end
       glob.version = "0.1.8"
     end
-    GUI.init()
+    if glob.version < "0.2.8" then
+      local stg = {
+        activeBP = glob.activeBP,
+        bp = glob.settings.bp,          
+        ccNet = glob.settings.ccNet,
+        ccWires = glob.settings.ccWires,
+        collectWood = glob.settings.collectWood,
+        curvedWeight = glob.settings.curvedWeight,
+        cruiseSpeed = glob.cruiseSpeed,
+        dropWood = glob.settings.dropWood,
+        electric = glob.settings.electric,
+        flipPoles = glob.settings.flipPoles,
+        flipSignals = false,
+        signalDistance = glob.settings.signalDistance,
+        medium = glob.medium,
+        minPoles = glob.minPoles,
+        poles = glob.poles,
+        rail = glob.rail,
+        signals = glob.signals,
+        bridge = glob.bridge,
+      }
+      glob.players = {}
+      for pi, player in pairs(game.players) do
+        local settings = Settings.loadByPlayer(player)
+        settings = resetMetatable(settings,Settings)
+        settings:update(util.table.deepcopy(stg))
+      end
+      glob.settings = nil
+      glob.electricInstalled = nil
+      for k, v in pairs(stg) do
+        if k == "farl" or k == "players" then
+        else
+          if glob[k] ~= nil then
+            glob[k] = nil
+          end
+        end
+      end
+      
+    end
+    for name, s in pairs(glob.players) do
+      s = resetMetatable(s,Settings)
+      s:checkMods()
+      --assert(getmetatable(s) == Settings)
+      --s:dump()
+    end
+    saveVar(glob,"postinit")
+    --GUI.init()
     glob.version = "0.2.4"
   end
 

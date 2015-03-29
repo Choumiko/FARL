@@ -34,17 +34,18 @@ GUI = {
 
     end,
 
-    init = function()
+    init = function(player)
+      local settings = Settings.loadByPlayer(player)
       GUI.bindings = {
-        signals = glob.signals,
-        poles = glob.poles,
-        flipSignals = glob.flipSignals,
-        medium = glob.medium,
-        minPoles = glob.minPoles,
-        ccNet = glob.settings.ccNet,
-        bridge = glob.bridge,
-        collectWood = glob.settings.collectWood,
-        dropWood = glob.settings.dropWood
+        signals = settings.signals,
+        poles = settings.poles,
+        flipSignals = settings.flipSignals,
+        medium = settings.medium,
+        minPoles = settings.minPoles,
+        ccNet = settings.ccNet,
+        bridge = settings.bridge,
+        collectWood = settings.collectWood,
+        dropWood = settings.dropWood
       }
     end,
 
@@ -75,6 +76,7 @@ GUI = {
 
     createGui = function(player)
       if player.gui.left.farl ~= nil then return end
+      GUI.init(player)
       local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farl"})
       local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
       local buttons = GUI.add(rows, {type="table", name="buttons", colspan=3})
@@ -98,31 +100,31 @@ GUI = {
       if GUI.callbacks[name] then
         return GUI.callbacks[name](event, farl, player)
       end
+      local psettings = Settings.loadByPlayer(player)
       if name == "debug" then
         saveVar(glob,"debug")
         --glob.debug = {}
         --glob.action = {}
         farl:debugInfo()
-      elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles" then
-        glob[name] = not glob[name]
-      elseif name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" then
-        glob.settings[name] = not glob.settings[name]
+      elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
+        or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" then
+        psettings[name] = not psettings[name]
       elseif name == "bridge" then
         if landfillInstalled then
-          glob.bridge = not glob.bridge
+          psettings.bridge = not psettings.bridge
         else
-          glob.bridge = false
+          psettings.bridge = false
         end
       elseif name == "poweredRails" then
-        if not remote.interfaces.dim_trains then
-          glob.rail = rails.basic
+        if not electricInstalled then
+          psettings.rail = rails.basic
           return
         end
-        glob.settings.electric = not glob.settings.electric
-        if glob.settings.electric then
-          glob.rail = rails.electric
+        psettings.electric = not psettings.electric
+        if psettings.electric then
+          psettings.rail = rails.electric
         else
-          glob.rail = rails.basic
+          psettings.rail = rails.basic
         end
         farl.lastrail = false
       elseif name == "junctionLeft" then
@@ -137,31 +139,34 @@ GUI = {
     end,
 
     togglePole = function(event, farl, player)
-      glob.medium = not glob.medium
-      if glob.medium then
-        glob.activeBP = glob.settings.bp.medium
+      local psettings = Settings.loadByPlayer(player)
+      psettings.medium = not psettings.medium
+      if psettings.medium then
+        psettings.activeBP = psettings.bp.medium
         event.element.caption = {"stg-poleMedium"}
       else
-        glob.activeBP = glob.settings.bp.big
+        psettings.activeBP = psettings.bp.big
         event.element.caption = {"stg-poleBig"}
       end
     end,
 
     toggleSide = function(event, farl, player)
-      if glob.settings.poleSide == 1 then
-        glob.settings.poleSide = -1
+      local psettings = Settings.loadByPlayer(player)
+      if psettings.poleSide == 1 then
+        psettings.poleSide = -1
         event.element.caption = {"stg-side-left"}
         return
       else
-        glob.settings.poleSide = 1
+        psettings.poleSide = 1
         event.element.caption = {"stg-side-right"}
         return
       end
     end,
 
     toggleWires = function(event,farl, player)
-      glob.settings.ccWires = glob.settings.ccWires % 3 + 1
-      event.element.caption = GUI.ccWires[glob.settings.ccWires]
+      local psettings = Settings.loadByPlayer(player)
+      psettings.ccWires = psettings.ccWires % 3 + 1
+      event.element.caption = GUI.ccWires[psettings.ccWires]
     end,
 
     toggleCC = function(event, farl, player)
@@ -170,15 +175,16 @@ GUI = {
 
     toggleSettingsWindow = function(event, farl, player)
       local row = player.gui.left.farl.rows
+      local psettings = Settings.loadByPlayer(player)
       if row.settings ~= nil then
         local s = row.settings
-        local sDistance = tonumber(s.signalDistance.text) or glob.settings.signalDistance
+        local sDistance = tonumber(s.signalDistance.text) or psettings.signalDistance
         sDistance = sDistance < 0 and 0 or sDistance
         player.gui.left.farl.rows.buttons.settings.caption={"text-settings"}
-        GUI.saveSettings{signalDistance=sDistance}
+        GUI.saveSettings({signalDistance=sDistance}, player)
         row.settings.destroy()
       else
-        local captionPole = glob.medium and {"stg-poleMedium"} or {"stg-poleBig"}
+        local captionPole = psettings.medium and {"stg-poleMedium"} or {"stg-poleBig"}
         local settings = row.add({type="table", name="settings", colspan=2})
         player.gui.left.farl.rows.buttons.settings.caption={"text-save"}
 
@@ -186,10 +192,10 @@ GUI = {
         GUI.add(settings,{type="checkbox", name="collectWood", caption={"stg-collectWood"}}, "collectWood")
 
         GUI.add(settings, {type="label", caption={"stg-signalDistance"}})
-        GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, glob.settings.signalDistance)
+        GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, psettings.signalDistance)
 
         if remote.interfaces.dim_trains then
-          GUI.add(settings,{type="checkbox", name="poweredRails", caption="use powered rails", state=glob.settings.electric})
+          GUI.add(settings,{type="checkbox", name="poweredRails", caption="use powered rails", state=psettings.electric})
           GUI.add(settings, {type="label", caption=""})
         end
 
@@ -197,15 +203,15 @@ GUI = {
         GUI.addButton(settings, {name="poleType", caption=captionPole}, GUI.togglePole)
 
         GUI.add(settings, {type="label", caption={"stg-poleSide"}})
-        GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=glob.settings.flipPoles})
+        GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=psettings.flipPoles})
 
         GUI.add(settings, {type="checkbox", name="minPoles", caption={"stg-minPoles"}}, "minPoles")
         GUI.add(settings, {type="label", caption=""})
 
-        GUI.add(settings, {type="checkbox", name="ccNet", caption={"stg-ccNet"}, state=glob.settings.ccNet})
+        GUI.add(settings, {type="checkbox", name="ccNet", caption={"stg-ccNet"}, state=psettings.ccNet})
         local row2 = GUI.add(settings, {type="table", name="row3", colspan=2})
         GUI.add(row2, {type="label", caption={"stg-ccNetWire"}})
-        GUI.addButton(row2, {name="ccNetWires", caption=GUI.ccWires[glob.settings.ccWires]}, GUI.toggleWires)
+        GUI.addButton(row2, {name="ccNetWires", caption=GUI.ccWires[psettings.ccWires]}, GUI.toggleWires)
 
         GUI.add(settings, {type="label", caption={"stg-blueprint"}})
         local row3 = GUI.add(settings, {type="table", name="row4", colspan=2})
@@ -260,23 +266,25 @@ GUI = {
     end,
 
     clearBlueprints = function(event, farl, player)
-      glob.settings.bp = {
+      local psettings = Settings.loadByPlayer(player)
+      psettings.bp = {
         medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight},
         big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}}
-      glob.activeBP = glob.medium and glob.settings.bp.medium or glob.settings.bp.big
+      psettings.activeBP = psettings.medium and psettings.bp.medium or psettings.bp.big
     end,
 
-    saveSettings = function(s)
+    saveSettings = function(s, player)
+      local psettings = Settings.loadByPlayer(player)
       for i,p in pairs(s) do
-        if glob.settings[i] then
-          glob.settings[i] = p
+        if psettings[i] ~= nil then
+          psettings[i] = p
         end
       end
     end,
 
     updateGui = function(farl)
-      GUI.init()
       if farl.driver.name ~= "farl_player" and farl.driver.gui.left.farl then
+        GUI.init(farl.driver)
         farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
       end
