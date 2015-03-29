@@ -403,7 +403,9 @@ clearAreas =
         godmodeSignals = bool
       end,
       setSpeed = function(speed)
-        glob.cruiseSpeed = speed
+        for name, s in pairs(glob.players) do
+          s.cruiseSpeed = speed
+        end
       end,
 
       tileAt = function(x,y)
