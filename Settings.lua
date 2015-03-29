@@ -9,6 +9,7 @@ Settings = {
       ccWires = 1,
       collectWood = true,
       curvedWeight = 4,
+      cruiseSpeed = 0.4,
       diagonal = {},
       dropWood = true,
       electric = false,

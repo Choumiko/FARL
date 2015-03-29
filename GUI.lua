@@ -56,7 +56,7 @@ GUI = {
       end
       if bind then
         if e.type == "checkbox" then
-          e.state = GUI.bindings[e.name]
+          e.state = Settings.loadByPlayer(parent.gui.player)[e.name]
         end
       end
       local ret = parent.add(e)
@@ -76,7 +76,7 @@ GUI = {
 
     createGui = function(player)
       if player.gui.left.farl ~= nil then return end
-      GUI.init(player)
+      --GUI.init(player)
       local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farl"})
       local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
       local buttons = GUI.add(rows, {type="table", name="buttons", colspan=3})
@@ -284,7 +284,7 @@ GUI = {
 
     updateGui = function(farl)
       if farl.driver.name ~= "farl_player" and farl.driver.gui.left.farl then
-        GUI.init(farl.driver)
+        --GUI.init(farl.driver)
         farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
       end

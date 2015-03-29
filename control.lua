@@ -1,7 +1,7 @@
 require "defines"
+require "Settings"
 require "FARL"
 require "GUI"
-require "Settings"
 require "migrate"
 
 godmode = false
@@ -134,6 +134,7 @@ clearAreas =
     ccWires = 1,
     collectWood = true,
     curvedWeight = 4,
+    cruiseSpeed = 0.4,
     dropWood = true,
     electric = false,
     flipPoles = false,
@@ -246,7 +247,7 @@ clearAreas =
       --assert(getmetatable(s) == Settings)
       --s:dump()
     end
-    glob.version = "0.2.4"
+    glob.version = "0.2.8"
   end
 
   local function oninit() initGlob() end
