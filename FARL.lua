@@ -45,6 +45,16 @@ function fixPos(pos)
   return ret
 end
 
+function saveBlueprint(player, poleType, type, bp)
+  if not glob.savedBlueprints[player.name] then
+    glob.savedBlueprints[player.name] = {}
+  end
+  if not glob.savedBlueprints[player.name][poleType] then
+    glob.savedBlueprints[player.name][poleType] = {straight = {}, diagonal = {}}
+  end
+  glob.savedBlueprints[player.name][poleType][type] = util.table.deepcopy(bp)
+end
+
 local RED = {r = 0.9}
 local GREEN = {g = 0.7}
 local YELLOW = {r = 0.8, g = 0.8}
@@ -55,8 +65,9 @@ FARL = {
       locomotive = player.vehicle, train=player.vehicle.train,
       driver=player, active=false, lastrail=false,
       direction = false, input = 1, name = player.vehicle.backername,
-      signalCount = 0, cruise = false, cruiseInterrupt = 0, cargo = {}
+      signalCount = 0, cruise = false, cruiseInterrupt = 0, cargo = {},
     }
+    new.settings = Settings.loadByPlayer(player)
     setmetatable(new, {__index=FARL})
     return new
   end,
@@ -77,7 +88,7 @@ FARL = {
         --if f.train.valid then
           f:deactivate()
           f.driver = false
-          f.settings = false
+          --f.settings = false
         --end
         break
       end
@@ -485,7 +496,7 @@ FARL = {
   parseBlueprints = function(self, bp)
     for j=1,#bp do
       local e = bp[j].getblueprintentities()
-      local offsets = {pole=false, lamps={}}
+      local offsets = {pole=false, poleEntities={}}
       local rail
 
       for i=1,#e do
@@ -498,13 +509,13 @@ FARL = {
           end
         else
           cargoTypes[e[i].name] = true
-          table.insert(offsets.lamps, {name = e[i].name, direction = e[i].direction, position = e[i].position})
+          table.insert(offsets.poleEntities, {name = e[i].name, direction = e[i].direction, position = e[i].position})
         end
       end
       if rail and offsets.pole then
         local type = rail.direction == 0 and "straight" or "diagonal"
         local lamps = {}
-        for _, l in ipairs(offsets.lamps) do
+        for _, l in ipairs(offsets.poleEntities) do
           table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position)})
         end
         local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
@@ -521,7 +532,9 @@ FARL = {
           railPos = {x=x,y=y}
         end
         offsets.pole.position = subPos(offsets.pole.position,railPos)
-        self.settings.bp[poleType][type] = {direction=rail.direction, pole = offsets.pole, lamps = lamps}
+        local bp = {direction=rail.direction, pole = offsets.pole, poleEntities = lamps}
+        self.settings.bp[poleType][type] = bp
+        saveBlueprint(self.driver, poleType, type, bp)
         self:updateCargo()
       else
         self:print("No rail in blueprint #"..j)
@@ -672,7 +685,7 @@ FARL = {
   end,
 
   placeLamp = function(self,traveldir,pole)
-    local lamps = traveldir % 2 == 0 and self.settings.activeBP.straight.lamps or self.settings.activeBP.diagonal.lamps
+    local lamps = traveldir % 2 == 0 and self.settings.activeBP.straight.poleEntities or self.settings.activeBP.diagonal.poleEntities
     local diff = traveldir % 2 == 0 and traveldir or traveldir-1
     local rad = diff * (math.pi/4)
     for i=1,#lamps do

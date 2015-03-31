@@ -90,25 +90,25 @@ clearAreas =
   --poleDistance = 1, side = right
   defaultsDiagonal = {
     direction = 3,
-    lamps = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
+    poleEntities = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
     pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}}
   }
 
   defaultsStraight = {
     direction = 0,
-    lamps = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
+    poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
     pole = {name = "big-electric-pole", position = {x = 3, y = 0}}
   }
 
   defaultsMediumDiagonal = {
     direction = 7,
-    lamps = {{name = "small-lamp", position = {x = -1, y = 1}}},
+    poleEntities = {{name = "small-lamp", position = {x = -1, y = 1}}},
     pole = {name = "medium-electric-pole", position = {x = 2, y = 1}}
   }
 
   defaultsMediumStraight = {
     direction = 0,
-    lamps = {{name = "small-lamp", position = {x = 0,y = 1}}},
+    poleEntities = {{name = "small-lamp", position = {x = 0,y = 1}}},
     pole = {name = "medium-electric-pole", position = {x = 2.5,y = -0.5}}
   }
 
@@ -187,6 +187,7 @@ clearAreas =
       migrate()
     end
     glob.players = glob.players or {}
+    glob.savedBlueprints = glob.savedBlueprints or {}
     glob.farl = glob.farl or {}
     glob.railInfoLast = glob.railInfoLast or {}
     glob.debug = glob.debug or {}
@@ -196,6 +197,17 @@ clearAreas =
       farl = resetMetatable(farl, FARL)
     end
     if glob.version < "0.2.8" then
+      saveVar(glob,"preMigrate")
+      local bps = {"big", "medium"}
+      for _, k in pairs(bps) do
+        if glob.settings.bp[k] then
+          glob.settings.bp[k].diagonal.poleEntities = glob.settings.bp[k].diagonal.lamps
+          glob.settings.bp[k].diagonal.lamps = nil
+          glob.settings.bp[k].straight.poleEntities = glob.settings.bp[k].straight.lamps
+          glob.settings.bp[k].straight.lamps = nil
+        end
+      end
+
       local stg = {
         activeBP = glob.activeBP,
         bp = glob.settings.bp,
@@ -246,6 +258,9 @@ clearAreas =
       s:checkMods()
       --assert(getmetatable(s) == Settings)
       --s:dump()
+    end
+    if glob.version < "0.2.9" then
+
     end
     glob.version = "0.2.8"
   end

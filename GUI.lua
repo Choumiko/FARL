@@ -271,6 +271,9 @@ GUI = {
         medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight},
         big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}}
       psettings.activeBP = psettings.medium and psettings.bp.medium or psettings.bp.big
+      if glob.savedBlueprints[player.name] then
+        glob.savedBlueprints[player.name] = nil
+      end
     end,
 
     saveSettings = function(s, player)
