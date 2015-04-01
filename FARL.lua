@@ -663,23 +663,23 @@ FARL = {
     return offset
   end,
 
-  placeLamp = function(self,traveldir,pole)
-    local lamps = traveldir % 2 == 0 and self.settings.activeBP.straight.poleEntities or self.settings.activeBP.diagonal.poleEntities
+  placePoleEntities = function(self,traveldir,pole)
+    local poleEntities = traveldir % 2 == 0 and self.settings.activeBP.straight.poleEntities or self.settings.activeBP.diagonal.poleEntities
     local diff = traveldir % 2 == 0 and traveldir or traveldir-1
     local rad = diff * (math.pi/4)
-    for i=1,#lamps do
-      if self:getCargoCount(lamps[i].name) > 1 then
-        local offset = rotate(lamps[i].position, rad)
+    for i=1,#poleEntities do
+      if self:getCargoCount(poleEntities[i].name) > 1 then
+        local offset = rotate(poleEntities[i].position, rad)
         local pos = addPos(pole, offset)
         --debugDump(pos, true)
-        local lamp = {name = lamps[i].name, position = pos}
-        local canplace = FARL.genericCanPlace(lamp)
+        local entity = {name = poleEntities[i].name, position = pos}
+        local canplace = FARL.genericCanPlace(entity)
         if not canplace then
           self:removeTrees(pos)
         end
-        if FARL.genericCanPlace(lamp) then
-          FARL.genericPlace{name = lamps[i].name, position = pos, direction=0,force = game.forces.player}
-          self:removeItemFromCargo(lamps[i].name, 1)
+        if FARL.genericCanPlace(entity) then
+          FARL.genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = game.forces.player}
+          self:removeItemFromCargo(poleEntities[i].name, 1)
         end
       end
     end
@@ -768,7 +768,7 @@ FARL = {
         if not pole.neighbours[1] then
           self:flyingText("Placed unconnected pole", RED, true)
         end
-        self:placeLamp(traveldir, tmp)
+        self:placePoleEntities(traveldir, tmp)
         self:removeItemFromCargo(name, 1)
         self:connectCCNet(pole)
         self.lastPole = tmp

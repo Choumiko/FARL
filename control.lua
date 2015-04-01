@@ -265,9 +265,6 @@ clearAreas =
       --assert(getmetatable(s) == Settings)
       --s:dump()
     end
-    if glob.version < "0.2.9" then
-
-    end
     glob.version = "0.2.8"
   end
 
