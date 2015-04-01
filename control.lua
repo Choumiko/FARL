@@ -5,9 +5,8 @@ require "GUI"
 require "migrate"
 
 godmode = false
-godmodePoles = false
-godmodeSignals = false
 removeStone = true
+
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 landfillInstalled = game.entityprototypes["landfill2by2"] and true or false
 electricInstalled = game.entityprototypes["straight-power-rail"] and true or false
@@ -197,17 +196,25 @@ clearAreas =
       farl = resetMetatable(farl, FARL)
     end
     if glob.version < "0.2.8" then
-      saveVar(glob,"preMigrate")
+      --saveVar(glob,"preMigrate")
       local bps = {"big", "medium"}
-      for _, k in pairs(bps) do
-        if glob.settings.bp[k] then
-          glob.settings.bp[k].diagonal.poleEntities = glob.settings.bp[k].diagonal.lamps
-          glob.settings.bp[k].diagonal.lamps = nil
-          glob.settings.bp[k].straight.poleEntities = glob.settings.bp[k].straight.lamps
-          glob.settings.bp[k].straight.lamps = nil
+      if glob.activeBP then
+        if glob.activeBP.diagonal.lamps then
+          glob.activeBP.diagonal.poleEntities = glob.activeBP.diagonal.lamps
+          glob.activeBP.straight.poleEntities = glob.activeBP.straight.lamps
         end
       end
-
+      for _, k in pairs(bps) do
+        if glob.settings.bp[k] then
+          if glob.settings.bp[k].diagonal.lamps then
+            glob.settings.bp[k].diagonal.poleEntities = util.table.deepcopy(glob.settings.bp[k].diagonal.lamps)
+            glob.settings.bp[k].diagonal.lamps = nil
+            glob.settings.bp[k].straight.poleEntities = util.table.deepcopy(glob.settings.bp[k].straight.lamps)
+            glob.settings.bp[k].straight.lamps = nil
+          end
+        end
+      end
+      --saveVar(glob, "postMigrate")
       local stg = {
         activeBP = glob.activeBP,
         bp = glob.settings.bp,
@@ -249,9 +256,8 @@ clearAreas =
             f[k] = nil
           end
         end
-        f.cargo = {}
-        f:updateCargo()
       end
+      --saveVar(glob, "postMigrate2")
     end
     for name, s in pairs(glob.players) do
       s = resetMetatable(s,Settings)
@@ -414,8 +420,6 @@ clearAreas =
 
       godmode = function(bool)
         godmode = bool
-        godmodePoles = bool
-        godmodeSignals = bool
       end,
       setSpeed = function(speed)
         for name, s in pairs(glob.players) do
@@ -429,8 +433,8 @@ clearAreas =
 
       quickstart = function()
         local items = {"farl", "curved-rail", "straight-rail", "medium-electric-pole", "big-electric-pole",
-          "small-lamp", "solid-fuel", "rail-signal", "blueprint"}
-        local count = {5,50,50,50,50,50,50,50,10}
+          "small-lamp", "solid-fuel", "rail-signal", "blueprint", "cargo-wagon"}
+        local count = {5,50,50,50,50,50,50,50,10,5}
         for i=1,#items do
           game.player.insert{name=items[i], count=count[i]}
         end

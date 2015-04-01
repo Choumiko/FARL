@@ -65,7 +65,7 @@ FARL = {
       locomotive = player.vehicle, train=player.vehicle.train,
       driver=player, active=false, lastrail=false,
       direction = false, input = 1, name = player.vehicle.backername,
-      signalCount = 0, cruise = false, cruiseInterrupt = 0, cargo = {},
+      signalCount = 0, cruise = false, cruiseInterrupt = 0
     }
     new.settings = Settings.loadByPlayer(player)
     setmetatable(new, {__index=FARL})
@@ -85,11 +85,9 @@ FARL = {
   onPlayerLeave = function(player)
     for i,f in ipairs(glob.farl) do
       if f.driver and f.driver.name == player.name then
-        --if f.train.valid then
           f:deactivate()
           f.driver = false
-          --f.settings = false
-        --end
+          f.settings = false
         break
       end
     end
@@ -117,16 +115,12 @@ FARL = {
   update = function(self, event)
     if self.driver then
       if not self.train.valid then
-        self.train = self.locomotive.train
-        if self.train.valid then
-          self:updateCargo()
+        if self.locomotive.valid then
+          self.train = self.locomotive.train
         else
           self.deactivate("Error (invalid train)")
         end
       else
-        if event.tick % 60 == 0 then
-          self:updateCargo()
-        end
         self.frontmover = false
         for i,l in ipairs(self.train.locomotives.frontmovers) do
           if l.equals(self.locomotive) then
@@ -182,7 +176,7 @@ FARL = {
           -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
           local lfills = math.ceil(#tiles/4)
           -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
-          if godmode or self.cargo["landfill2by2"] > lfills then
+          if self:getCargoCount("landfill2by2") >= lfills then
             game.settiles(tiles)
             self:removeItemFromCargo("landfill2by2", lfills)
           else
@@ -243,11 +237,8 @@ FARL = {
         if lastRail.direction ~= data.lastDir then -- need extra diagonal rail to connect
           local testD, testR = self:getRail(lastRail,travelDir,1)
           local d2, r2 = self:getRail(testR,testD,input)
-          --debugDump({testD, testR},true)
-          --debugDump({d2, r2},true)
           retDir = {testD, d2}
           retRail = {testR, r2}
-          --retDir, retRail = false, "extra"
         else
           pos = addPos(lastRail.position, data.pos)
           retDir, retRail = newTravelDir, {name=name, position=pos, direction=data.direction}
@@ -260,11 +251,8 @@ FARL = {
         else
           local testD, testR = self:getRail(lastRail,travelDir,1)
           local d2, r2 = self:getRail(testR,testD,input)
-          --debugDump({testD, testR},true)
-          --debugDump({d2, r2},true)
           retDir = {testD, d2}
           retRail = {testR, r2}
-          --retDir, retRail = false, "extra"
         end
       end
     end
@@ -329,7 +317,6 @@ FARL = {
     self.lastrail = self:findLastRail()
     if self.lastrail then
       self:findLastPole()
-      self:updateCargo()
       self.direction = self:calcTrainDir()
       if self.direction and self.lastPole and self.lastCheckPole then
         self.active = true
@@ -351,9 +338,6 @@ FARL = {
     self.lastrail = nil
     self.direction = nil
     self.lastPole, self.lastCheckPole = nil,nil
-    if self.train.valid then
-      self:updateCargo()
-    end
   end,
 
   toggleActive = function(self)
@@ -449,23 +433,20 @@ FARL = {
         local inv = entity.getinventory(1).getcontents()
         if inv[item] then
           entity.getinventory(1).remove({name=item, count=count})
-          if self.cargo[item] and self.cargo[item] >= count then self.cargo[item] = self.cargo[item] - count end
-          return
         end
       end
     end
   end,
 
-  updateCargo = function(self)
-    local cargo = self.cargo
-    for type,b in pairs(cargoTypes) do
-      cargo[type] = 0
-      for i, wagon in ipairs(self.train.carriages) do
-        if wagon.type == "cargo-wagon"  and wagon.name ~= "rail-tanker" then
-          cargo[type] = cargo[type] + wagon.getinventory(1).getitemcount(type)
-        end
+  getCargoCount = function(self, item)
+    if godmode then return 9001 end
+    local c = 0
+    for i, wagon in ipairs(self.train.carriages) do
+      if wagon.type == "cargo-wagon"  and wagon.name ~= "rail-tanker" then
+        c = c + wagon.getinventory(1).getitemcount(item)
       end
     end
+    return c
   end,
 
   genericCanPlace = function(arg)
@@ -508,7 +489,6 @@ FARL = {
             offsets.pole = {name = e[i].name, direction = e[i].direction, position = e[i].position}
           end
         else
-          cargoTypes[e[i].name] = true
           table.insert(offsets.poleEntities, {name = e[i].name, direction = e[i].direction, position = e[i].position})
         end
       end
@@ -535,7 +515,6 @@ FARL = {
         local bp = {direction=rail.direction, pole = offsets.pole, poleEntities = lamps}
         self.settings.bp[poleType][type] = bp
         saveBlueprint(self.driver, poleType, type, bp)
-        self:updateCargo()
       else
         self:print("No rail in blueprint #"..j)
       end
@@ -589,7 +568,7 @@ FARL = {
             end
           end
         end
-        local hasRail = self.cargo[nextRail.name] > 0 or godmode
+        local hasRail = self:getCargoCount(nextRail.name) > 0
         canplace = FARL.genericCanPlace(newRail)
         if canplace and hasRail then
           newRail.force = game.forces.player
@@ -599,14 +578,14 @@ FARL = {
           end
           self:removeItemFromCargo(nextRail.name, 1)
           if self.settings.poles then
-            if godmodePoles or self.cargo["big-electric-pole"] > 0 or self.cargo["medium-electric-pole"] > 0 then
+            if self:getCargoCount("big-electric-pole") > 0 or self:getCargoCount("medium-electric-pole") > 0 then
               self:placePole(newTravelDir, nextRail, travelDir)
             end
           end
           if self.settings.signals then
             local signalWeight = nextRail.name == self.settings.rail.curved and self.settings.curvedWeight or 1
             self.signalCount = self.signalCount + signalWeight
-            if godmodeSignals or self.cargo["rail-signal"] > 0 then
+            if self:getCargoCount("rail-signal") > 0 then
               if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
             end
           end
@@ -689,7 +668,7 @@ FARL = {
     local diff = traveldir % 2 == 0 and traveldir or traveldir-1
     local rad = diff * (math.pi/4)
     for i=1,#lamps do
-      if godmode or self.cargo[lamps[i].name] > 1 then
+      if self:getCargoCount(lamps[i].name) > 1 then
         local offset = rotate(lamps[i].position, rad)
         local pos = addPos(pole, offset)
         --debugDump(pos, true)
@@ -708,9 +687,9 @@ FARL = {
 
   connectCCNet = function(self, pole)
     if self.settings.ccNet and pole.neighbours[1] and self.ccNetPole then
-      if godmode  or (self.settings.ccWires == 1 and self.cargo["red-wire"] > 0)
-        or (self.settings.ccWires == 2 and self.cargo["green-wire"] > 0)
-        or (self.settings.ccWires == 3 and (self.cargo["red-wire"] > 0 or self.cargo["green-wire"] > 0)) then
+      if (self.settings.ccWires == 1 and self:getCargoCount("red-wire") > 0)
+        or (self.settings.ccWires == 2 and self:getCargoCount("green-wire") > 0)
+        or (self.settings.ccWires == 3 and (self:getCargoCount("red-wire") > 0 or self:getCargoCount("green-wire") > 0)) then
         local c = {}
         local items = {}
         if self.settings.ccWires == 1 then
@@ -724,7 +703,7 @@ FARL = {
           items = {"red-wire", "green-wire"}
         end
         for i=1,#c do
-          if self.cargo[items[i]] > 0 or godmode then
+          if self:getCargoCount(items[i]) > 0 then
             pole.connectneighbour(self.ccNetPole, c[i])
             self:removeItemFromCargo(items[i], 1)
           end
@@ -784,8 +763,7 @@ FARL = {
       if not FARL.genericCanPlace(pole) then
         self:removeTrees(tmp)
       end
-      self.cargo[name] = self.cargo[name] or 0
-      if FARL.genericCanPlace(pole) and (self.cargo[name] > 0 or godmode or godmodePoles) then
+      if FARL.genericCanPlace(pole) and self:getCargoCount(name) > 0 then
         local success, pole = FARL.genericPlace{name = name, position = tmp, force = game.forces.player}
         if not pole.neighbours[1] then
           self:flyingText("Placed unconnected pole", RED, true)
@@ -794,7 +772,6 @@ FARL = {
         self:removeItemFromCargo(name, 1)
         self:connectCCNet(pole)
         self.lastPole = tmp
-        self.cargo[name] = self.cargo[name] - 1
         return true
       else
       --self:print("Can`t place pole@"..pos2Str(tmp))
@@ -825,7 +802,6 @@ FARL = {
       local success, entity = FARL.genericPlace(signal)
       if success then
         self:removeItemFromCargo(signal.name, 1)
-        self.cargo[signal.name] = self.cargo[signal.name] - 1
         return success, entity
       else
         --self:print("Can't place signal@"..pos2Str(pos))
