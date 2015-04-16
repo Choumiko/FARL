@@ -102,7 +102,7 @@ clearAreas =
   defaultsMediumDiagonal = {
     direction = 7,
     poleEntities = {{name = "small-lamp", position = {x = -1, y = 1}}},
-    pole = {name = "medium-electric-pole", position = {x = 2, y = 1}}
+    pole = {name = "medium-electric-pole", position = {x = 2, y = 2}}
   }
 
   defaultsMediumStraight = {
@@ -382,7 +382,7 @@ clearAreas =
     {
       railInfo = function(rail)
         debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
-        if glob.railInfoLast.valid then
+        if type(glob.railInfoLast) == "table" and glob.railInfoLast.valid then
           local pos = glob.railInfoLast.position
           local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
           debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
@@ -391,8 +391,10 @@ clearAreas =
             local max = AStar.heuristic(glob.railInfoLast, rail)
             debugDump("Distance (heuristic): "..max, true)
           end
+          glob.railInfoLast = false
+        else
+          glob.railInfoLast = rail
         end
-        glob.railInfoLast = rail
       end,
       debugInfo = function()
         saveVar(glob, "console")

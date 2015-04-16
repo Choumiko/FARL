@@ -65,7 +65,8 @@ FARL = {
       locomotive = player.vehicle, train=player.vehicle.train,
       driver=player, active=false, lastrail=false,
       direction = false, input = 1, name = player.vehicle.backername,
-      signalCount = 0, cruise = false, cruiseInterrupt = 0
+      signalCount = 0, cruise = false, cruiseInterrupt = 0,
+      lastposition = false, maintenance = false
     }
     new.settings = Settings.loadByPlayer(player)
     setmetatable(new, {__index=FARL})
@@ -85,9 +86,9 @@ FARL = {
   onPlayerLeave = function(player)
     for i,f in ipairs(glob.farl) do
       if f.driver and f.driver.name == player.name then
-          f:deactivate()
-          f.driver = false
-          f.settings = false
+        f:deactivate()
+        f.driver = false
+        f.settings = false
         break
       end
     end
@@ -129,30 +130,41 @@ FARL = {
           end
         end
         self.cruiseInterrupt = self.driver.ridingstate.acceleration
-        self:layRails()
+        if not self.maintenance then
+          self:layRails()
+        else
+          self:replaceMode()
+        end
       end
     end
   end,
 
-  removeTrees = function(self,pos, area)
+  prepareArea = function(self,pos, area)
     if not area then
       area = {{pos.x - 1.5, pos.y - 1.5}, {pos.x + 1.5, pos.y + 1.5}}
     else
       local tl, lr = fixPos(addPos(pos,area[1])), fixPos(addPos(pos,area[2]))
       area = {{tl[1]-1,tl[2]-1},{lr[1]+1,lr[2]+1}}
     end
+    self:removeTrees(pos, area)
+    self:pickupItems(pos, area)
+    self:removeStone(area)
+    self:fillWater(area)
+  end,
 
-    for _, entity in ipairs(game.findentitiesfiltered{area = area, type = "tree"}) do
+  removeTrees = function(self, pos, area)
+    for _, entity in pairs(game.findentitiesfiltered{area = area, type = "tree"}) do
       entity.die()
       if not godmode and self.settings.collectWood then self:addItemToCargo("raw-wood", 1) end
     end
-    self:pickupItems(pos, area)
+  end,
+
+  removeStone = function(self, area)
     if removeStone then
-      for _, entity in ipairs(game.findentitiesfiltered{area = area, name = "stone-rock"}) do
+      for _, entity in pairs(game.findentitiesfiltered{area = area, name = "stone-rock"}) do
         entity.die()
       end
     end
-    self:fillWater(area)
   end,
 
   fillWater = function(self, area)
@@ -221,8 +233,8 @@ FARL = {
       else -- N/E/S/W travel
         if lastRail.name == self.settings.rail.curved then --straight after curve
           pos = data.shift[lastRail.direction]
-        end
-        pos = addPos(lastRail.position, pos)
+      end
+      pos = addPos(lastRail.position, pos)
       end
       retDir, retRail = newTravelDir, {name=name, position=pos, direction=newDir}
     end
@@ -309,6 +321,62 @@ FARL = {
         end
       end
     end
+  end,
+
+  replaceMode = function(self)
+    self:cruiseControl()
+    if self.active and self.maintenance and self.train then
+      self.oldDirection = self.direction or self:calcTrainDir()
+      self.direction = self.direction or self:calcTrainDir()
+      self.acc = self.driver.ridingstate.acceleration
+      local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
+      local currPosition = firstWagon.position
+      if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and util.distance(self.lastposition, currPosition) < 6
+      then
+        local railBelow = self:railBelowTrain(true)
+        if railBelow then
+          local neighbours = self:findNeighbours(railBelow, self.direction)
+          if neighbours then
+            for i=0,2 do
+              if neighbours[i] and neighbours[i].position.x == railBelow.position.x and neighbours[i].position.y == railBelow.position.y then
+              --search signal/pole, remove, replace
+              end
+            end
+          end
+        end
+        -- self:placePole(self.direction, lastrail, self.oldDirection)
+        self.lastposition = currPosition
+      end
+    end
+  end,
+
+  findNeighbours = function(self, rail, travelDir)
+    local paths = {}
+    local found = false
+    for i=0,2 do
+      local newTravel, nrail = self:getRail(rail, travelDir, i)
+      if type(newTravel) == "number" and self:findRail(nrail) then
+        paths[i] = {newTravel, nrail}
+        found = true
+      else
+        paths[i] = false
+      end
+    end
+    return found and paths or false
+  end,
+
+  findRail = function(self, rail)
+    local pos = {rail.position.x, rail.position.y}
+    local range = 0.4
+    local found = false
+    local rails = game.findentitiesfiltered{area={{pos[1]-range,pos[2]-range},{pos[1]+range,pos[2]+range}}, name=rail.name}
+    for i,r in pairs(rails) do
+      if r.position.x == pos[1] and r.position.y == pos[2] then
+        found = r
+        break
+      end
+    end
+    return found
   end,
 
   activate = function(self)
@@ -555,12 +623,12 @@ FARL = {
         local newRail = {name = nextRail.name, position = newPos, direction = newDir}
         local canplace = FARL.genericCanPlace(newRail)
         if not canplace then
-          self:removeTrees(newPos)
+          self:prepareArea(newPos)
           if not FARL.genericCanPlace(newRail) then
             if nextRail.name == self.settings.rail.curved then
               local areas = clearAreas[nextRail.direction%4]
               for i=1,6 do
-                self:removeTrees(newPos, areas[i])
+                self:prepareArea(newPos, areas[i])
                 if FARL.genericCanPlace(newRail) then
                   break
                 end
@@ -610,6 +678,56 @@ FARL = {
     return retDir, retRail
   end,
 
+  flipEntity = function(self, pos, traveldir)
+    local ret = {x=pos.x, y=pos.y}
+    if traveldir % 2 == 1 then
+      if ret.x == ret.y and ret.x then return ret end
+      return {x=ret.x * -1, y=ret.y * -1}
+    end
+    if traveldir == 0 or traveldir == 4 then
+      ret.x = ret.x * -1
+    elseif traveldir == 2 or traveldir == 6 then
+      ret.y = ret.y * -1
+    end
+    return ret
+  end,
+
+  mirrorEntity = function(self, pos, traveldir)
+    local deg = 0
+    if traveldir == 0 then deg = 90
+    elseif traveldir == 1 then deg = -45
+    elseif traveldir == 2 then deg = 0
+    elseif traveldir == 3 then deg = 45
+    elseif traveldir == 4 then deg = -90
+    elseif traveldir == 5 then deg = -45
+    elseif traveldir == 6 then deg = 180
+    elseif traveldir == 7 then deg = 45
+    end
+    local rad = (deg%360) * math.pi/180
+    local cos, sin = math.cos(2*rad) , math.sin(2*rad)
+    local r = {{x=cos,y=sin},{x=sin,y=-cos}}
+    local ret = {x=0,y=0}
+    ret.x = pos.x * r[1].x + pos.y * r[1].y
+    ret.y = pos.x * r[2].x + pos.y * r[2].y
+    return ret
+  end,
+
+  fixDiagonalPos = function(self, rail)
+    local x,y = 0,0
+    -- 1 +x -y
+    if rail.direction == 1 then
+      x, y = 0.5, - 0.5
+    elseif rail.direction == 3 then
+      x, y = 0.5, 0.5
+      -- 5 -x +y
+    elseif rail.direction == 5 then
+      x, y = - 0.5, 0.5
+    elseif rail.direction == 7 then
+      x, y = - 0.5, - 0.5
+    end
+    return addPos({x=x,y=y}, rail.position)
+  end,
+
   calcPole = function(self,lastrail, traveldir, oldDir)
     local offset
     local curvePositions = {
@@ -624,14 +742,15 @@ FARL = {
     }
 
     if lastrail.name ~= self.settings.rail.curved then
-      local diagonal = traveldir % 2 == 1 and true or false
+      --local diagonal = traveldir % 2 == 1 and true or false
+      local diagonal = lastrail.direction % 2 == 1 and true or false
       local pole = not diagonal and self.settings.activeBP.straight.pole or self.settings.activeBP.diagonal.pole
       local pos = addPos(pole.position)
       local diff = not diagonal and traveldir or traveldir-1
       local rad = diff * (math.pi/4)
       offset = rotate(pos, rad)
       if self.settings.flipPoles then
-        offset = rotate(offset, math.pi)
+        offset = self:mirrorEntity(offset, traveldir)
       end
       if diagonal then
         local x,y = 0,0
@@ -670,13 +789,17 @@ FARL = {
     if type(poleEntities) == "table" then
       for i=1,#poleEntities do
         if self:getCargoCount(poleEntities[i].name) > 1 then
-          local offset = rotate(poleEntities[i].position, rad)
+          local offset = poleEntities[i].position
+          offset = rotate(offset, rad)
+          if self.settings.flipPoles then
+            offset = self:mirrorEntity(offset, traveldir)
+          end
           local pos = addPos(pole, offset)
           --debugDump(pos, true)
           local entity = {name = poleEntities[i].name, position = pos}
           local canplace = FARL.genericCanPlace(entity)
           if not canplace then
-            self:removeTrees(pos)
+            self:prepareArea(pos)
           end
           if FARL.genericCanPlace(entity) then
             FARL.genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = game.forces.player}
@@ -715,23 +838,31 @@ FARL = {
     self.ccNetPole = pole
   end,
 
+  findClosestPole = function(self, minDist, minPos)
+    local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
+    local tmp = addPos(self.lastCheckPole)
+    local reach = self.settings.medium and 9 or 30
+    local area = {{tmp.x-reach,tmp.y-reach},{tmp.x+reach,tmp.y+reach}}
+    for i,p in ipairs(game.findentitiesfiltered{area=area, name=name}) do
+      local dist = util.distance(p.position, tmp)
+      local diff = subPos(p.position,self.lastPole.position)
+      if dist < minDist then
+        --if dist < minDist and diff.x == 0 and diff.y == 0 then
+        minDist = dist
+        minPos = p.position
+      end
+    end
+    return minDist, minPos
+  end,
+
   placePole = function(self,traveldir, lastrail, oldDir)
     local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = self.settings.medium and 9 or 30
     local tmp = {x=self.lastCheckPole.x,y=self.lastCheckPole.y}
-    local area = {{tmp.x-reach,tmp.y-reach},{tmp.x+reach,tmp.y+reach}}
     local minDist, minPos = util.distance(tmp, self.lastPole), false
     --debugDump("Distance to last:"..minDist,true)
-    if not self.settings.ccNet and self.settings.minPoles then
-      for i,p in ipairs(game.findentitiesfiltered{area=area, name=name}) do
-        local dist = util.distance(p.position, tmp)
-        local diff = subPos(p.position,self.lastPole.position)
-        if dist < minDist then
-          --if dist < minDist and diff.x == 0 and diff.y == 0 then
-          minDist = dist
-          minPos = p.position
-        end
-      end
+    if not (self.settings.ccNet or self.maintenance) and self.settings.minPoles then
+      minDist, minPos = self:findClosestPole(minDist, minPos)
     end
     if minPos then self.lastPole = minPos end
     local offset = self:calcPole(lastrail, traveldir, oldDir)
@@ -741,12 +872,13 @@ FARL = {
       local first = d1 < d2 and offset[1] or offset[2]
       local second = d1 < d2 and offset[2] or offset[1]
 
-      self:placePole(first.dir, first.rail)
-      self:placePole(second.dir, second.rail)
+      self:placePole(first.dir, first.rail, first.dir)
+      self:placePole(second.dir, second.rail, second.dir)
       return
     end
 
     self.lastCheckPole = addPos(lastrail.position, offset)
+    self.lastCheckRailDir = lastrail.direction
     local distance = util.distance(self.lastPole, self.lastCheckPole)
     if distance > reach then
       if name ~= "big-electric-pole" and traveldir % 2 == 0 and lastrail.name ~= self.settings.rail.curved then
@@ -763,7 +895,7 @@ FARL = {
       --debugDump({dist=distance, lr=lastrail, dir=traveldir, offset=offset},true)
       local pole = {name = name, position = tmp}
       if not FARL.genericCanPlace(pole) then
-        self:removeTrees(tmp)
+        self:prepareArea(tmp)
       end
       if FARL.genericCanPlace(pole) and self:getCargoCount(name) > 0 then
         local success, pole = FARL.genericPlace{name = name, position = tmp, force = game.forces.player}
@@ -776,7 +908,7 @@ FARL = {
         self.lastPole = tmp
         return true
       else
-      --self:print("Can`t place pole@"..pos2Str(tmp))
+      --debugDump("Can`t place pole@"..pos2Str(tmp),true)
       --debugDump(glob.lastCheckRail,true)
       end
     end
@@ -799,7 +931,7 @@ FARL = {
       local pos = addPos(rail.position, offset)
       local signal = {name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
       if not FARL.genericCanPlace(signal) then
-        self:removeTrees(pos)
+        self:prepareArea(pos)
       end
       local success, entity = FARL.genericPlace(signal)
       if success then
@@ -831,10 +963,12 @@ FARL = {
       self.lastPole = addPos(self.lastrail.position, {x=-100,y=-100})
       local offset = self:calcPole(self.lastrail, self:calcTrainDir())
       self.lastCheckPole = addPos(self.lastrail.position, offset)
+      self.lastCheckRailDir = self.lastrail.direction
     else
       self.ccNetPole = pole
       self.lastPole = pole.position
       self.lastCheckPole = {x=pole.position.x,y=pole.position.y}
+      self.lastCheckRailDir = self:calcTrainDir()
     end
   end,
 
@@ -868,29 +1002,40 @@ FARL = {
   --        5   0   4
   --        6   1   5
   --        7   2   6
-  railBelowTrain = function(self)
+  railBelowTrain = function(self, ignore)
     local locomotive = self.locomotive
     local pos = {locomotive.position.x, locomotive.position.y}
-    local rails = game.findentitiesfiltered{area={{pos[1]-0.4,pos[2]-0.4},{pos[1]+0.4,pos[2]+0.4}}, type="rail"}
     local trainDir = self:calcTrainDir()
+    --debugDump({dir=trainDir,pos=pos},true)
+    --self:flyingText("|", RED, true, pos)
+    local range = 0.4
+    local rails = game.findentitiesfiltered{area={{pos[1]-range,pos[2]-range},{pos[1]+range,pos[2]+range}}, type="rail"}
     local curves ={}
+    --debugDump(#rails,true)
     for i=1, #rails do
       if rails[i].name == self.settings.rail.curved then
         table.insert(curves, rails[i])
       else
         if trainDir % 2 == 0 then
           if rails[i].direction == trainDir or (rails[i].direction + 4) % 8 == trainDir then
+            --self:flyingText(".", RED, true, rails[i].position)
             return rails[i]
           end
         else
           local dir = (trainDir+2)%8
           if rails[i].direction == dir or rails[i].direction == (dir+4)%8 then
+            --self:flyingText(".", RED, true, rails[i].position)
             return rails[i]
           end
         end
       end
     end
-    if curves[1] then self:deactivate("Can't start on curves", true) end
+    if curves[1] then
+      if not ignore then
+        self:deactivate("Can't start on curves", true) end
+    else
+      return curves[1]
+    end
     return false
   end,
 
