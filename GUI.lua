@@ -50,13 +50,18 @@ GUI = {
     end,
 
     add = function(parent, e, bind)
-      local type, name = e.type, e.name
-      if not e.style and GUI.defaultStyles[type] then
-        e.style = GUI.styleprefix..type
+      local gtype, name = e.type, e.name
+      if not e.style and GUI.defaultStyles[gtype] then
+        e.style = GUI.styleprefix..gtype
       end
       if bind then
         if e.type == "checkbox" then
-          e.state = Settings.loadByPlayer(parent.gui.player)[e.name]
+          if type(bind) == "string" then
+            e.state = Settings.loadByPlayer(parent.gui.player)[e.name]
+          else
+            e.state = false
+            GUI.callbacks[e.name] = bind
+          end
         end
       end
       local ret = parent.add(e)
@@ -85,6 +90,7 @@ GUI = {
       GUI.addButton(buttons, {name="settings", caption={"text-settings"}}, GUI.toggleSettingsWindow)
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
+      --GUI.add(rows,{type="checkbox", name="maintenance", caption="Replace"},GUI.toggleMaintenance)
       if landfillInstalled then
         GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
       end
@@ -137,6 +143,10 @@ GUI = {
     toggleStart = function(event, farl, player)
       farl:toggleActive()
     end,
+    
+--    toggleMaintenance = function(event, farl, player)
+--      farl.maintenance = not farl.maintenance
+--    end,
 
     togglePole = function(event, farl, player)
       local psettings = Settings.loadByPlayer(player)
