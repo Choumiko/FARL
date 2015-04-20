@@ -45,6 +45,32 @@ function fixPos(pos)
   return ret
 end
 
+function distance(pos1, pos2)
+  if not pos1.x then
+    error("invalid pos1", 2)
+  end
+  if not pos2.x then
+    error("invalid pos2", 2)
+  end
+  return util.distance(pos1, pos2)
+end
+
+function moveposition(pos, direction, distance)
+  if not pos then error("Position is nil", 2) end
+  if not pos[1] or not pos[2] then
+    error("invalid position", 2)
+  end
+  if direction % 2 == 0 then
+    return util.moveposition(pos, direction, distance)
+  else
+    local dirs = {[1] = {0,2},
+      [3] = {2,4},
+      [5] = {4,6},
+      [7] = {0,6}}
+    return util.moveposition(util.moveposition(pos, dirs[direction][1], distance), dirs[direction][2], distance)
+  end
+end
+
 function saveBlueprint(player, poleType, type, bp)
   if not glob.savedBlueprints[player.name] then
     glob.savedBlueprints[player.name] = {}
@@ -298,7 +324,7 @@ FARL = {
       self.direction = self.direction or self:calcTrainDir()
       self.acc = self.driver.ridingstate.acceleration
       local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
-      if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and util.distance(self.lastrail.position, firstWagon.position) < 6 then
+      if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and distance(self.lastrail.position, firstWagon.position) < 6 then
         self.input = self.driver.ridingstate.direction
         if self.driver.name == "farl_player" then
           if self.course and self.course[1] then
@@ -331,7 +357,7 @@ FARL = {
       self.acc = self.driver.ridingstate.acceleration
       local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
       local currPosition = firstWagon.position
-      if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and util.distance(self.lastposition, currPosition) < 6
+      if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and distance(self.lastposition, currPosition) < 6
       then
         local railBelow = self:railBelowTrain(true)
         if railBelow then
@@ -386,7 +412,7 @@ FARL = {
     if self.lastrail then
       self:findLastPole()
       self.direction = self:calcTrainDir()
-      if self.direction and self.lastPole and self.lastCheckPole then
+      if self.direction and self.lastPole then --and self.lastCheckPole then
         self.active = true
       else
         self:print("Error activating, drive on straight rails and try again")
@@ -519,24 +545,36 @@ FARL = {
 
   genericCanPlace = function(arg)
     if not arg.position or not arg.position.x or not arg.position.y then
+      debugDump(arg,true)
       error("invalid position", 2)
     elseif not arg.name then
       error("no name", 2)
     end
+    local name = arg.innername or arg.name
     if not arg.direction then
-      return game.canplaceentity{name = arg.name, position = arg.position}
+      return game.canplaceentity{name = name, position = arg.position}
     else
-      return game.canplaceentity{name = arg.name, position = arg.position, direction = arg.direction}
+      return game.canplaceentity{name = name, position = arg.position, direction = arg.direction}
     end
   end,
 
   genericPlace = function(arg, ignore)
-    local canPlace = FARL.genericCanPlace(arg)
+    local canPlace
+    if not ignore then
+      canPlace = FARL.genericCanPlace(arg)
+    else
+      canPlace = true
+    end
     local entity
-    if canPlace or ignore then
+    if canPlace then
       local direction = arg.direction or 0
       local force = arg.force or game.forces.player
       arg.force = force
+      local pos = arg.position
+      local area = {{pos.x - 0.4, pos.y - 0.4}, {pos.x + 0.4, pos.y + 0.4}}
+      for _,ent in pairs(game.findentitiesfiltered{area=area, name="ghost"}) do
+        debugDump(ent.name.." "..pos2Str(ent.position),true)
+      end
       entity = game.createentity(arg)
     end
     return canPlace, entity
@@ -740,7 +778,6 @@ FARL = {
       [6] = {straight={dir=2, off={x=3,y=-1}}, diagonal = {dir=3, off={x=-3,y=1}}},
       [7] = {straight={dir=2, off={x=3,y=1}}, diagonal = {dir=1, off={x=-3,y=-1}}}
     }
-
     if lastrail.name ~= self.settings.rail.curved then
       --local diagonal = traveldir % 2 == 1 and true or false
       local diagonal = lastrail.direction % 2 == 1 and true or false
@@ -774,10 +811,10 @@ FARL = {
       local d = {name=self.settings.rail.straight, direction=tracks.diagonal.dir, position=addPos(lastrail.position,tracks.diagonal.off)}
       local s = {name=self.settings.rail.straight, direction=tracks.straight.dir, position=addPos(lastrail.position,tracks.straight.off)}
 
-      local dDir = traveldir % 2 == 1 and traveldir or oldDir
-      local sDir = traveldir % 2 == 0 and traveldir or oldDir
-      offset[1] = {rail=d, dir = dDir}
-      offset[2] = {rail=s, dir = sDir}
+      --local dDir = traveldir % 2 == 1 and traveldir or oldDir
+      --local sDir = traveldir % 2 == 0 and traveldir or oldDir
+      --local dPole, sPole = self:calcPole(d, dDir), self:calcPole(s, sDir)
+      return {d=d, s=s}
     end
     return offset
   end,
@@ -844,7 +881,7 @@ FARL = {
     local reach = self.settings.medium and 9 or 30
     local area = {{tmp.x-reach,tmp.y-reach},{tmp.x+reach,tmp.y+reach}}
     for i,p in ipairs(game.findentitiesfiltered{area=area, name=name}) do
-      local dist = util.distance(p.position, tmp)
+      local dist = distance(p.position, tmp)
       local diff = subPos(p.position,self.lastPole.position)
       if dist < minDist then
         --if dist < minDist and diff.x == 0 and diff.y == 0 then
@@ -855,44 +892,134 @@ FARL = {
     return minDist, minPos
   end,
 
+  getPolePoints = function(self, railpos, offset, traveldir, range)
+    local polePos = addPos(railpos, offset)
+    local checks = {}
+    local found = false
+    for i=range[1],range[2] do
+      table.insert(checks,moveposition({polePos.x, polePos.y}, traveldir, i))
+    end
+    return checks
+  end,
+
   placePole = function(self,traveldir, lastrail, oldDir)
     local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = self.settings.medium and 9 or 30
-    local tmp = {x=self.lastCheckPole.x,y=self.lastCheckPole.y}
-    local minDist, minPos = util.distance(tmp, self.lastPole), false
-    --debugDump("Distance to last:"..minDist,true)
-    if not (self.settings.ccNet or self.maintenance) and self.settings.minPoles then
-      minDist, minPos = self:findClosestPole(minDist, minPos)
-    end
-    if minPos then self.lastPole = minPos end
+    local tmp-- = {x=self.lastCheckPole.x,y=self.lastCheckPole.y}
+    --    local minDist, minPos = distance(tmp, self.lastPole), false
+    --    debugDump("Distance to last:"..minDist,true)
+    --    if not (self.settings.ccNet or self.maintenance) and self.settings.minPoles then
+    --      minDist, minPos = self:findClosestPole(minDist, minPos)
+    --    end
+    --    if minPos then self.lastPole = minPos end
+    local polePos
     local offset = self:calcPole(lastrail, traveldir, oldDir)
-    if not offset.x then
-      local d1 = util.distance(offset[1].rail.position,self.lastPole)
-      local d2 = util.distance(offset[2].rail.position,self.lastPole)
-      local first = d1 < d2 and offset[1] or offset[2]
-      local second = d1 < d2 and offset[2] or offset[1]
-
-      self:placePole(first.dir, first.rail, first.dir)
-      self:placePole(second.dir, second.rail, second.dir)
-      return
-    end
-
-    self.lastCheckPole = addPos(lastrail.position, offset)
-    self.lastCheckRailDir = lastrail.direction
-    local distance = util.distance(self.lastPole, self.lastCheckPole)
-    if distance > reach then
-      if name ~= "big-electric-pole" and traveldir % 2 == 0 and lastrail.name ~= self.settings.rail.curved then
-        if not self.switch then
-          local fix = util.moveposition({tmp.x, tmp.y}, traveldir, 1)
-          if util.distance(self.lastPole, {x=fix[1],y=fix[2]}) > reach then
-            fix = {tmp.x,tmp.y}
-            self.switch = not self.switch
-          end
-          tmp = {x=fix[1], y=fix[2]}
+    local needPole = false
+    if lastrail.name ~= self.settings.rail.curved then
+      local checks = self:getPolePoints(lastrail.position, offset, traveldir, {-1,1})
+      local found = false
+      local distances = {}
+      for i,pole in pairs(checks) do
+        local dist = distance(self.lastPole.position, {x=pole[1],y=pole[2]})
+        table.insert(distances, {d=dist,p={x=pole[1],y=pole[2]}, dir=traveldir})
+        if dist == reach then
+          polePos = {x=pole[1],y=pole[2]}
+          found = true
+          needPole = true
+          break
         end
-        self.switch = not self.switch
       end
-      --debugDump({dist=distance, lr=lastrail, dir=traveldir, offset=offset},true)
+      if not found then
+        --debugDump(distances,true)
+        --        polePos = {x=checks[#checks][1],y=checks[#checks][2]}
+        local max = 0
+        local maxPole
+        for _, d in pairs(distances) do
+          if d.d < reach and d.d > max then
+            max = d.d
+            maxPole = d
+          end
+        end
+        if not maxPole then
+          for _, d in pairs(distances) do
+            maxPole = d
+            break
+          end
+        end
+        --debugDump(maxPole, true)
+        local nextPole = moveposition(fixPos(maxPole.p), maxPole.dir, 1)
+        if distance(self.lastPole.position, {x=nextPole[1], y=nextPole[2]}) > reach then
+          needPole = true
+          polePos = maxPole.p
+        end
+        --polePos = maxPole
+      end
+    else
+      debugDump({old=oldDir,new=traveldir},true)
+      local found = false
+      local checks = {}
+      for k, rail in pairs(offset) do
+        local dir = (k == "d" and traveldir % 2 == 1) and traveldir or oldDir
+        local off = self:calcPole(rail, dir)
+        local dir = traveldir
+        if k == "d" then
+          dir = traveldir % 2 == 1 and traveldir or oldDir
+        else
+          dir = traveldir % 2 == 0 and traveldir or oldDir
+        end
+
+        local range = k == "d" and {-1,1} or {-1,1}
+        local points = self:getPolePoints(rail.position, off, dir, range)
+        for i,pole in pairs(points) do
+          local options = {
+            name = "ghost",
+            innername = name,
+            position = {x=pole[1],y=pole[2]}
+          }
+          --/c game.player.print(serpent.dump(game.canplaceentity{name="ghost", innername="medium-electric-pole", position=game.player.selected.position}))
+          --self:prepareArea(options.position)
+          --FARL.genericPlace(options)
+          local dist = distance(self.lastPole.position, {x=pole[1],y=pole[2]})
+          table.insert(checks, {d=dist, p={x=pole[1],y=pole[2]}, dir = dir})
+        end
+      end
+      for _, pole in pairs(checks) do
+        if pole.d == reach then
+          polePos = pole.p
+          found = true
+          needPole = true
+          break
+        end
+      end
+      if not found then
+        local max = 0
+        local maxPole
+        for _, d in pairs(checks) do
+          if d.d < reach and d.d > max then
+            max = d.d
+            maxPole = d
+
+          end
+        end
+        debugDump(maxPole, true)
+        if not maxPole then
+          for _, d in pairs(checks) do
+            maxPole = d
+            break
+          end
+        end
+        local nextPole = moveposition(fixPos(maxPole.p), maxPole.dir, 1)
+        if distance(self.lastPole.position, {x=nextPole[1], y=nextPole[2]}) > reach or maxPole.dir ~= traveldir then
+          needPole = true
+          polePos = maxPole.p
+        end
+      end
+      --debugDump(polePos,true)
+    end
+    --self.lastCheckPole = polePos
+    --local distance = distance(self.lastPole, self.lastCheckPole)
+    if needPole then
+      tmp = polePos
       local pole = {name = name, position = tmp}
       if not FARL.genericCanPlace(pole) then
         self:prepareArea(tmp)
@@ -905,7 +1032,7 @@ FARL = {
         self:placePoleEntities(traveldir, tmp)
         self:removeItemFromCargo(name, 1)
         self:connectCCNet(pole)
-        self.lastPole = tmp
+        self.lastPole = pole
         return true
       else
       --debugDump("Can`t place pole@"..pos2Str(tmp),true)
@@ -953,22 +1080,26 @@ FARL = {
     local poles = game.findentitiesfiltered{area={{pos[1]-reach,pos[2]-reach},{pos[1]+reach,pos[2]+reach}}, name=name}
     local min, pole = 900, nil
     for i=1, #poles do
-      local dist = math.abs(util.distance(locomotive.position,poles[i].position))
+      local dist = math.abs(distance(locomotive.position,poles[i].position))
       if min > dist then
         pole = poles[i]
         min = dist
       end
     end
     if not pole then
-      self.lastPole = addPos(self.lastrail.position, {x=-100,y=-100})
-      local offset = self:calcPole(self.lastrail, self:calcTrainDir())
-      self.lastCheckPole = addPos(self.lastrail.position, offset)
-      self.lastCheckRailDir = self.lastrail.direction
+      local trainDir = self:calcTrainDir()
+      local offset = self:calcPole(self.lastrail, trainDir)
+      --self.lastCheckPole = addPos(self.lastrail.position, offset)
+      local dist = trainDir % 2 == 1 and -9 or -9
+      local tmp = moveposition(fixPos(offset), trainDir, dist)
+      tmp.x, tmp.y = tmp[1],tmp[2]
+      self.lastPole = {position=addPos(self.lastrail.position, tmp)}
+      self:placePole(self:calcTrainDir(), self.lastrail, trainDir)
+
     else
       self.ccNetPole = pole
-      self.lastPole = pole.position
-      self.lastCheckPole = {x=pole.position.x,y=pole.position.y}
-      self.lastCheckRailDir = self:calcTrainDir()
+      self.lastPole = pole
+      --self.lastCheckPole = {x=pole.position.x,y=pole.position.y}
     end
   end,
 
@@ -986,7 +1117,7 @@ FARL = {
     local last = self:findLastRail()
     player.print("Last@"..pos2Str(last.position).." dir:"..last.direction)
     player.print("Pole@"..pos2Str(self.lastPole))
-    player.print("LastCheck@"..pos2Str(self.lastCheckPole))
+    -- player.print("LastCheck@"..pos2Str(self.lastCheckPole))
   end,
 
   calcTrainDir = function(self)
