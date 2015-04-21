@@ -191,7 +191,8 @@ clearAreas =
     glob.railInfoLast = glob.railInfoLast or {}
     glob.debug = glob.debug or {}
     glob.action = glob.action or {}
-
+    if glob.godmode == nil then glob.godmode = false end
+    godmode = glob.godmode
     for i,farl in ipairs(glob.farl) do
       farl = resetMetatable(farl, FARL)
     end
@@ -418,6 +419,7 @@ clearAreas =
       end,
 
       godmode = function(bool)
+        glob.godmode = bool
         godmode = bool
       end,
       setSpeed = function(speed)
