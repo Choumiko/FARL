@@ -260,6 +260,22 @@ clearAreas =
       end
       --saveVar(glob, "postMigrate2")
     end
+    if glob.version < "0.2.9" then
+      glob.savedBlueprints = {}
+      for name, s in pairs(glob.players) do
+        if s.medium then
+          s.activeBP.diagonal = defaultsMediumDiagonal
+          s.activeBP.straight = defaultsMediumStraight
+          s.bp.big.diagonal = defaultsDiagonal
+          s.bp.big.straight = defaultsStraight  
+        else
+          s.activeBP.diagonal = defaultsDiagonal
+          s.activeBP.straight = defaultsStraight
+          s.bp.big.diagonal = defaultsMediumDiagonal
+          s.bp.big.straight = defaultsMediumStraight  
+        end
+      end
+    end
     for name, s in pairs(glob.players) do
       s = resetMetatable(s,Settings)
       s:checkMods()
@@ -328,7 +344,7 @@ clearAreas =
   --game.onevent(defines.events.ontrainchangedstate, ontrainchangedstate)
   game.onevent(defines.events.onplayermineditem, onplayermineditem)
   game.onevent(defines.events.onpreplayermineditem, onpreplayermineditem)
-  game.onevent(defines.events.onbuiltentity, onbuiltentity)
+  --game.onevent(defines.events.onbuiltentity, onbuiltentity)
   game.onevent(defines.events.onentitydied, onentitydied)
 
   local function onplayercreated(event)

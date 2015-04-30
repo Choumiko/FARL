@@ -115,6 +115,13 @@ GUI = {
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
         or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" then
         psettings[name] = not psettings[name]
+        if name == "poles" then
+          if not psettings[name] then
+            farl:resetPoleData()
+          else
+            farl:findLastPole()
+          end
+        end
       elseif name == "bridge" then
         if landfillInstalled then
           psettings.bridge = not psettings.bridge
@@ -143,10 +150,10 @@ GUI = {
     toggleStart = function(event, farl, player)
       farl:toggleActive()
     end,
-    
---    toggleMaintenance = function(event, farl, player)
---      farl.maintenance = not farl.maintenance
---    end,
+
+    --    toggleMaintenance = function(event, farl, player)
+    --      farl.maintenance = not farl.maintenance
+    --    end,
 
     togglePole = function(event, farl, player)
       local psettings = Settings.loadByPlayer(player)
@@ -158,6 +165,8 @@ GUI = {
         psettings.activeBP = psettings.bp.big
         event.element.caption = {"stg-poleBig"}
       end
+      farl:resetPoleData()
+      farl:findLastPole()
     end,
 
     toggleSide = function(event, farl, player)
@@ -284,6 +293,9 @@ GUI = {
       if glob.savedBlueprints[player.name] then
         glob.savedBlueprints[player.name] = nil
       end
+      farl:print("Cleared blueprints")
+      GUI.destroyGui(player)
+      GUI.createGui(player)
     end,
 
     saveSettings = function(s, player)

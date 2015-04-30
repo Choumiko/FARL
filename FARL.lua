@@ -355,25 +355,30 @@ FARL = {
           newTravelDirs = {newTravelDirs}
           nextRails = {nextRails}
         end
-        self.previous = {r=self.lastrail, pdir=self.direction, dir=newTravelDirs[1]}
+        self.previousDirection = self.previousDirection or self.direction
         for i=1, #newTravelDirs do
           local nextRail = nextRails[i]
           local newTravelDir = newTravelDirs[i]
-          local previousRail = self.previous.r
-          local oldTravelDir = self.previous.dir
-          debugDump(self.previous,true)
-          local dir, last = self:placeRails(nextRail, newTravelDir, self.previous)
+          local dir, last = self:placeRails(self.previousDirection, self.lastrail, self.direction, nextRail, newTravelDir)
           if dir then
+            if self.settings.poles then
+              if self:getCargoCount("big-electric-pole") > 0 or self:getCargoCount("medium-electric-pole") > 0 then
+                local poleRails = self:getPoleRails(self.lastrail, self.previousDirection, self.direction)
+                local nextPoleRails = self:getPoleRails(nextRail, newTravelDir, self.direction)
+                local placed, foundBest = self:placePole(poleRails, nextPoleRails)
+              end
+            end
             if self.settings.signals then
               local signalWeight = nextRail.name == self.settings.rail.curved and self.settings.curvedWeight or 1
               self.signalCount = self.signalCount + signalWeight
               if self:getCargoCount("rail-signal") > 0 then
                 if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
+              else
+                self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
               end
             end
-            self.previous = {r=nextRail, pdir=oldTravelDir, dir=newTravelDir}
+            self.previousDirection = self.direction
             self.direction, self.lastrail = newTravelDir, nextRail
-            
           else
             self:deactivate(last)
           end
@@ -444,7 +449,9 @@ FARL = {
   activate = function(self)
     self.lastrail = false
     self.signalCount = 0
+    self.recheckRails = {}
     self.lastrail = self:findLastRail()
+    self.lastCheckIndex = 1
     if self.lastrail then
       self:findLastPole()
       self.direction = self:calcTrainDir()
@@ -468,6 +475,8 @@ FARL = {
     self.lastrail = nil
     self.direction = nil
     self.lastPole, self.lastCheckPole = nil,nil
+    self.previousDirection, self.lastCheckDir = nil, nil
+    self.recheckRails = {}
   end,
 
   toggleActive = function(self)
@@ -496,15 +505,22 @@ FARL = {
       return
     end
   end,
-
+  
+  resetPoleData = function(self)
+    self.recheckRails = {}
+    self.lastPole, self.lastCheckPole = nil,nil
+  end,
+  
   findLastRail = function(self, limit)
     local trainDir = self:calcTrainDir()
     local test = self:railBelowTrain()
     local last = test
+    table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})
     local limit, count = limit, 1
     local ret = last
     while test and test.name ~= self.settings.rail.curved do
       last = test
+      table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})
       ret = last
       if limit and count == limit then
         return last
@@ -535,6 +551,7 @@ FARL = {
       self:flyingText("Last", RED, true, ret.position)
     end
     return ret
+      --return {r=ret, dir=trainDir, range={{0,1}}}
   end,
 
   addItemToCargo = function(self,item, count)
@@ -636,6 +653,10 @@ FARL = {
       end
       if rail and offsets.pole then
         local type = rail.direction == 0 and "straight" or "diagonal"
+        if type == "diagonal" and not (rail.direction == 3 or rail.direction == 7) then
+          self:print("Invalid rail")
+          break
+        end
         local lamps = {}
         for _, l in ipairs(offsets.poleEntities) do
           table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position)})
@@ -643,20 +664,22 @@ FARL = {
         local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
         local railPos = rail.position
         if type == "diagonal" then
-          local x,y = 0,0
-          if rail.direction == 3 then
-            x = rail.position.x + 0.5
-            y = rail.position.y + 0.5
-          elseif rail.direction == 7 then
-            x = rail.position.x - 0.5
-            y = rail.position.y - 0.5
-          end
-          railPos = {x=x,y=y}
+--          local x,y = 0,0
+--          if rail.direction == 3 then
+--            x = rail.position.x + 0.5
+--            y = rail.position.y + 0.5
+--          elseif rail.direction == 7 then
+--            x = rail.position.x - 0.5
+--            y = rail.position.y - 0.5
+--          end
+          railPos = self:fixDiagonalPos(rail)
+          --railPos = {x=x,y=y}
         end
         offsets.pole.position = subPos(offsets.pole.position,railPos)
         local bp = {direction=rail.direction, pole = offsets.pole, poleEntities = lamps}
         self.settings.bp[poleType][type] = bp
         saveBlueprint(self.driver, poleType, type, bp)
+        self:print("Saved blueprint for "..type.." rail with "..poleType.. " pole")
       else
         self:print("No rail in blueprint #"..j)
       end
@@ -679,8 +702,8 @@ FARL = {
       self:print("Couldn't create junction")
     end
   end,
-
-  placeRails = function(self,nextRail, newTravelDir, previous)
+  --self:placeRails(self.previousDirection, self.lastrail, self.direction, nextRail, newTravelDir
+  placeRails = function(self, lastInDir, lastRail, newInDir, nextRail, newTravelDir)
     if newTravelDir and nextRail.position then
       local newDir = nextRail.direction
       local newPos = nextRail.position
@@ -709,62 +732,6 @@ FARL = {
           remote.call("dim_trains", "railCreated", newPos)
         end
         self:removeItemFromCargo(nextRail.name, 1)
-        if self.settings.poles then
-          if self:getCargoCount("big-electric-pole") > 0 or self:getCargoCount("medium-electric-pole") > 0 then
-            local nextPoleRail = {{r=nextRail, dir=newTravelDir}}
-            local pRail, pnewDir,ptraveldir = previous.r, previous.dir, previous.pdir
-            local range = {{0,1}}
-            local placedPole = self.lastPole
-            if pRail.name == self.settings.rail.curved then
-              --range[1][2] = 0
-              --debugDump({old=ptraveldir,new=pnewDir},true)
-              local tracks, tmp = FARL.curvePositions[pRail.direction], {}
-              tmp.d = {name=self.settings.rail.straight, direction=tracks.diagonal.dir, position=addPos(pRail.position,tracks.diagonal.off)}
-              tmp.s = {name=self.settings.rail.straight, direction=tracks.straight.dir, position=addPos(pRail.position,tracks.straight.off)}
-              local dDir, sDir
-              local rails = {}
-              if ptraveldir % 2 == 1 then
-                sDir = pnewDir
-                dDir = ptraveldir
-                
-                pRail = tmp.s
-                pnewDir = sDir
-                ptraveldir = sDir
-                rails = {far = {r=tmp.d, dir=dDir}, near = {r=tmp.s, dir=sDir}}
-
-              else
-                sDir = ptraveldir
-                dDir = pnewDir
-                pRail = tmp.d
-                pnewDir = dDir
-                ptraveldir = dDir
-                rails = {far = {r=tmp.s, dir=sDir}, near = {r=tmp.d, dir=dDir}}
-              end
-              local foundFar, foundNear
-              --range = {{0,2}}
-              --placedPole, foundNear = self:placePole(rails.near.dir, rails.near.r, rails.near.dir, range, placedPole, {{r=rails.far.r,dir=rails.far.dir, range={{-1,1}}}})
-              range = {{-1,1}} 
-              placedPole, foundFar = self:placePole(rails.far.dir, rails.far.r, range, placedPole, nextPoleRail, true)
-              if placedPole then debugDump("1",true) end
-
-              if not foundFar then
-                --self:flyingText("2", RED, true, rails.near.r.position)
-                range = {{0,2}}
-                placedPole, foundNear = self:placePole(rails.near.dir, rails.near.r, range, placedPole, nextPoleRail)
-                if placedPole then debugDump("2",true) end
-                range = {{-1,1}}
-                placedPole = self:placePole(rails.far.dir, rails.far.r, range, placedPole, nextPoleRail)
---                  if placedPole then
---                    debugDump("3",true)
---                    placedPole, foundFar = self:placePole(rails.far.dir, rails.far.r, rails.far.dir, range, placedPole)
---                  end
-              end
-            else
-              self:placePole(pnewDir, pRail, range, placedPole, nextPoleRail)
-            end
-            self:flyingText("C", RED, true, self.lastCheckPole)
-          end
-        end
       elseif not canplace then
         return false, "Can't place rail"
       elseif not hasRail then
@@ -937,83 +904,96 @@ FARL = {
     return ret
   end,
 
-  getPolePoints = function(self, rails, range)
-    if not rails then error("no rail",2) end
-    if type(rails)~="table" then error("no table2", 2)end
+  getPolePoints = function(self, rail)
+    if not rail then error("no rail",2) end
+    if not rail.r then error("no r", 3)end
     local checks = {}
-    for i, rail in pairs(rails) do
-      local offset = self:calcPole(rail.r, rail.dir)
-      local polePos = addPos(rail.r.position, offset)
-      for j=range[i][1],range[i][2] do
-        table.insert(checks, {dir=rail.dir, pos=moveposition({polePos.x, polePos.y}, rail.dir, j)})
-      end
+    local offset = self:calcPole(rail.r, rail.dir)
+    local polePos = addPos(rail.r.position, offset)
+    if type(rail.range[1])~="number" then error("no table2", 4)end
+    for j=rail.range[1],rail.range[2] do
+      table.insert(checks, {dir=rail.dir, pos=moveposition({polePos.x, polePos.y}, rail.dir, j)})
     end
     return checks
   end,
 
-  getBestPole = function(self, lastPole, rails, range)
+  getBestPole = function(self, lastPole, rails, foo)
     local reach = self.settings.medium and 9 or 30
-    local min, max = 100, 0
-    local minPole, maxPole
+    local min, max = 100, -1
+    local minPole, maxPole, maxIndex
     local points = {}
     if not rails then error("no rail",2) end
     if type(rails)~="table" then error("no table3", 3)end
     if not lastPole then error("nil pole", 3) end
-    local polePoints = self:getPolePoints(rails, range)
-    for i,pole in pairs(polePoints) do
-      local pos = {x=pole.pos[1],y=pole.pos[2]}
-      self:flyingText(".", RED, true, pos)
-      local dist = distance(lastPole.position, pos)
-      table.insert(points, {d=dist, p=pos, dir=pole.dir})
-      if dist > max and dist <= reach then
-        max = dist
-        maxPole =  {d=dist,p=pos, dir=pole.dir}
-      end
-    end
-    return maxPole, points
-  end,
-
-  getPoleRails = function(self, rail, newDir, oldDir)
-    
-  end,
-
-  placePole = function(self,traveldir, lastrail, range, lastPole, nextRail, curve)
-    local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
-    local reach = self.settings.medium and 9 or 30
-    local needPole = false
-    local range = range or {{0,0}}
-    local rails = {{r=lastrail, dir=traveldir}}
-    local polePos, poleDir, bestPole, points
-    local lastPole = lastPole or self.lastPole
-    bestPole, points = self:getBestPole(lastPole, rails, range)
-    if bestPole then
-      self.backupPole = self.lastCheckPole
-      self.backupDir = self.lastCheckDir
-      self.lastCheckPole = bestPole.p
-      self.lastCheckDir = bestPole.dir
-      self:flyingText("B", GREEN, true, self.lastCheckPole)
-    else
-      polePos = self.lastCheckPole
-      poleDir = self.lastCheckDir
-      if curve then return false, false end
-      if nextRail[1].r.name ~= self.settings.rail.curved then
-        bestPole, points = self:getBestPole({position=polePos}, nextRail, {{0,1}})
-        if bestPole then
-          self.backupPole = self.lastCheckPole
-          self.backupDir = self.lastCheckDir
-          self.lastCheckPole = bestPole.p
-          self.lastCheckDir = bestPole.dir
-          self:flyingText("B", GREEN, true, self.lastCheckPole)
+    for j, rail in pairs(rails) do
+      local polePoints = self:getPolePoints(rail)
+      for i,pole in pairs(polePoints) do
+        local pos = {x=pole.pos[1],y=pole.pos[2]}
+        --if foo then self:flyingText(foo, RED, true, pos) end
+        local dist = distance(lastPole.position, pos)
+        table.insert(points, {d=dist, p=pos, dir=pole.dir})
+        if dist >= max and dist <= reach then
+          max = dist
+          maxIndex = j
+          maxPole =  {d=dist,p=pos, dir=pole.dir}
         end
       end
     end
-    if polePos then
+    return maxPole, maxIndex
+  end,
+
+  getPoleRails = function(self, rail, newDir, oldDir)
+    local rails = {}
+    if rail.name == self.settings.rail.curved then
+      --range[1][2] = 0
+      --debugDump({old=ptraveldir,new=pnewDir},true)
+      local tracks, tmp = FARL.curvePositions[rail.direction], {}
+      tmp.d = {name=self.settings.rail.straight, direction=tracks.diagonal.dir, position=addPos(rail.position,tracks.diagonal.off)}
+      tmp.s = {name=self.settings.rail.straight, direction=tracks.straight.dir, position=addPos(rail.position,tracks.straight.off)}
+      local dDir, sDir
+      if oldDir % 2 == 1 then
+        sDir = newDir
+        dDir = oldDir
+        rails = {[1] = {r=tmp.s, dir=sDir, range={0,2}}, [2] = {r=tmp.d, dir=dDir, range={-1,1}}}
+      else
+        sDir = oldDir
+        dDir = newDir
+        rails = {[1] = {r=tmp.d, dir=dDir, range={0,2}}, [2] = {r=tmp.s, dir=sDir, range={-1,1}}}
+      end
+    else
+      rails = {{r=rail, dir=newDir, range={0,1}}}
+    end
+    return rails
+  end,
+
+  placePole = function(self, lastrail, nextRail)
+    local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
+    local rails = lastrail -- {{r=lastrail, dir=traveldir}}
+    local polePos, poleDir, bestPole, index
+    local lastPole = self.lastPole
+    for i,r in pairs(lastrail) do
+      table.insert(self.recheckRails, r)
+    end    
+    bestPole, index = self:getBestPole(lastPole, self.recheckRails, ".")
+    if bestPole then
+      self.lastCheckPole = bestPole.p
+      self.lastCheckDir = bestPole.dir
+      self.lastCheckIndex = index
+      index = index > 1 and index-1 or 1
+      for i=index,1,-1 do
+        table.remove(self.recheckRails, i)
+      end
+      --self:flyingText("B", GREEN, true, self.lastCheckPole)
+      return false, index
+    else
+      polePos = self.lastCheckPole
+      poleDir = self.lastCheckDir
+
       local diff = subPos(self.lastPole.position, polePos)
       if diff.x == 0 and diff.y == 0 then
-        debugDump("Placing on last pole!",true)
-        debugDump({rail=pos2Str(lastrail.position), pole=self.lastPole.position,dir=traveldir,curve=curve},true)
-        self:deactivate()
-        return
+        --debugDump("Placing on last pole!",true)
+        --self:deactivate()
+        --return
       end
       local pole = {name = name, position = polePos}
       --debugDump(util.distance(pole.position, self.lastPole.position),true)
@@ -1021,7 +1001,8 @@ FARL = {
         self:prepareArea(polePos)
       end
       local canPlace = FARL.genericCanPlace(pole)
-      if canPlace and self:getCargoCount(name) > 0 then
+      local hasPole = self:getCargoCount(name) > 0
+      if canPlace and hasPole then
         local success, pole = FARL.genericPlace{name = name, position = polePos, force = game.forces.player}
         if not pole.neighbours[1] then
           self:flyingText("Placed unconnected pole", RED, true)
@@ -1030,13 +1011,35 @@ FARL = {
         self:removeItemFromCargo(name, 1)
         self:connectCCNet(pole)
         self.lastPole = pole
---self.lastCheckPole = false
---self.lastCheckDir = false
-        return pole
+
+        bestPole, index = self:getBestPole(pole, self.recheckRails, "O")
+        if bestPole then
+          self.lastCheckPole = bestPole.p
+          self.lastCheckDir = bestPole.dir
+          for i=self.lastCheckIndex,1,-1 do
+            table.remove(self.recheckRails, i)
+          end
+          self.lastCheckIndex = index
+          --self:flyingText("B", YELLOW, true, self.lastCheckPole)
+        else
+          debugDump("not found",true)
+          if nextRail then
+            self:placePole(nextRail)
+          end
+        end
+        return true, index
       else
+        if not hasPole then
+          self.recheckRails = nextRail
+          self:findLastPole()
+          self:flyingText({"","Out of ", "",name}, YELLOW, true, addPos(self.locomotive.position, {x=0,y=0}))
+          --self:print({"","Out of ","",name})
+          debugDump()
+        end
         if not canPlace then
           debugDump("Can`t place pole@"..pos2Str(polePos),true)
-          --self:deactivate()
+          self.recheckRails = nextRail
+          self:findLastPole()
         end
       end
     end
@@ -1095,8 +1098,8 @@ FARL = {
       self.lastPole = {position=addPos(self.lastrail.position, tmp)}
       self.lastCheckDir = trainDir
       self.lastCheckPole = addPos(self.lastrail.position, offset)
-      self:placePole(trainDir, self.lastrail, trainDir)
-
+      self.lastCheckIndex = 1
+      --self:placePole(self.lastrail, trainDir)
     else
       self.ccNetPole = pole
       self.lastPole = pole
