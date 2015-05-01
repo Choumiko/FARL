@@ -971,6 +971,7 @@ FARL = {
     local rails = lastrail -- {{r=lastrail, dir=traveldir}}
     local polePos, poleDir, bestPole, index
     local lastPole = self.lastPole
+    if not self.recheckRails then self.recheckRails = {} end
     for i,r in pairs(lastrail) do
       table.insert(self.recheckRails, r)
     end    
@@ -1030,7 +1031,8 @@ FARL = {
         return true, index
       else
         if not hasPole then
-          self.recheckRails = nextRail
+          local rails = nextRail or {}
+          self.recheckRails = rails
           self:findLastPole()
           self:flyingText({"","Out of ", "",name}, YELLOW, true, addPos(self.locomotive.position, {x=0,y=0}))
           --self:print({"","Out of ","",name})
@@ -1038,7 +1040,8 @@ FARL = {
         end
         if not canPlace then
           debugDump("Can`t place pole@"..pos2Str(polePos),true)
-          self.recheckRails = nextRail
+          local rails = nextRail or {}
+          self.recheckRails = rails
           self:findLastPole()
         end
       end
