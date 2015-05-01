@@ -282,7 +282,7 @@ clearAreas =
       --assert(getmetatable(s) == Settings)
       --s:dump()
     end
-    glob.version = "0.2.8"
+    glob.version = "0.2.9"
   end
 
   local function oninit() initGlob() end
