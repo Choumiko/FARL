@@ -271,8 +271,8 @@ clearAreas =
         else
           s.activeBP.diagonal = defaultsDiagonal
           s.activeBP.straight = defaultsStraight
-          s.bp.big.diagonal = defaultsMediumDiagonal
-          s.bp.big.straight = defaultsMediumStraight  
+          s.bp.medium.diagonal = defaultsMediumDiagonal
+          s.bp.medium.straight = defaultsMediumStraight  
         end
       end
     end

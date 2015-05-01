@@ -1092,12 +1092,13 @@ FARL = {
     end
     if not pole then
       local trainDir = self:calcTrainDir()
-      local offset = self:calcPole(self.lastrail, trainDir)
+      local lastrail = self.lastrail or self:findLastRail()
+      local offset = self:calcPole(lastrail, trainDir)
       local tmp = moveposition(fixPos(offset), trainDir, 50)
       tmp.x, tmp.y = tmp[1],tmp[2]
-      self.lastPole = {position=addPos(self.lastrail.position, tmp)}
+      self.lastPole = {position=addPos(lastrail.position, tmp)}
       self.lastCheckDir = trainDir
-      self.lastCheckPole = addPos(self.lastrail.position, offset)
+      self.lastCheckPole = addPos(lastrail.position, offset)
       self.lastCheckIndex = 1
       --self:placePole(self.lastrail, trainDir)
     else
