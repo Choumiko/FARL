@@ -968,6 +968,24 @@ FARL = {
 
   placePole = function(self, lastrail, nextRail)
     local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
+    local reach = self.settings.medium and 9+1 or 30+1
+    if self.settings.minPoles then
+      local locomotive = self.locomotive
+      local pos = {locomotive.position.x, locomotive.position.y}
+      local poles = game.findentitiesfiltered{area={{pos[1]-reach,pos[2]-reach},{pos[1]+reach,pos[2]+reach}}, name=name}
+      local checkpos = lastrail and lastrail.position or locomotive.position
+      local min, pole = math.abs(distance(self.lastPole.position, checkpos)), nil
+      for i=1, #poles do
+        local dist = math.abs(distance(checkpos,poles[i].position))
+        if min > dist then
+          pole = poles[i]
+          min = dist
+        end
+      end
+      if pole then
+        self.lastPole = pole
+      end
+    end
     local rails = lastrail -- {{r=lastrail, dir=traveldir}}
     local polePos, poleDir, bestPole, index
     local lastPole = self.lastPole
