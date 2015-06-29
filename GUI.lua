@@ -45,7 +45,9 @@ GUI = {
         ccNet = settings.ccNet,
         bridge = settings.bridge,
         collectWood = settings.collectWood,
-        dropWood = settings.dropWood
+        dropWood = settings.dropWood,
+        root = settings.root
+        
       }
     end,
 
@@ -90,6 +92,7 @@ GUI = {
       GUI.addButton(buttons, {name="settings", caption={"text-settings"}}, GUI.toggleSettingsWindow)
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
+      GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}}, "root")
       --GUI.add(rows,{type="checkbox", name="maintenance", caption="Replace"},GUI.toggleMaintenance)
       if landfillInstalled then
         GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
@@ -113,7 +116,7 @@ GUI = {
         --glob.action = {}
         farl:debugInfo()
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
-        or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" then
+        or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" or name == "root" then
         psettings[name] = not psettings[name]
         if name == "poles" then
           if not psettings[name] then

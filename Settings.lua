@@ -22,7 +22,8 @@ Settings = {
       poles = true,
       rail = {},
       signals = true,
-      bridge = false
+      bridge = false,
+      root = false
     }
     setmetatable(new, {__index=Settings})
     return new
