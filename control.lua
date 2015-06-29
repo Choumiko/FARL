@@ -144,7 +144,8 @@ clearAreas =
     poles = true,
     rail = rails.basic,
     signals = true,
-    bridge = false
+    bridge = false,
+    root = false
   }
   defaultSettings.activeBP = defaultSettings.bp.big
 
