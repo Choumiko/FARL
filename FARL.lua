@@ -59,6 +59,10 @@ function distance(pos1, pos2)
   return util.distance(pos1, pos2)
 end
 
+function expandPos(pos, range)
+  return {{pos.x - range, pos.y - range}, {pos.x + range, pos.y + range}}
+end
+
 function oppositedirection(direction)
   local opp = util.oppositedirection(direction)
   if not opp then
@@ -506,42 +510,50 @@ FARL = {
       self:findLastPole()
       self.direction = self:calcTrainDir()
       if self.direction and self.lastPole then --and self.lastCheckPole then
-        self.active = true
-      else
-        self:print("Error activating, drive on straight rails and try again")
-      end
---negroot mode
-      if self.settings.root then
-        --self:print("negroot mode")
         local carriages = #self.train.carriages
-        local behind, check = self.lastrail, {[1]={[1] = oppositedirection(self.direction), [2] = self.lastrail}}
+        local behind, check = self.lastrail, {[1]={[1] = oppositedirection(self.direction), [2] = self.lastrail, [3]=self.lastrail}}
+        local lastSignal, signalCount, signalDir = false, -1, signalOffset[self.direction].dir
         local limit = 1
         local path = {self.lastrail}
-        --self:print("last:")
-        --debugDump(behind,true)
-        --self:print("searching")
-        --debugDump(check[1][1],true)
         while (check and type(check) == "table" and check[1] and check[1][2]) and limit < carriages*7 do
+          if not lastSignal then
+            signalCount = signalCount + 1
+            local signalOffset = signalOffset[self.direction]
+            if check[1][1] % 2 == 1 then
+              signalOffset = signalOffset[check[1][1]]
+            else
+              signalOffset = signalOffset.pos
+            end 
+            local signalPos = addPos(check[1][3].position, signalOffset)
+            local range = (self.direction % 2 == 0) and 1 or 0.5
+            local area = expandPos(signalPos,range)
+            for _, entity in pairs(game.findentitiesfiltered{area = area, name = "rail-signal"}) do
+              self:flyingText("S", GREEN, true, entity.position)
+              if entity.direction == signalDir then
+                lastSignal = entity
+                break
+              end
+            end
+          end
+          self.signalCount = signalCount
+          --self:flyingText("SignalCount: "..self.signalCount, GREEN, true)
           check = self:findNeighbours(check[1][2], check[1][1])
           if check and type(check) == "table" and check[1] and check[1][2] then
             --debugDump(check[1][2],true)
-            table.insert(path, check[1][3]) 
+            table.insert(path, check[1][3])
             behind = check[1][2]
           end
           limit = limit + 1
         end
-        --self:print("Path:"..#path)
-        self.path = path
-        --for i=#path,1,-1 do
-          --table.insert(self.path, path[i])
-        --end
-        --path = nil
-        --self:print("rev:"..#self.path)
-        --self:print("Behind:")
-        --debugDump(behind,true)
         self:flyingText("Behind", RED, true, behind.position)
-        --debugDump(self.train.carriages[carriages].position,true)
-        --straight: 4 tracks/wagon
+        --negroot mode
+        if self.settings.root then
+          --self:print("negroot mode")
+          self.path = path
+        end
+        self.active = true
+      else
+        self:print("Error activating, drive on straight rails and try again")
       end
     else
       self:deactivate("Error (no valid rail found)", true)
