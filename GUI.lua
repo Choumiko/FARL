@@ -58,6 +58,7 @@ GUI = {
       end
       if bind then
         if e.type == "checkbox" then
+          --e.state = false 
           if type(bind) == "string" then
             e.state = Settings.loadByPlayer(parent.gui.player)[e.name]
           else
@@ -83,6 +84,7 @@ GUI = {
 
     createGui = function(player)
       if player.gui.left.farl ~= nil then return end
+      local psettings = Settings.loadByPlayer(player)
       --GUI.init(player)
       local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farl"})
       local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
@@ -92,7 +94,7 @@ GUI = {
       GUI.addButton(buttons, {name="settings", caption={"text-settings"}}, GUI.toggleSettingsWindow)
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
-      GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}}, "root")
+      GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
       --GUI.add(rows,{type="checkbox", name="maintenance", caption="Replace"},GUI.toggleMaintenance)
       if landfillInstalled then
         GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
@@ -194,7 +196,12 @@ GUI = {
     toggleCC = function(event, farl, player)
       farl:toggleCruiseControl()
     end,
-
+    
+    toggleRootMode = function(event, farl, player)
+      farl:toggleRootMode()
+      GUI.updateGui(farl)
+    end,
+    
     toggleSettingsWindow = function(event, farl, player)
       local row = player.gui.left.farl.rows
       local psettings = Settings.loadByPlayer(player)
@@ -315,6 +322,7 @@ GUI = {
         --GUI.init(farl.driver)
         farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
+        farl.driver.gui.left.farl.rows.root.state = farl.settings.root
       end
     end,
 }

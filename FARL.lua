@@ -198,8 +198,9 @@ FARL = {
         end
         self.cruiseInterrupt = self.driver.ridingstate.acceleration
         if not self.maintenance then
-          if self.active and self.settings.root then
-            local lastWagon = self.train.carriages[#self.train.carriages].position
+          if self.active then
+          --if self.active and self.settings.root then
+            local lastWagon = self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
             local c = #self.path
             local behind = self.path[c].name
             local dist = distance(lastWagon, self.path[c].position)
@@ -208,9 +209,12 @@ FARL = {
               --flyingText = function(self, line, color, show, pos)
               --self:flyingText("c", RED, true, self.path[c].position)
               if self.path[c].valid and (self.path[c].name == self.settings.rail.curved or self.path[c].name == self.settings.rail.straight) then
-                self.path[c].destroy()
+                --self:flyingText(#self.path, GREEN,true, self.path[c].position)
+                if self.settings.root then
+                  self.path[c].destroy()
+                  self:addItemToCargo(behind,1)
+                end
                 table.remove(self.path, c)
-                self:addItemToCargo(behind,1)
                 c = #self.path
                 dist = distance(lastWagon, self.path[c].position)
               end                  
@@ -406,12 +410,10 @@ FARL = {
           local newTravelDir = newTravelDirs[i]
           local dir, last = self:placeRails(self.previousDirection, self.lastrail, self.direction, nextRail, newTravelDir)
           if dir then
-            if self.settings.root then
-              if not last.position and not last.name then 
-                error("Placed rail but no entity returned", 2)
-              end
-              table.insert(self.path, 1, last)  
+            if not last.position and not last.name then 
+              error("Placed rail but no entity returned", 2)
             end
+            table.insert(self.path, 1, last)
             if self.settings.poles then
               if self:getCargoCount("big-electric-pole") > 0 or self:getCargoCount("medium-electric-pole") > 0 then
                 local poleRails = self:getPoleRails(self.lastrail, self.previousDirection, self.direction)
@@ -546,10 +548,11 @@ FARL = {
           limit = limit + 1
         end
         self:flyingText("Behind", RED, true, behind.position)
-        --negroot mode
-        if self.settings.root then
-          --self:print("negroot mode")
-          self.path = path
+        self.path = path
+        if not self:rootModeAllowed() then
+          self.driver.print("-root mode disabled")
+          self.driver.print("-root mode requires FARL at each end of the train")
+          self.settings.root = false
         end
         self.active = true
       else
@@ -599,6 +602,19 @@ FARL = {
         self.driver.ridingstate = {acceleration = self.driver.ridingstate.acceleration, direction = input}
       end
       return
+    end
+  end,
+  
+  rootModeAllowed = function(self)
+    return (self.train.carriages[1].name == "farl" and self.train.carriages[#self.train.carriages].name == "farl")
+  end,
+  
+  toggleRootMode = function(self)
+    if self:rootModeAllowed() then 
+      self.settings.root = not self.settings.root
+    else
+      self.driver.print("-root mode requires FARL at each end of the train")
+      self.settings.root = false
     end
   end,
   
