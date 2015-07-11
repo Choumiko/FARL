@@ -118,7 +118,7 @@ GUI = {
         --glob.action = {}
         farl:debugInfo()
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
-        or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" or name == "root" then
+        or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" then
         psettings[name] = not psettings[name]
         if name == "poles" then
           if not psettings[name] then

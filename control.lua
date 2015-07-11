@@ -9,7 +9,7 @@ removeStone = true
 
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 landfillInstalled = game.entityprototypes["landfill2by2"] and true or false
-electricInstalled = game.entityprototypes["straight-power-rail"] and true or false
+electricInstalled = (game.entityprototypes["straight-power-rail"] and remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated) and true or false
 
 cargoTypes = { ["straight-rail"] = true, ["curved-rail"] = true,["rail-signal"] = true,
   ["big-electric-pole"] = true, ["medium-electric-pole"] = true, ["small-lamp"] = true,
@@ -290,6 +290,12 @@ clearAreas =
 
   local function onload()
     initGlob()
+    for i,f in pairs(glob.farl) do
+      if f.driver and f.driver.gui.left.farl then
+        GUI.destroyGui(f.driver)
+        GUI.createGui(f.driver)
+      end
+    end
   end
 
   local function onGuiClick(event)
