@@ -201,10 +201,11 @@ FARL = {
           if self.active then
           --if self.active and self.settings.root then
             local lastWagon = self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
+            local firstWagon = not self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
             local c = #self.path
             local behind = self.path[c].name
             local dist = distance(lastWagon, self.path[c].position)
-            while dist > 10 do
+            while dist > 10 and distance(firstWagon, self.path[c].position) > dist do
             --if dist >= 6 then 
               --flyingText = function(self, line, color, show, pos)
               --self:flyingText("c", RED, true, self.path[c].position)
@@ -910,9 +911,9 @@ FARL = {
   calcPole = function(self,lastrail, traveldir)
     local offset
     if not lastrail then error("no rail",2) end
-    if type(lastrail)~="table" then error("no table", 2)end
+    if type(lastrail)~="table" then error("no table", 2) end
+    if not lastrail.name then error("calcPole: no name", 2) end
     if lastrail.name ~= self.settings.rail.curved then
-      --local diagonal = traveldir % 2 == 1 and true or false
       local diagonal = traveldir % 2 == 1 and true or false
       local pole = not diagonal and self.settings.activeBP.straight.pole or self.settings.activeBP.diagonal.pole
       local pos = addPos(pole.position)
