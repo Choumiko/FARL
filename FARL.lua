@@ -231,7 +231,7 @@ FARL = {
 
   prepareArea = function(self,pos, area)
     if not area then
-      area = {{pos.x - 1.5, pos.y - 1.5}, {pos.x + 1.5, pos.y + 1.5}}
+      area = expandPos(pos,1.5)
     else
       local tl, lr = fixPos(addPos(pos,area[1])), fixPos(addPos(pos,area[2]))
       area = {{tl[1]-1,tl[2]-1},{lr[1]+1,lr[2]+1}}
@@ -490,12 +490,11 @@ FARL = {
   end,
 
   findRail = function(self, rail)
-    local pos = {rail.position.x, rail.position.y}
-    local range = 0.4
+    local area = expandPos(rail.position,0.4)
     local found = false
-    local rails = game.findentitiesfiltered{area={{pos[1]-range,pos[2]-range},{pos[1]+range,pos[2]+range}}, name=rail.name}
+    local rails = game.findentitiesfiltered{area=area, name=rail.name}
     for i,r in pairs(rails) do
-      if r.position.x == pos[1] and r.position.y == pos[2] and r.direction == rail.direction then
+      if r.position.x == rail.position.x and r.position.y == rail.position.y and r.direction == rail.direction then
         found = r
         break
       end
@@ -530,8 +529,7 @@ FARL = {
             local signalPos = addPos(check[1][3].position, signalOffset)
             --self:flyingText2("s",RED,true,signalPos)
             local range = (self.direction % 2 == 0) and 1 or 0.5
-            local area = expandPos(signalPos,range)
-            for _, entity in pairs(game.findentitiesfiltered{area = area, name = "rail-signal"}) do
+            for _, entity in pairs(game.findentitiesfiltered{area = expandPos(signalPos,range), name = "rail-signal"}) do
               self:flyingText2("S", GREEN, true, entity.position)
               if entity.direction == signalDir then
                 lastSignal = entity
@@ -719,9 +717,7 @@ FARL = {
       local direction = arg.direction or 0
       local force = arg.force or game.forces.player
       arg.force = force
-      local pos = arg.position
-      local area = {{pos.x - 0.4, pos.y - 0.4}, {pos.x + 0.4, pos.y + 0.4}}
-      for _,ent in pairs(game.findentitiesfiltered{area=area, name="ghost"}) do
+      for _,ent in pairs(game.findentitiesfiltered{area=expandPos(arg.position,0.4), name="ghost"}) do
         debugDump(ent.name.." "..pos2Str(ent.position),true)
       end
       entity = game.createentity(arg)
@@ -988,8 +984,7 @@ FARL = {
     local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local tmp, ret, minDist = minPos, false, 100
     local reach = self.settings.medium and 9 or 30
-    local area = {{tmp.x-reach,tmp.y-reach},{tmp.x+reach,tmp.y+reach}}
-    for i,p in pairs(game.findentitiesfiltered{area=area, name=name}) do
+    for i,p in pairs(game.findentitiesfiltered{area=expandPos(tmp, reach), name=name}) do
       local dist = distance(p.position, tmp)
       debugDump({dist=dist, minPos=minPos, p=p.position},true)
       local diff = subPos(p.position,self.lastPole.position)
@@ -1067,10 +1062,8 @@ FARL = {
     local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = self.settings.medium and 9+1 or 30+1
     if self.settings.minPoles then
-      local locomotive = self.locomotive
-      local pos = {locomotive.position.x, locomotive.position.y}
-      local poles = game.findentitiesfiltered{area={{pos[1]-reach,pos[2]-reach},{pos[1]+reach,pos[2]+reach}}, name=name}
-      local checkpos = lastrail and lastrail.position or locomotive.position
+      local poles = game.findentitiesfiltered{area=expandPos(self.locomotive.position,reach), name=name}
+      local checkpos = lastrail and lastrail.position or self.locomotive.position
       local min, pole = math.abs(distance(self.lastPole.position, checkpos)), nil
       for i=1, #poles do
         local dist = math.abs(distance(checkpos,poles[i].position))
@@ -1197,12 +1190,10 @@ FARL = {
   findLastPole = function(self)
     local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = self.settings.medium and 9 or 30
-    local locomotive = self.locomotive
-    local pos = {locomotive.position.x, locomotive.position.y}
-    local poles = game.findentitiesfiltered{area={{pos[1]-reach,pos[2]-reach},{pos[1]+reach,pos[2]+reach}}, name=name}
+    local poles = game.findentitiesfiltered{area=expandPos(self.locomotive.position, reach), name=name}
     local min, pole = 900, nil
     for i=1, #poles do
-      local dist = math.abs(distance(locomotive.position,poles[i].position))
+      local dist = math.abs(distance(self.locomotive.position,poles[i].position))
       if min > dist then
         pole = poles[i]
         min = dist
@@ -1268,13 +1259,10 @@ FARL = {
   --        6   1   5
   --        7   2   6
   railBelowTrain = function(self, ignore)
-    local locomotive = self.locomotive
-    local pos = {locomotive.position.x, locomotive.position.y}
     local trainDir = self:calcTrainDir()
     --debugDump({dir=trainDir,pos=pos},true)
     --self:flyingText("|", RED, true, pos)
-    local range = 0.4
-    local rails = game.findentitiesfiltered{area={{pos[1]-range,pos[2]-range},{pos[1]+range,pos[2]+range}}, type="rail"}
+    local rails = game.findentitiesfiltered{area=expandPos(self.locomotive.position, 0.4), type="rail"}
     local curves ={}
     --debugDump(#rails,true)
     for i=1, #rails do
