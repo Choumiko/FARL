@@ -13,3 +13,12 @@ farl.pictures.filenames =
     "__FARL__/graphics/entity/farl/farl-08.png"
   }
 data:extend({farl})
+
+data:extend({
+  {
+    type = "flying-text",
+    name = "flying-text2",
+    flags = {"not-on-map"},
+    time_to_live = 150,
+    speed = 0.0
+  }})

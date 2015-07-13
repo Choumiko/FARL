@@ -495,7 +495,7 @@ FARL = {
     local found = false
     local rails = game.findentitiesfiltered{area={{pos[1]-range,pos[2]-range},{pos[1]+range,pos[2]+range}}, name=rail.name}
     for i,r in pairs(rails) do
-      if r.position.x == pos[1] and r.position.y == pos[2] then
+      if r.position.x == pos[1] and r.position.y == pos[2] and r.direction == rail.direction then
         found = r
         break
       end
@@ -522,16 +522,17 @@ FARL = {
           if not lastSignal then
             signalCount = signalCount + 1
             local signalOffset = signalOffset[self.direction]
-            if check[1][1] % 2 == 1 then
-              signalOffset = signalOffset[check[1][1]]
+            if self.direction % 2 == 1 then
+              signalOffset = signalOffset[check[1][3].direction]
             else
               signalOffset = signalOffset.pos
             end 
             local signalPos = addPos(check[1][3].position, signalOffset)
+            --self:flyingText2("s",RED,true,signalPos)
             local range = (self.direction % 2 == 0) and 1 or 0.5
             local area = expandPos(signalPos,range)
             for _, entity in pairs(game.findentitiesfiltered{area = area, name = "rail-signal"}) do
-              self:flyingText("S", GREEN, true, entity.position)
+              self:flyingText2("S", GREEN, true, entity.position)
               if entity.direction == signalDir then
                 lastSignal = entity
                 break
@@ -548,9 +549,9 @@ FARL = {
           end
           limit = limit + 1
         end
-        self:flyingText("Behind", RED, true, behind.position)
+        self:flyingText2("Behind", RED, true, behind.position)
         self.path = path
-        if not self:rootModeAllowed() then
+        if self.settings.root and not self:rootModeAllowed() then
           self.driver.print("-root mode disabled")
           self.driver.print("-root mode requires FARL at each end of the train")
           self.settings.root = false
@@ -630,41 +631,23 @@ FARL = {
     local last = test
     table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})
     local limit, count = limit, 1
-    local ret = last
     while test and test.name ~= self.settings.rail.curved do
-      last = test
-      table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})
-      ret = last
-      if limit and count == limit then
-        return last
-      end
-      local _, next = self:getRail(last,trainDir,1)
-      next = next[1] or next
-      local pos = fixPos(next.position)
-      local area = {{pos[1]-0.4,pos[2]-0.4},{pos[1]+0.4,pos[2]+0.4}}
-      local found = false
-      for i,rail in ipairs(game.findentitiesfiltered{area=area, name=self.settings.rail.straight}) do
-        local dirMatch = false
-        if trainDir % 2 == 0 then
-          dirMatch = rail.direction == trainDir or rail.direction+4%8 == trainDir
-        else
-          local dir = (trainDir+2)%8
-          dirMatch = rail.direction == dir or rail.direction == (dir+4) % 8
-        end
-        if dirMatch then
-          test = rail
-          found = true
-          break
-        end
+      local protoDir, protoRail = self:getRail(last, trainDir,1)
+      protoRail = protoRail[1] or protoRail
+      local rail = self:findRail(protoRail)
+      if rail then
+        test = rail
+        last = rail
+        table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})  
+      else
+        break
       end
       count = count + 1
-      if not found then break end
     end
-    if type(ret) == "table" then
-      self:flyingText("Last", RED, true, ret.position)
+    if last then
+      self:flyingText2("Last", RED, true, last.position)
     end
-    return ret
-      --return {r=ret, dir=trainDir, range={{0,1}}}
+    return last
   end,
 
   addItemToCargo = function(self,item, count)
@@ -1244,19 +1227,30 @@ FARL = {
   end,
 
   debugInfo = function(self)
+    self.recheckRails = self.recheckRails or {}
     local locomotive = self.locomotive
     local player = self.driver
-    if not self.active then self:activate() end
+    --if not self.active then self:activate() end
     player.print("Train@"..pos2Str(locomotive.position).." dir:"..self:calcTrainDir())
     local rail = self:railBelowTrain()
     if rail then
+      --self:flyingText2("B", GREEN, true, rail.position)
       player.print("Rail@"..pos2Str(rail.position).." dir:"..rail.direction)
+      local fixed = self:fixDiagonalPos(rail)
+      if rail.direction % 2 == 1 then
+        self:flyingText2("F", GREEN, true, fixed)
+        player.print("Fixed: "..pos2Str(fixed).." dir:"..rail.direction)
+      end
     else
       player.print("No rail found")
     end
     local last = self:findLastRail()
-    player.print("Last@"..pos2Str(last.position).." dir:"..last.direction)
-    player.print("Pole@"..pos2Str(self.lastPole))
+    if last then
+      player.print("Last@"..pos2Str(last.position).." dir:"..last.direction)
+    end
+    if self.lastpole then
+      player.print("Pole@"..pos2Str(self.lastPole))
+    end
     -- player.print("LastCheck@"..pos2Str(self.lastCheckPole))
   end,
 
@@ -1323,6 +1317,14 @@ FARL = {
       local pos = pos or addPos(self.locomotive.position, {x=0,y=-1})
       color = color or RED
       game.createentity({name="flying-text", position=pos, text=line, color=color})
+    end
+  end,
+  
+  flyingText2 = function(self, line, color, show, pos)
+    if show then
+      local pos = addPos(pos,{x=-0.5,y=-0.5}) or addPos(self.locomotive.position, {x=0,y=-1})
+      color = color or RED
+      game.createentity({name="flying-text2", position=pos, text=line, color=color})
     end
   end,
 }

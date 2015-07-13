@@ -88,10 +88,17 @@ GUI = {
       --GUI.init(player)
       local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farl"})
       local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
-      local buttons = GUI.add(rows, {type="table", name="buttons", colspan=3})
+      local span = 3
+      if game.getplayer("Choumiko") then
+        span = 4
+      end
+      local buttons = GUI.add(rows, {type="table", name="buttons", colspan=span})
       GUI.addButton(buttons, {name="start"}, GUI.toggleStart)
       GUI.addButton(buttons, {name="cc"}, GUI.toggleCC)
       GUI.addButton(buttons, {name="settings", caption={"text-settings"}}, GUI.toggleSettingsWindow)
+      if game.getplayer("Choumiko") then
+        GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
+      end
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
       GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
@@ -154,6 +161,10 @@ GUI = {
 
     toggleStart = function(event, farl, player)
       farl:toggleActive()
+    end,
+    
+    debugInfo = function(event, farl, player)
+      farl:debugInfo()
     end,
 
     --    toggleMaintenance = function(event, farl, player)

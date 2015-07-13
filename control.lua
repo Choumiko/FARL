@@ -409,8 +409,8 @@ clearAreas =
         if type(glob.railInfoLast) == "table" and glob.railInfoLast.valid then
           local pos = glob.railInfoLast.position
           local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
-          debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
-          debugDump("Distance (util): "..util.distance(pos, rail.position),true)
+          --debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
+          --debugDump("Distance (util): "..util.distance(pos, rail.position),true)
           if AStar then
             local max = AStar.heuristic(glob.railInfoLast, rail)
             debugDump("Distance (heuristic): "..max, true)
