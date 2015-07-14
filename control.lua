@@ -5,7 +5,7 @@ require "GUI"
 require "migrate"
 
 
-debugButton = true
+debugButton = false
 godmode = false
 removeStone = true
 
