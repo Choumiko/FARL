@@ -58,7 +58,9 @@ GUI = {
       end
       if bind then
         if e.type == "checkbox" then
-          --e.state = false 
+          if e.state == nil then
+            e.state = false
+          end 
           if type(bind) == "string" then
             e.state = Settings.loadByPlayer(parent.gui.player)[e.name]
           else
@@ -89,14 +91,14 @@ GUI = {
       local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farl"})
       local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
       local span = 3
-      if game.getplayer("Choumiko") then
+      if debugButton then
         span = 4
       end
       local buttons = GUI.add(rows, {type="table", name="buttons", colspan=span})
       GUI.addButton(buttons, {name="start"}, GUI.toggleStart)
       GUI.addButton(buttons, {name="cc"}, GUI.toggleCC)
       GUI.addButton(buttons, {name="settings", caption={"text-settings"}}, GUI.toggleSettingsWindow)
-      if game.getplayer("Choumiko") then
+      if debugButton then
         GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
       end
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
@@ -112,7 +114,42 @@ GUI = {
       if player.gui.left.farl == nil then return end
       player.gui.left.farl.destroy()
     end,
-
+    
+--    createAIGui = function(player, farl)
+--      player.print("Opened "..farl.locomotive.backername)
+--      if player.gui.left.farlAI ~= nil then return end
+--      local psettings = Settings.loadByPlayer(player)
+--      --GUI.init(player)
+--      local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farlAI"})
+--      local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
+--      local span = 3
+--      if game.getplayer("Choumiko") then
+--        span = 4
+--      end
+--      local buttons = GUI.add(rows, {type="table", name="buttons", colspan=span})
+--      GUI.addButton(buttons, {name="start", style="farl_button"}, GUI.toggleStart)
+--      GUI.addButton(buttons, {name="cc"}, GUI.toggleCC)
+--      if game.getplayer("Choumiko") then
+--        GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
+--      end
+--      GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
+--      GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
+--      --GUI.add(rows,{type="checkbox", name="maintenance", caption="Replace"},GUI.toggleMaintenance)
+--      if landfillInstalled then
+--        GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
+--      end
+--    end,
+--    
+--    destroyAIGui = function(player)
+--      player.print("Closed ui")
+--      if player.gui.left.farlAI == nil then return end
+--      player.gui.left.farlAI.destroy()
+--    end,
+--    
+--    onAIGuiClick = function(event, farl, player)
+--      GUI.onGuiClick(event,farl,player)
+--    end,
+    
     onGuiClick = function(event, farl, player)
       local name = event.element.name
       if GUI.callbacks[name] then

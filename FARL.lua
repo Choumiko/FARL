@@ -124,11 +124,18 @@ FARL = {
     [6] = {straight={dir=2, off={x=3,y=-1}}, diagonal = {dir=3, off={x=-3,y=1}}},
     [7] = {straight={dir=2, off={x=3,y=1}}, diagonal = {dir=1, off={x=-3,y=-1}}}
   },
-  new = function(player)
+  new = function(player, ent)
+    local vehicle, driver = nil, false
+    if ent then
+      vehicle = ent
+    else
+      vehicle = player.vehicle
+      driver = player
+    end
     local new = {
-      locomotive = player.vehicle, train=player.vehicle.train,
-      driver=player, active=false, lastrail=false,
-      direction = false, input = 1, name = player.vehicle.backername,
+      locomotive = vehicle, train=vehicle.train,
+      driver=driver, active=false, lastrail=false,
+      direction = false, input = 1, name = vehicle.backername,
       signalCount = 0, cruise = false, cruiseInterrupt = 0,
       lastposition = false, maintenance = false
     }
@@ -550,8 +557,8 @@ FARL = {
         self:flyingText2("Behind", RED, true, behind.position)
         self.path = path
         if self.settings.root and not self:rootModeAllowed() then
-          self.driver.print("-root mode disabled")
-          self.driver.print("-root mode requires FARL at each end of the train")
+          self:print("-root mode disabled")
+          self:print("-root mode requires FARL at each end of the train")
           self.settings.root = false
         end
         self.active = true
@@ -613,7 +620,7 @@ FARL = {
     if self:rootModeAllowed() then 
       self.settings.root = not self.settings.root
     else
-      self.driver.print("-root mode requires FARL at each end of the train")
+      self:print("-root mode requires FARL at each end of the train")
       self.settings.root = false
     end
   end,
@@ -1222,27 +1229,26 @@ FARL = {
     local locomotive = self.locomotive
     local player = self.driver
     --if not self.active then self:activate() end
-    player.print("Train@"..pos2Str(locomotive.position).." dir:"..self:calcTrainDir())
+    self:print("Train@"..pos2Str(locomotive.position).." dir:"..self:calcTrainDir())
     local rail = self:railBelowTrain()
     if rail then
       --self:flyingText2("B", GREEN, true, rail.position)
-      player.print("Rail@"..pos2Str(rail.position).." dir:"..rail.direction)
+      self:print("Rail@"..pos2Str(rail.position).." dir:"..rail.direction)
       local fixed = self:fixDiagonalPos(rail)
       if rail.direction % 2 == 1 then
         self:flyingText2("F", GREEN, true, fixed)
-        player.print("Fixed: "..pos2Str(fixed).." dir:"..rail.direction)
+        self:print("Fixed: "..pos2Str(fixed).." dir:"..rail.direction)
       end
     else
-      player.print("No rail found")
+      self:print("No rail found")
     end
     local last = self:findLastRail()
     if last then
-      player.print("Last@"..pos2Str(last.position).." dir:"..last.direction)
+      self:print("Last@"..pos2Str(last.position).." dir:"..last.direction)
     end
     if self.lastpole then
-      player.print("Pole@"..pos2Str(self.lastPole))
+      self:print("Pole@"..pos2Str(self.lastPole))
     end
-    -- player.print("LastCheck@"..pos2Str(self.lastCheckPole))
   end,
 
   calcTrainDir = function(self)
@@ -1293,7 +1299,7 @@ FARL = {
   end,
 
   print = function(self, msg)
-    if self.driver.name ~= "farl_player" then
+    if self.driver and self.driver.name ~= "farl_player" then
       self.driver.print(msg)
     else
       self:flyingText(msg, RED, true)

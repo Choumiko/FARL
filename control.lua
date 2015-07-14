@@ -4,6 +4,8 @@ require "FARL"
 require "GUI"
 require "migrate"
 
+
+debugButton = true
 godmode = false
 removeStone = true
 
@@ -168,6 +170,18 @@ clearAreas =
           FARL.onPlayerLeave(player)
           GUI.destroyGui(player)
         end
+--        if player.opened ~= nil and player.gui.left.farlAI == nil and player.opened.name == "farl" then
+--          local i = FARL.findByLocomotive(player.opened)
+--          if i then
+--            glob.farl[i].settings = Settings.loadByPlayer(player)
+--            GUI.createAIGui(player, glob.farl[i])
+--          else
+--            table.insert(glob.farl, FARL.new(player, player.opened))
+--          end
+--        end
+--        if player.gui.left.farlAI ~= nil and player.opened == nil then
+--          GUI.destroyAIGui(player)
+--        end
       end
     end
     for i, farl in ipairs(glob.farl) do
@@ -301,7 +315,7 @@ clearAreas =
   local function onGuiClick(event)
     local index = event.playerindex or event.name
     local player = game.players[index]
-    if player.gui.left.farl ~= nil then
+    if player.gui.left.farl ~= nil then --and player.gui.left.farlAI == nil then
       local farl = FARL.findByPlayer(player)
       if farl then
         GUI.onGuiClick(event, farl, player)
@@ -310,6 +324,20 @@ clearAreas =
         GUI.destroyGui(player)
       end
     end
+--    if player.gui.left.farlAI ~= nil and player.gui.left.farl == nil then
+--      if player.opened and player.opened.name == "farl" then
+--        local farl = FARL.findByLocomotive(player.opened)
+--        if farl then
+--          GUI.onAIGuiClick(event, glob.farl[farl], player)
+--        else
+--          player.print("AI gui: Could not find train")
+--          GUI.destroyAIGui(player)
+--        end
+--      else
+--        player.print("AI gui without train!")
+--        GUI.destroyAIGui(player)
+--      end
+--    end
   end
 
   function onpreplayermineditem(event)
