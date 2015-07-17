@@ -194,7 +194,7 @@ FARL = {
         end
       else
         self.frontmover = false
-        for i,l in ipairs(self.train.locomotives.frontmovers) do
+        for i,l in ipairs(self.train.locomotives.front_movers) do
           if l == self.locomotive then
             self.frontmover = true
             break
@@ -827,7 +827,12 @@ FARL = {
         if self.settings.electric then
           remote.call("dim_trains", "railCreated", newPos)
         end
-        self:removeItemFromCargo(nextRail.name, 1)
+        if ent then
+          self:removeItemFromCargo(nextRail.name, 1)
+        else
+          self:deactivate("Placed rail but no entity returned.")
+          return false
+        end
         return true, ent
       elseif not canplace then
         return false, "Can't place rail"
@@ -948,8 +953,12 @@ FARL = {
             self:prepareArea(pos)
           end
           if self:genericCanPlace(entity) then
-            self:genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = game.forces.player}
-            self:removeItemFromCargo(poleEntities[i].name, 1)
+            local _, ent = self:genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = game.forces.player}
+            if ent then
+              self:removeItemFromCargo(poleEntities[i].name, 1)
+            else
+              self:deactivate("Trying to place "..poleEntities[i].name.." failed")
+            end
           end
         end
       end
@@ -1117,30 +1126,34 @@ FARL = {
       local hasPole = self:getCargoCount(name) > 0
       if canPlace and hasPole then
         local success, pole = self:genericPlace{name = name, position = polePos, force = game.forces.player}
-        if not pole.neighbours[1] then
-          self:flyingText("Placed unconnected pole", RED, true)
-        end
-        self:placePoleEntities(poleDir, polePos)
-        self:removeItemFromCargo(name, 1)
-        self:connectCCNet(pole)
-        self.lastPole = pole
-
-        bestPole, index = self:getBestPole(pole, self.recheckRails, "O")
-        if bestPole then
-          self.lastCheckPole = bestPole.p
-          self.lastCheckDir = bestPole.dir
-          for i=self.lastCheckIndex,1,-1 do
-            table.remove(self.recheckRails, i)
+        if pole then
+          if not pole.neighbours.copper[1] then
+            self:flyingText("Placed unconnected pole", RED, true)
           end
-          self.lastCheckIndex = index
-          --self:flyingText("B", YELLOW, true, self.lastCheckPole)
+          self:placePoleEntities(poleDir, polePos)
+          self:removeItemFromCargo(name, 1)
+          self:connectCCNet(pole)
+          self.lastPole = pole
+  
+          bestPole, index = self:getBestPole(pole, self.recheckRails, "O")
+          if bestPole then
+            self.lastCheckPole = bestPole.p
+            self.lastCheckDir = bestPole.dir
+            for i=self.lastCheckIndex,1,-1 do
+              table.remove(self.recheckRails, i)
+            end
+            self.lastCheckIndex = index
+            --self:flyingText("B", YELLOW, true, self.lastCheckPole)
+          else
+            debugDump("not found",true)
+            if nextRail then
+              self:placePole(nextRail)
+            end
+          end
+          return true, index
         else
-          debugDump("not found",true)
-          if nextRail then
-            self:placePole(nextRail)
-          end
-        end
-        return true, index
+        
+        end        
       else
         if not hasPole then
           local rails = nextRail or {}
@@ -1180,7 +1193,7 @@ FARL = {
         self:prepareArea(pos)
       end
       local success, entity = self:genericPlace(signal)
-      if success then
+      if entity then
         self:removeItemFromCargo(signal.name, 1)
         return success, entity
       else

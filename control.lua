@@ -266,7 +266,7 @@ clearAreas =
   end
 
   function onplayermineditem(event)
-    if event.itemstack.name == "farl" then
+    if event.item_stack.name == "farl" then
       for i=#global.farl,1,-1 do
         if global.farl[i].delete then
           table.remove(global.farl, i)
@@ -291,9 +291,9 @@ clearAreas =
   game.on_event(defines.events.on_gui_click, onGuiClick)
   --game.on_event(defines.events.on_train_changed_state, ontrainchangedstate)
   game.on_event(defines.events.on_player_mined_item, onplayermineditem)
-  game.on_event(defines.events.on_pre_player_mined_item, onpreplayermineditem)
+  game.on_event(defines.events.on_preplayer_mined_item, onpreplayermineditem)
   --game.onevent(defines.events.on_built_entity, onbuiltentity)
-  game.onevent(defines.events.on_entity_died, onentitydied)
+  game.on_event(defines.events.on_entity_died, onentitydied)
 
   local function onplayercreated(event)
     local player = game.get_player(event.player_index)
@@ -304,7 +304,7 @@ clearAreas =
     --debugDump("onplayercreated",true)
   end
 
-  game.onevent(defines.events.on_player_created, onplayercreated)
+  game.on_event(defines.events.on_player_created, onplayercreated)
 
   function debugDump(var, force)
     if false or force then
@@ -323,7 +323,7 @@ clearAreas =
   function saveVar(var, name)
     local var = var or glob
     local n = name or ""
-    game.make_file("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
+    game.makefile("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
     --game.make_file("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
   end
 
