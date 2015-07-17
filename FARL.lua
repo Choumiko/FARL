@@ -805,20 +805,20 @@ FARL = {
       local newPos = nextRail.position
       local newRail = {name = nextRail.name, position = newPos, direction = newDir}
       local canplace = self:genericCanPlace(newRail)
-      if not canplace then
+--      if not canplace then
         self:prepareArea(newPos)
         if not self:genericCanPlace(newRail) then
           if nextRail.name == self.settings.rail.curved then
             local areas = clearAreas[nextRail.direction%4]
             for i=1,6 do
               self:prepareArea(newPos, areas[i])
-              if self:genericCanPlace(newRail) then
-                break
-              end
+--              if self:genericCanPlace(newRail) then
+--                break
+--              end
             end
           end
         end
-      end
+--      end
       local hasRail = self:getCargoCount(nextRail.name) > 0
       canplace = self:genericCanPlace(newRail)
       if canplace and hasRail then
@@ -949,9 +949,9 @@ FARL = {
           --debugDump(pos, true)
           local entity = {name = poleEntities[i].name, position = pos}
           local canplace = self:genericCanPlace(entity)
-          if not canplace then
+          --if not canplace then
             self:prepareArea(pos)
-          end
+          --end
           if self:genericCanPlace(entity) then
             local _, ent = self:genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = game.forces.player}
             if ent then
@@ -1119,9 +1119,9 @@ FARL = {
       end
       local pole = {name = name, position = polePos}
       --debugDump(util.distance(pole.position, self.lastPole.position),true)
-      if not self:genericCanPlace(pole) then
+      --if not self:genericCanPlace(pole) then
         self:prepareArea(polePos)
-      end
+      --end
       local canPlace = self:genericCanPlace(pole)
       local hasPole = self:getCargoCount(name) > 0
       if canPlace and hasPole then
@@ -1189,9 +1189,9 @@ FARL = {
       end
       local pos = addPos(rail.position, offset)
       local signal = {name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
-      if not self:genericCanPlace(signal) then
+      --if not self:genericCanPlace(signal) then
         self:prepareArea(pos)
-      end
+      --end
       local success, entity = self:genericPlace(signal)
       if entity then
         self:removeItemFromCargo(signal.name, 1)
