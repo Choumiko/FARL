@@ -149,9 +149,6 @@ FARL = {
     if i then
       global.farl[i].driver = player
       global.farl[i].settings = Settings.loadByPlayer(player)
-      if global.farl[i].settings.root == nil then
-        global.farl[i].settings.root = false
-      end
     else
       table.insert(global.farl, FARL.new(player))
     end

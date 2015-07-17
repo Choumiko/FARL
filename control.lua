@@ -193,111 +193,24 @@ clearAreas =
   end
 
   local function initGlob()
-    if global.version == nil then
-      glob = {}
+    if global.version == nil or global.version < "0.3.0" then
+      global = {}
       global.version = "0.0.0"
-    end
-    if global.version < "0.2.8" then
-      migrate()
     end
     global.players = global.players or {}
     global.savedBlueprints = global.savedBlueprints or {}
     global.farl = global.farl or {}
     global.railInfoLast = global.railInfoLast or {}
-    global.debug = global.debug or {}
-    global.action = global.action or {}
     if global.godmode == nil then global.godmode = false end
     godmode = global.godmode
     for i,farl in ipairs(global.farl) do
       farl = resetMetatable(farl, FARL)
     end
-    if global.version < "0.2.8" then
-      --saveVar(glob,"preMigrate")
-      local bps = {"big", "medium"}
-      if global.activeBP then
-        if global.activeBP.diagonal.lamps then
-          global.activeBP.diagonal.poleEntities = global.activeBP.diagonal.lamps
-          global.activeBP.straight.poleEntities = global.activeBP.straight.lamps
-        end
-      end
-      for _, k in pairs(bps) do
-        if global.settings.bp[k] then
-          if global.settings.bp[k].diagonal.lamps then
-            global.settings.bp[k].diagonal.poleEntities = util.table.deepcopy(global.settings.bp[k].diagonal.lamps)
-            global.settings.bp[k].diagonal.lamps = nil
-            global.settings.bp[k].straight.poleEntities = util.table.deepcopy(global.settings.bp[k].straight.lamps)
-            global.settings.bp[k].straight.lamps = nil
-          end
-        end
-      end
-      --saveVar(glob, "postMigrate")
-      local stg = {
-        activeBP = global.activeBP,
-        bp = global.settings.bp,
-        ccNet = global.settings.ccNet,
-        ccWires = global.settings.ccWires,
-        collectWood = global.settings.collectWood,
-        curvedWeight = global.settings.curvedWeight,
-        cruiseSpeed = global.cruiseSpeed,
-        dropWood = global.settings.dropWood,
-        electric = global.settings.electric,
-        flipPoles = global.settings.flipPoles,
-        flipSignals = false,
-        signalDistance = global.settings.signalDistance,
-        medium = global.medium,
-        minPoles = global.minPoles,
-        poles = global.poles,
-        rail = global.rail,
-        signals = global.signals,
-        bridge = global.bridge,
-      }
-      global.players = {}
-      for pi, player in pairs(game.players) do
-        local settings = Settings.loadByPlayer(player)
-        settings = resetMetatable(settings,Settings)
-        settings:update(util.table.deepcopy(stg))
-      end
-      global.settings = nil
-      global.electricInstalled = nil
-      for k, v in pairs(stg) do
-        if k ~= "farl" and k ~= "players" then
-          if glob[k] ~= nil then
-            glob[k] = nil
-          end
-        end
-      end
-      for i,f in pairs(global.farl) do
-        for k,v in pairs(cargoTypes) do
-          if f[k] ~= nil then
-            f[k] = nil
-          end
-        end
-      end
-      --saveVar(glob, "postMigrate2")
-    end
-    if global.version < "0.2.9" then
-      global.savedBlueprints = {}
-      for name, s in pairs(global.players) do
-        if s.medium then
-          s.activeBP.diagonal = defaultsMediumDiagonal
-          s.activeBP.straight = defaultsMediumStraight
-          s.bp.big.diagonal = defaultsDiagonal
-          s.bp.big.straight = defaultsStraight  
-        else
-          s.activeBP.diagonal = defaultsDiagonal
-          s.activeBP.straight = defaultsStraight
-          s.bp.medium.diagonal = defaultsMediumDiagonal
-          s.bp.medium.straight = defaultsMediumStraight  
-        end
-      end
-    end
     for name, s in pairs(global.players) do
       s = resetMetatable(s,Settings)
       s:checkMods()
-      --assert(getmetatable(s) == Settings)
-      --s:dump()
     end
-    global.version = "0.2.9"
+    global.version = "0.3.0"
   end
 
   local function oninit() initGlob() end

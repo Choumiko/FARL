@@ -161,8 +161,6 @@ GUI = {
       local psettings = Settings.loadByPlayer(player)
       if name == "debug" then
         saveVar(glob,"debug")
-        --global.debug = {}
-        --global.action = {}
         farl:debugInfo()
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
         or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" then
@@ -373,7 +371,7 @@ GUI = {
         --GUI.init(farl.driver)
         farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
-        farl.driver.gui.left.farl.rows.root.state = farl.settings.root or false
+        farl.driver.gui.left.farl.rows.root.state = farl.settings.root
       end
     end,
 }
