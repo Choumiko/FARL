@@ -10,8 +10,8 @@ godmode = false
 removeStone = true
 
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
-landfillInstalled = game.entityprototypes["landfill2by2"] and true or false
-electricInstalled = (game.entityprototypes["straight-power-rail"] and remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated) and true or false
+landfillInstalled = game.entity_prototypes["landfill2by2"] and true or false
+electricInstalled = (game.entity_prototypes["straight-power-rail"] and remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated) and true or false
 
 cargoTypes = { ["straight-rail"] = true, ["curved-rail"] = true,["rail-signal"] = true,
   ["big-electric-pole"] = true, ["medium-electric-pole"] = true, ["small-lamp"] = true,
@@ -313,7 +313,7 @@ clearAreas =
   end
 
   local function onGuiClick(event)
-    local index = event.playerindex or event.name
+    local index = event.player_index
     local player = game.players[index]
     if player.gui.left.farl ~= nil then --and player.gui.left.farlAI == nil then
       local farl = FARL.findByPlayer(player)
@@ -345,7 +345,7 @@ clearAreas =
     local cname = ent.name
     if ent.type == "locomotive" and cname == "farl" then
       for i=1,#global.farl do
-        if global.farl[i].name == ent.backername then
+        if global.farl[i].name == ent.backer_name then
           global.farl[i].delete = true
         end
       end
@@ -372,18 +372,18 @@ clearAreas =
     end
   end
 
-  game.oninit(oninit)
-  game.onload(onload)
-  game.onevent(defines.events.ontick, onTick)
-  game.onevent(defines.events.onguiclick, onGuiClick)
-  --game.onevent(defines.events.ontrainchangedstate, ontrainchangedstate)
-  game.onevent(defines.events.onplayermineditem, onplayermineditem)
-  game.onevent(defines.events.onpreplayermineditem, onpreplayermineditem)
-  --game.onevent(defines.events.onbuiltentity, onbuiltentity)
-  game.onevent(defines.events.onentitydied, onentitydied)
+  game.on_init(oninit)
+  game.on_load(onload)
+  game.on_event(defines.events.on_tick, onTick)
+  game.on_event(defines.events.on_gui_click, onGuiClick)
+  --game.on_event(defines.events.on_train_changed_state, ontrainchangedstate)
+  game.on_event(defines.events.on_player_mined_item, onplayermineditem)
+  game.on_event(defines.events.on_pre_player_mined_item, onpreplayermineditem)
+  --game.onevent(defines.events.on_built_entity, onbuiltentity)
+  game.onevent(defines.events.on_entity_died, onentitydied)
 
   local function onplayercreated(event)
-    local player = game.getplayer(event.playerindex)
+    local player = game.get_player(event.player_index)
     local gui = player.gui
     if gui.top.farl ~= nil then
       gui.top.farl.destroy()
@@ -391,7 +391,7 @@ clearAreas =
     --debugDump("onplayercreated",true)
   end
 
-  game.onevent(defines.events.onplayercreated, onplayercreated)
+  game.onevent(defines.events.on_player_created, onplayercreated)
 
   function debugDump(var, force)
     if false or force then
@@ -410,8 +410,8 @@ clearAreas =
   function saveVar(var, name)
     local var = var or glob
     local n = name or ""
-    game.makefile("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
-    --game.makefile("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
+    game.make_file("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
+    --game.make_file("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
   end
 
   --  driverNextDir = 1
@@ -430,7 +430,7 @@ clearAreas =
   --    end
   --  end
 
-  remote.addinterface("farl",
+  remote.add_interface("farl",
     {
       railInfo = function(rail)
         debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
@@ -480,7 +480,7 @@ clearAreas =
       end,
 
       tileAt = function(x,y)
-        debugDump(game.gettile(x, y).name,true)
+        debugDump(game.get_tile(x, y).name,true)
       end,
 
       quickstart = function()

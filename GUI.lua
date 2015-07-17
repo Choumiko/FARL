@@ -73,6 +73,9 @@ GUI = {
       if bind and e.type == "textfield" then
         ret.text = bind
       end
+      if e.type == "checkbox" and e.state == nil then
+        e.state = false
+      end
       return ret
     end,
 
@@ -116,20 +119,20 @@ GUI = {
     end,
     
 --    createAIGui = function(player, farl)
---      player.print("Opened "..farl.locomotive.backername)
+--      player.print("Opened "..farl.locomotive.backer_name)
 --      if player.gui.left.farlAI ~= nil then return end
 --      local psettings = Settings.loadByPlayer(player)
 --      --GUI.init(player)
 --      local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farlAI"})
 --      local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
 --      local span = 3
---      if game.getplayer("Choumiko") then
+--      if game.get_player("Choumiko") then
 --        span = 4
 --      end
 --      local buttons = GUI.add(rows, {type="table", name="buttons", colspan=span})
 --      GUI.addButton(buttons, {name="start", style="farl_button"}, GUI.toggleStart)
 --      GUI.addButton(buttons, {name="cc"}, GUI.toggleCC)
---      if game.getplayer("Choumiko") then
+--      if game.get_player("Choumiko") then
 --        GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
 --      end
 --      GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
@@ -300,7 +303,7 @@ GUI = {
     findBlueprintsInHotbar = function(player)
       local blueprints = {}
       if player ~= nil then
-        local hotbar = player.getinventory(1)
+        local hotbar = player.get_inventory(1)
         if hotbar ~= nil then
           local i = 1
           while (i < 30) do
@@ -324,7 +327,7 @@ GUI = {
       if blueprints ~= nil then
         local ret = {}
         for i, blueprint in ipairs(blueprints) do
-          if blueprint.isblueprintsetup() then
+          if blueprint.is_blueprint_setup() then
             table.insert(ret, blueprint)
           end
         end
