@@ -203,6 +203,7 @@ FARL = {
         self.cruiseInterrupt = self.driver.riding_state.acceleration
         if not self.maintenance then
           if self.active then
+            --self.train.manual_mode = true
           --if self.active and self.settings.root then
             local lastWagon = self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
             local firstWagon = not self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
@@ -262,7 +263,6 @@ FARL = {
   end,
 
   fillWater = function(self, area)
-    if landfillInstalled then
       -- check if bridging is turned on in settings
       if self.settings.bridge then
         -- following code mostly pulled from landfill mod itself and adjusted to fit
@@ -282,15 +282,14 @@ FARL = {
           -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
           local lfills = math.ceil(#tiles/4)
           -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
-          if self:getCargoCount("landfill2by2") >= lfills then
+          if self:getCargoCount("concrete") >= lfills then
             self.surface.set_tiles(tiles)
-            self:removeItemFromCargo("landfill2by2", lfills)
+            self:removeItemFromCargo("concrete", lfills)
           else
-            self:print("Out of 2 by 2 Landfill")
+            self:print("Not enough concrete")
           end
         end
       end
-    end
   end,
 
   pickupItems = function(self,pos, area)
@@ -439,6 +438,7 @@ FARL = {
             self.direction, self.lastrail = newTravelDir, nextRail
           else
             self:deactivate(last)
+            return
           end
         end
         if self.driver.name == "farl_player" and #self.course == 0 then
@@ -738,7 +738,8 @@ FARL = {
       for i=1,#e do
         if e[i].name == "straight-rail" or e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
           if not rail and e[i].name == "straight-rail" then
-            rail = {direction = e[i].direction, name = e[i].name, position = e[i].position}
+            local dir = e[i].direction or 0
+            rail = {direction = dir, name = e[i].name, position = e[i].position}
           end
           if e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
             offsets.pole = {name = e[i].name, direction = e[i].direction, position = e[i].position}
@@ -748,7 +749,7 @@ FARL = {
         end
       end
       if rail and offsets.pole then
-        local type = rail.direction == 0 and "straight" or "diagonal"
+        local type = (rail.direction == 0 or rail.direction == 4) and "straight" or "diagonal"
         if type == "diagonal" and not (rail.direction == 3 or rail.direction == 7) then
           self:print("Invalid rail")
           break
@@ -1152,7 +1153,10 @@ FARL = {
           end
           return true, index
         else
-        
+          debugDump("Can`t place pole@"..pos2Str(polePos),true)
+          local rails = nextRail or {}
+          self.recheckRails = rails
+          self:findLastPole()
         end        
       else
         if not hasPole then
@@ -1219,7 +1223,12 @@ FARL = {
     if not pole then
       local trainDir = self:calcTrainDir()
       local lastrail = self.lastrail or self:findLastRail()
-      local offset = self:calcPole(lastrail, trainDir)
+      local offset = {x=1,y=1}
+      if lastrail.name ~= self.settings.rail.curved then
+        offset = self:calcPole(lastrail, trainDir)
+      else
+        self:print("calcPole with curved2")
+      end
       local tmp = moveposition(fixPos(offset), trainDir, 50)
       tmp.x, tmp.y = tmp[1],tmp[2]
       self.lastPole = {position=addPos(lastrail.position, tmp)}

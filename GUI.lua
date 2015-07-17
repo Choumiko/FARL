@@ -108,9 +108,7 @@ GUI = {
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
       GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
       --GUI.add(rows,{type="checkbox", name="maintenance", caption="Replace"},GUI.toggleMaintenance)
-      if landfillInstalled then
-        GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
-      end
+      GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
     end,
 
     destroyGui = function(player)
@@ -138,9 +136,7 @@ GUI = {
 --      GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
 --      GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
 --      --GUI.add(rows,{type="checkbox", name="maintenance", caption="Replace"},GUI.toggleMaintenance)
---      if landfillInstalled then
 --        GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
---      end
 --    end,
 --    
 --    destroyAIGui = function(player)
@@ -173,11 +169,7 @@ GUI = {
           end
         end
       elseif name == "bridge" then
-        if landfillInstalled then
           psettings.bridge = not psettings.bridge
-        else
-          psettings.bridge = false
-        end
       elseif name == "poweredRails" then
         if not electricInstalled then
           psettings.rail = rails.basic
@@ -307,7 +299,7 @@ GUI = {
           while (i < 30) do
             local itemStack
             if pcall(function () itemStack = hotbar[i] end) then
-              if itemStack ~= nil and itemStack.type == "blueprint" then
+              if itemStack ~= nil and itemStack.valid_for_read and itemStack.type == "blueprint" then
                 table.insert(blueprints, itemStack)
               end
               i = i + 1
