@@ -370,7 +370,7 @@ GUI = {
         --GUI.init(farl.driver)
         farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
-        farl.driver.gui.left.farl.rows.root.state = farl.settings.root
+        farl.driver.gui.left.farl.rows.root.state = farl.settings.root or false
       end
     end,
 }
