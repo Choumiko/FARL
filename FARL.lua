@@ -100,13 +100,13 @@ function moveposition(pos, direction, distance)
 end
 
 function saveBlueprint(player, poleType, type, bp)
-  if not glob.savedBlueprints[player.name] then
-    glob.savedBlueprints[player.name] = {}
+  if not global.savedBlueprints[player.name] then
+    global.savedBlueprints[player.name] = {}
   end
-  if not glob.savedBlueprints[player.name][poleType] then
-    glob.savedBlueprints[player.name][poleType] = {straight = {}, diagonal = {}}
+  if not global.savedBlueprints[player.name][poleType] then
+    global.savedBlueprints[player.name][poleType] = {straight = {}, diagonal = {}}
   end
-  glob.savedBlueprints[player.name][poleType][type] = util.table.deepcopy(bp)
+  global.savedBlueprints[player.name][poleType][type] = util.table.deepcopy(bp)
 end
 
 local RED = {r = 0.9}
@@ -147,18 +147,18 @@ FARL = {
   onPlayerEnter = function(player)
     local i = FARL.findByLocomotive(player.vehicle)
     if i then
-      glob.farl[i].driver = player
-      glob.farl[i].settings = Settings.loadByPlayer(player)
-      if glob.farl[i].settings.root == nil then
-        glob.farl[i].settings.root = false
+      global.farl[i].driver = player
+      global.farl[i].settings = Settings.loadByPlayer(player)
+      if global.farl[i].settings.root == nil then
+        global.farl[i].settings.root = false
       end
     else
-      table.insert(glob.farl, FARL.new(player))
+      table.insert(global.farl, FARL.new(player))
     end
   end,
 
   onPlayerLeave = function(player)
-    for i,f in ipairs(glob.farl) do
+    for i,f in ipairs(global.farl) do
       if f.driver and f.driver.name == player.name then
         f:deactivate()
         f.driver = false
@@ -169,7 +169,7 @@ FARL = {
   end,
 
   findByLocomotive = function(loco)
-    for i,f in ipairs(glob.farl) do
+    for i,f in ipairs(global.farl) do
       if f.locomotive.equals(loco) then
         return i
       end
@@ -178,7 +178,7 @@ FARL = {
   end,
 
   findByPlayer = function(player)
-    for i,f in ipairs(glob.farl) do
+    for i,f in ipairs(global.farl) do
       if f.locomotive.equals(player.vehicle) then
         f.driver = player
         return f
@@ -666,7 +666,7 @@ FARL = {
         end
       end
     end
-    if self.settings.dropWood or ((item == self.settings.rail.curved or item == self.settings.rail.straight) and not glob.godmode) then
+    if self.settings.dropWood or ((item == self.settings.rail.curved or item == self.settings.rail.straight) and not global.godmode) then
       local position = game.findnoncollidingposition("item-on-ground", self.driver.position, 100, 0.5)
       game.createentity{name = "item-on-ground", position = position, stack = {name = item, count = count}}
     end
