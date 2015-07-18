@@ -206,20 +206,6 @@ clearAreas =
         GUI.destroyGui(player)
       end
     end
---    if player.gui.left.farlAI ~= nil and player.gui.left.farl == nil then
---      if player.opened and player.opened.name == "farl" then
---        local farl = FARL.findByLocomotive(player.opened)
---        if farl then
---          GUI.onAIGuiClick(event, global.farl[farl], player)
---        else
---          player.print("AI gui: Could not find train")
---          GUI.destroyAIGui(player)
---        end
---      else
---        player.print("AI gui without train!")
---        GUI.destroyAIGui(player)
---      end
---    end
   end
 
   function onpreplayermineditem(event)
@@ -257,10 +243,10 @@ clearAreas =
   function onPlayerDrivingChangedState(event)
     local player = game.players[event.player_index]
     if (player.vehicle ~= nil and player.vehicle.name == "farl") then
-          if player.gui.left.farl == nil then
-            FARL.onPlayerEnter(player)
-            GUI.createGui(player)
-          end
+      if player.gui.left.farl == nil then
+        FARL.onPlayerEnter(player)
+        GUI.createGui(player)
+      end
     end
     if player.vehicle == nil and player.gui.left.farl ~= nil then
       FARL.onPlayerLeave(player)

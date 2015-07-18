@@ -47,7 +47,7 @@ GUI = {
         collectWood = settings.collectWood,
         dropWood = settings.dropWood,
         root = settings.root
-        
+
       }
     end,
 
@@ -60,7 +60,7 @@ GUI = {
         if e.type == "checkbox" then
           if e.state == nil then
             e.state = false
-          end 
+          end
           if type(bind) == "string" then
             e.state = Settings.loadByPlayer(parent.gui.player)[e.name]
           else
@@ -115,40 +115,7 @@ GUI = {
       if player.gui.left.farl == nil then return end
       player.gui.left.farl.destroy()
     end,
-    
---    createAIGui = function(player, farl)
---      player.print("Opened "..farl.locomotive.backer_name)
---      if player.gui.left.farlAI ~= nil then return end
---      local psettings = Settings.loadByPlayer(player)
---      --GUI.init(player)
---      local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farlAI"})
---      local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
---      local span = 3
---      if game.get_player("Choumiko") then
---        span = 4
---      end
---      local buttons = GUI.add(rows, {type="table", name="buttons", colspan=span})
---      GUI.addButton(buttons, {name="start", style="farl_button"}, GUI.toggleStart)
---      GUI.addButton(buttons, {name="cc"}, GUI.toggleCC)
---      if game.get_player("Choumiko") then
---        GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
---      end
---      GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
---      GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
---      --GUI.add(rows,{type="checkbox", name="maintenance", caption="Replace"},GUI.toggleMaintenance)
---        GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
---    end,
---    
---    destroyAIGui = function(player)
---      player.print("Closed ui")
---      if player.gui.left.farlAI == nil then return end
---      player.gui.left.farlAI.destroy()
---    end,
---    
---    onAIGuiClick = function(event, farl, player)
---      GUI.onGuiClick(event,farl,player)
---    end,
-    
+
     onGuiClick = function(event, farl, player)
       local name = event.element.name
       if GUI.callbacks[name] then
@@ -169,7 +136,7 @@ GUI = {
           end
         end
       elseif name == "bridge" then
-          psettings.bridge = not psettings.bridge
+        psettings.bridge = not psettings.bridge
       elseif name == "poweredRails" then
         if not electricInstalled then
           psettings.rail = rails.basic
@@ -192,7 +159,7 @@ GUI = {
     toggleStart = function(event, farl, player)
       farl:toggleActive()
     end,
-    
+
     debugInfo = function(event, farl, player)
       farl:debugInfo()
     end,
@@ -237,12 +204,12 @@ GUI = {
     toggleCC = function(event, farl, player)
       farl:toggleCruiseControl()
     end,
-    
+
     toggleRootMode = function(event, farl, player)
       farl:toggleRootMode()
       GUI.updateGui(farl)
     end,
-    
+
     toggleSettingsWindow = function(event, farl, player)
       local row = player.gui.left.farl.rows
       local psettings = Settings.loadByPlayer(player)

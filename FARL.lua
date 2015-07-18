@@ -204,14 +204,14 @@ FARL = {
         if not self.maintenance then
           if self.active then
             --self.train.manual_mode = true
-          --if self.active and self.settings.root then
+            --if self.active and self.settings.root then
             local lastWagon = self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
             local firstWagon = not self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
             local c = #self.path
             local behind = self.path[c].name
             local dist = distance(lastWagon, self.path[c].position)
             while dist > 10 and distance(firstWagon, self.path[c].position) > dist do
-            --if dist >= 6 then 
+              --if dist >= 6 then
               --flyingText = function(self, line, color, show, pos)
               --self:flyingText("c", RED, true, self.path[c].position)
               if self.path[c].valid and (self.path[c].name == self.settings.rail.curved or self.path[c].name == self.settings.rail.straight) then
@@ -223,7 +223,7 @@ FARL = {
                 table.remove(self.path, c)
                 c = #self.path
                 dist = distance(lastWagon, self.path[c].position)
-              end                  
+              end
             end
           end
           self:layRails()
@@ -263,33 +263,33 @@ FARL = {
   end,
 
   fillWater = function(self, area)
-      -- check if bridging is turned on in settings
-      if self.settings.bridge then
-        -- following code mostly pulled from landfill mod itself and adjusted to fit
-        local tiles = {}
-        local st, ft = area[1],area[2]
-        for x = st[1], ft[1], 1 do
-          for y = st[2], ft[2], 1 do
-            local tileName = self.surface.get_tile(x, y).name
-            -- check that tile is water, if it is add it to a list of tiles to be changed to grass
-            if tileName == "water" or tileName == "deepwater" then
-              table.insert(tiles,{name="grass", position={x, y}})
-            end
-          end
-        end
-        -- check to make sure water tiles were found
-        if #tiles ~= 0 then
-          -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
-          local lfills = math.ceil(#tiles/4)
-          -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
-          if self:getCargoCount("concrete") >= lfills then
-            self.surface.set_tiles(tiles)
-            self:removeItemFromCargo("concrete", lfills)
-          else
-            self:print("Not enough concrete")
+    -- check if bridging is turned on in settings
+    if self.settings.bridge then
+      -- following code mostly pulled from landfill mod itself and adjusted to fit
+      local tiles = {}
+      local st, ft = area[1],area[2]
+      for x = st[1], ft[1], 1 do
+        for y = st[2], ft[2], 1 do
+          local tileName = self.surface.get_tile(x, y).name
+          -- check that tile is water, if it is add it to a list of tiles to be changed to grass
+          if tileName == "water" or tileName == "deepwater" then
+            table.insert(tiles,{name="grass", position={x, y}})
           end
         end
       end
+      -- check to make sure water tiles were found
+      if #tiles ~= 0 then
+        -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
+        local lfills = math.ceil(#tiles/4)
+        -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
+        if self:getCargoCount("concrete") >= lfills then
+          self.surface.set_tiles(tiles)
+          self:removeItemFromCargo("concrete", lfills)
+        else
+          self:print("Not enough concrete")
+        end
+      end
+    end
   end,
 
   pickupItems = function(self,pos, area)
@@ -414,7 +414,7 @@ FARL = {
           local newTravelDir = newTravelDirs[i]
           local dir, last = self:placeRails(self.previousDirection, self.lastrail, self.direction, nextRail, newTravelDir)
           if dir then
-            if not last.position and not last.name then 
+            if not last.position and not last.name then
               error("Placed rail but no entity returned", 2)
             end
             table.insert(self.path, 1, last)
@@ -529,7 +529,7 @@ FARL = {
               signalOffset = signalOffset[check[1][3].direction]
             else
               signalOffset = signalOffset.pos
-            end 
+            end
             local signalPos = addPos(check[1][3].position, signalOffset)
             --self:flyingText2("s",RED,true,signalPos)
             local range = (self.direction % 2 == 0) and 1 or 0.5
@@ -608,25 +608,25 @@ FARL = {
       return
     end
   end,
-  
+
   rootModeAllowed = function(self)
     return (self.train.carriages[1].name == "farl" and self.train.carriages[#self.train.carriages].name == "farl")
   end,
-  
+
   toggleRootMode = function(self)
-    if self:rootModeAllowed() then 
+    if self:rootModeAllowed() then
       self.settings.root = not self.settings.root
     else
       self:print("-root mode requires FARL at each end of the train")
       self.settings.root = false
     end
   end,
-  
+
   resetPoleData = function(self)
     self.recheckRails = {}
     self.lastPole, self.lastCheckPole = nil,nil
   end,
-  
+
   findLastRail = function(self, limit)
     local trainDir = self:calcTrainDir()
     local test = self:railBelowTrain()
@@ -640,7 +640,7 @@ FARL = {
       if rail then
         test = rail
         last = rail
-        table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})  
+        table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})
       else
         break
       end
@@ -761,14 +761,14 @@ FARL = {
         local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
         local railPos = rail.position
         if type == "diagonal" then
---          local x,y = 0,0
---          if rail.direction == 3 then
---            x = rail.position.x + 0.5
---            y = rail.position.y + 0.5
---          elseif rail.direction == 7 then
---            x = rail.position.x - 0.5
---            y = rail.position.y - 0.5
---          end
+          --          local x,y = 0,0
+          --          if rail.direction == 3 then
+          --            x = rail.position.x + 0.5
+          --            y = rail.position.y + 0.5
+          --          elseif rail.direction == 7 then
+          --            x = rail.position.x - 0.5
+          --            y = rail.position.y - 0.5
+          --          end
           railPos = self:fixDiagonalPos(rail)
           --railPos = {x=x,y=y}
         end
@@ -806,20 +806,20 @@ FARL = {
       local newPos = nextRail.position
       local newRail = {name = nextRail.name, position = newPos, direction = newDir}
       local canplace = self:genericCanPlace(newRail)
---      if not canplace then
-        self:prepareArea(newPos)
-        if not self:genericCanPlace(newRail) then
-          if nextRail.name == self.settings.rail.curved then
-            local areas = clearAreas[nextRail.direction%4]
-            for i=1,6 do
-              self:prepareArea(newPos, areas[i])
---              if self:genericCanPlace(newRail) then
---                break
---              end
-            end
+      --      if not canplace then
+      self:prepareArea(newPos)
+      if not self:genericCanPlace(newRail) then
+        if nextRail.name == self.settings.rail.curved then
+          local areas = clearAreas[nextRail.direction%4]
+          for i=1,6 do
+            self:prepareArea(newPos, areas[i])
+            --              if self:genericCanPlace(newRail) then
+            --                break
+            --              end
           end
         end
---      end
+      end
+      --      end
       local hasRail = self:getCargoCount(nextRail.name) > 0
       canplace = self:genericCanPlace(newRail)
       if canplace and hasRail then
@@ -951,7 +951,7 @@ FARL = {
           local entity = {name = poleEntities[i].name, position = pos}
           local canplace = self:genericCanPlace(entity)
           --if not canplace then
-            self:prepareArea(pos)
+          self:prepareArea(pos)
           --end
           if self:genericCanPlace(entity) then
             local _, ent = self:genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = game.forces.player}
@@ -1096,7 +1096,7 @@ FARL = {
     if not self.recheckRails then self.recheckRails = {} end
     for i,r in pairs(lastrail) do
       table.insert(self.recheckRails, r)
-    end    
+    end
     bestPole, index = self:getBestPole(lastPole, self.recheckRails, ".")
     if bestPole then
       self.lastCheckPole = bestPole.p
@@ -1114,14 +1114,14 @@ FARL = {
 
       local diff = subPos(self.lastPole.position, polePos)
       if diff.x == 0 and diff.y == 0 then
-        --debugDump("Placing on last pole!",true)
-        --self:deactivate()
-        --return
+      --debugDump("Placing on last pole!",true)
+      --self:deactivate()
+      --return
       end
       local pole = {name = name, position = polePos}
       --debugDump(util.distance(pole.position, self.lastPole.position),true)
       --if not self:genericCanPlace(pole) then
-        self:prepareArea(polePos)
+      self:prepareArea(polePos)
       --end
       local canPlace = self:genericCanPlace(pole)
       local hasPole = self:getCargoCount(name) > 0
@@ -1135,7 +1135,7 @@ FARL = {
           self:removeItemFromCargo(name, 1)
           self:connectCCNet(pole)
           self.lastPole = pole
-  
+
           bestPole, index = self:getBestPole(pole, self.recheckRails, "O")
           if bestPole then
             self.lastCheckPole = bestPole.p
@@ -1157,7 +1157,7 @@ FARL = {
           local rails = nextRail or {}
           self.recheckRails = rails
           self:findLastPole()
-        end        
+        end
       else
         if not hasPole then
           local rails = nextRail or {}
@@ -1194,7 +1194,7 @@ FARL = {
       local pos = addPos(rail.position, offset)
       local signal = {name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
       --if not self:genericCanPlace(signal) then
-        self:prepareArea(pos)
+      self:prepareArea(pos)
       --end
       local success, entity = self:genericPlace(signal)
       if entity then
@@ -1332,7 +1332,7 @@ FARL = {
       self.surface.create_entity({name="flying-text", position=pos, text=line, color=color})
     end
   end,
-  
+
   flyingText2 = function(self, line, color, show, pos)
     if show then
       local pos = addPos(pos,{x=-0.5,y=-0.5}) or addPos(self.locomotive.position, {x=0,y=-1})

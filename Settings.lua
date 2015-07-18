@@ -42,7 +42,7 @@ Settings = {
     setmetatable(global.players[name], Settings)
     return global.players[name]
   end,
-  
+
   update = function(self, key, value)
     if type(key) == "table" then
       for k,v in pairs(key) do
@@ -52,16 +52,16 @@ Settings = {
       self.key = value
     end
   end,
-  
+
   checkMods = function(self)
     if not landfillInstalled then
-      self.bridge = false 
+      self.bridge = false
     end
     if not electricInstalled then
       self.electric = false
     end
   end,
-  
+
   dump = function(self)
     saveVar(self, "dump"..self.player.name)
   end
