@@ -153,33 +153,6 @@ clearAreas =
   end
 
   local function onTick(event)
-
-    if event.tick % 10 == 0  then
-      for pi, player in ipairs(game.players) do
-        if (player.vehicle ~= nil and player.vehicle.name == "farl") then
-          if player.gui.left.farl == nil then
-            FARL.onPlayerEnter(player)
-            GUI.createGui(player)
-          end
-        end
-        if player.vehicle == nil and player.gui.left.farl ~= nil then
-          FARL.onPlayerLeave(player)
-          GUI.destroyGui(player)
-        end
---        if player.opened ~= nil and player.gui.left.farlAI == nil and player.opened.name == "farl" then
---          local i = FARL.findByLocomotive(player.opened)
---          if i then
---            global.farl[i].settings = Settings.loadByPlayer(player)
---            GUI.createAIGui(player, global.farl[i])
---          else
---            table.insert(global.farl, FARL.new(player, player.opened))
---          end
---        end
---        if player.gui.left.farlAI ~= nil and player.opened == nil then
---          GUI.destroyAIGui(player)
---        end
-      end
-    end
     for i, farl in ipairs(global.farl) do
       farl:update(event)
       if farl.driver and farl.driver.name ~= "farl_player" then
@@ -281,6 +254,20 @@ clearAreas =
     end
   end
 
+  function onPlayerDrivingChangedState(event)
+    local player = game.players[event.player_index]
+    if (player.vehicle ~= nil and player.vehicle.name == "farl") then
+          if player.gui.left.farl == nil then
+            FARL.onPlayerEnter(player)
+            GUI.createGui(player)
+          end
+    end
+    if player.vehicle == nil and player.gui.left.farl ~= nil then
+      FARL.onPlayerLeave(player)
+      GUI.destroyGui(player)
+    end
+  end
+
   game.on_init(oninit)
   game.on_load(onload)
   game.on_event(defines.events.on_tick, onTick)
@@ -290,6 +277,8 @@ clearAreas =
   game.on_event(defines.events.on_preplayer_mined_item, onpreplayermineditem)
   --game.onevent(defines.events.on_built_entity, onbuiltentity)
   game.on_event(defines.events.on_entity_died, onentitydied)
+
+  game.on_event(defines.events.on_player_driving_changed_state, onPlayerDrivingChangedState)
 
   local function onplayercreated(event)
     local player = game.get_player(event.player_index)
