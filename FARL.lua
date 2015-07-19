@@ -808,15 +808,13 @@ FARL = {
       local canplace = self:genericCanPlace(newRail)
       --      if not canplace then
       self:prepareArea(newPos)
-      if not self:genericCanPlace(newRail) then
-        if nextRail.name == self.settings.rail.curved then
-          local areas = clearAreas[nextRail.direction%4]
-          for i=1,6 do
-            self:prepareArea(newPos, areas[i])
-            --              if self:genericCanPlace(newRail) then
-            --                break
-            --              end
-          end
+      if nextRail.name == self.settings.rail.curved then
+        local areas = clearAreas[nextRail.direction%4]
+        for i=1,6 do
+          self:prepareArea(newPos, areas[i])
+          --              if self:genericCanPlace(newRail) then
+          --                break
+          --              end
         end
       end
       --      end
@@ -967,26 +965,26 @@ FARL = {
   end,
 
   connectCCNet = function(self, pole)
-    if self.settings.ccNet and pole.neighbours[1] and self.ccNetPole then
+    if self.settings.ccNet and pole.neighbours.copper[1] and self.ccNetPole then
       if (self.settings.ccWires == 1 and self:getCargoCount("red-wire") > 0)
         or (self.settings.ccWires == 2 and self:getCargoCount("green-wire") > 0)
         or (self.settings.ccWires == 3 and (self:getCargoCount("red-wire") > 0 or self:getCargoCount("green-wire") > 0)) then
         local c = {}
         local items = {}
         if self.settings.ccWires == 1 then
-          c = {defines.circuit_connector.red}
+          c = {defines.circuitconnector.red}
           items = {"red-wire"}
         elseif self.settings.ccWires == 2 then
-          c = {defines.circuit_connector.green}
+          c = {defines.circuitconnector.green}
           items = {"green-wire"}
         else
-          c = {defines.circuit_connector.red, defines.circuit_connector.green}
+          c = {defines.circuitconnector.red, defines.circuitconnector.green}
           items = {"red-wire", "green-wire"}
         end
         for i=1,#c do
           if self:getCargoCount(items[i]) > 0 then
-            pole.connect_neighbour(self.ccNetPole, c[i])
-            self:removeItemFromCargo(items[i], 1)
+            --pole.connect_neighbour(self.ccNetPole, c[i])
+            --self:removeItemFromCargo(items[i], 1)
           end
         end
       end

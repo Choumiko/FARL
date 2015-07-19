@@ -68,22 +68,24 @@ inputToNewDir =
   }--{[]={pos={x=,y=},diag},[]={pos={x=,y=},diag}}
 
 --clearArea[curveDir%4]
-clearAreas =
-  {
-    [0]={{{x=-3.5,y=-3.5},{x=0.5,y=-2.5}},{{x=-3.5,y=-1.5},{x=1.5,y=-1.5}},
-      {{x=-2.5,y=-0.5},{x=1.5,y=-0.5}},{{x=-1.5,y=0.5},{x=2.5,y=0.5}},
-      {{x=-1.5,y=1.5}, {x=3.5,y=1.5}},{{x=-0.5,y=2.5},{x=3.5,y=3.5}}},
-    [1]={{{x=-0.5,y=-3.5},{x=3.5,y=-2.5}},{{x=-1.5,y=-1.5},{x=3.5,y=-1.5}},
-      {{x=-1.5,y=-0.5},{x=2.5,y=-0.5}},{{x=-2.5,y=0.5},{x=1.5,y=0.5}},
-      {{x=-3.5,y=1.5},{x=1.5,y=1.5}},{{x=-3.5,y=2.5},{x=0.5,y=3.5}}},
-    [2]={{{x=2.5,y=-3,5},{x=3.5,y=0.5}},{{x=1.5,y=-3,5},{x=1.5,y=1.5}},
-      {{x=0.5,y=-2.5},{x=0.5,y=1.5}},{{x=-0.5,y=-1.5},{x=-0.5,y=2.5}},
-      {{x=-1.5,y=-1.5},{x=-1.5,y=3.5}},{{x=-3.5,y=-0.5},{x=-2.5,y=3.5}}},
-    [3]={{{x=2.5,y=-0,5},{x=3.5,y=3.5}},{{x=1.5,y=-1,5},{x=1.5,y=3.5}},
-      {{x=0.5,y=-1.5},{x=0.5,y=2.5}},{{x=-0.5,y=-2.5},{x=-0.5,y=1.5}},
-      {{x=-1.5,y=-3.5},{x=-1.5,y=1.5}},{{x=-3.5,y=-3.5},{x=-2.5,y=0.5}}}
+clearAreas = {
+  [0]={
+    {{x=-2.5,y=-3.5},{x=0.5,y=0.5}},
+    {{x=-0.5,y=-0.5},{x=2.5,y=3.5}}
+  },
+  [1]={
+    {{x=-2.5,y=-0.5},{x=0.5,y=3.5}},
+    {{x=-0.5,y=-3.5},{x=2.5,y=0.5}}
+  },
+  [2]={
+    {{x=-3.5,y=-0.5},{x=0.5,y=2.5}},
+    {{x=-0.5,y=-2.5},{x=3.5,y=0.5}}
+  },
+  [3]={
+    {{x=-3.5,y=-2.5},{x=0.5,y=0.5}},
+    {{x=-0.5,y=-0.5},{x=3.5,y=2.5}},
   }
-
+}
   --poleDistance = 1, side = right
   defaultsDiagonal = {
     direction = 3,
@@ -321,8 +323,8 @@ clearAreas =
         if type(global.railInfoLast) == "table" and global.railInfoLast.valid then
           local pos = global.railInfoLast.position
           local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
-          --debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
-          --debugDump("Distance (util): "..util.distance(pos, rail.position),true)
+          debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
+          debugDump("Distance (util): "..util.distance(pos, rail.position),true)
           if AStar then
             local max = AStar.heuristic(global.railInfoLast, rail)
             debugDump("Distance (heuristic): "..max, true)
