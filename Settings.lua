@@ -54,9 +54,6 @@ Settings = {
   end,
 
   checkMods = function(self)
-    if not landfillInstalled then
-      self.bridge = false
-    end
     if not electricInstalled then
       self.electric = false
     end

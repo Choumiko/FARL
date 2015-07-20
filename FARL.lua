@@ -279,8 +279,9 @@ FARL = {
       end
       -- check to make sure water tiles were found
       if #tiles ~= 0 then
+        debugDump(#tiles,true)
         -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
-        local lfills = math.ceil(#tiles/4)
+        local lfills = math.ceil(#tiles/2)
         -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
         if self:getCargoCount("concrete") >= lfills then
           self.surface.set_tiles(tiles)
