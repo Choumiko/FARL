@@ -983,8 +983,8 @@ FARL = {
         end
         for i=1,#c do
           if self:getCargoCount(items[i]) > 0 then
-            --pole.connect_neighbour(self.ccNetPole, c[i])
-            --self:removeItemFromCargo(items[i], 1)
+            pole.connect_neighbour{target_entity = self.ccNetPole, wire=c[i]}
+            self:removeItemFromCargo(items[i], 1)
           end
         end
       end
@@ -1073,7 +1073,7 @@ FARL = {
   placePole = function(self, lastrail, nextRail)
     local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = self.settings.medium and 9+1 or 30+1
-    if self.settings.minPoles then
+    if self.settings.minPoles and not self.settings.ccNet then
       local poles = self.surface.find_entities_filtered{area=expandPos(self.locomotive.position,reach), name=name}
       local checkpos = lastrail and lastrail.position or self.locomotive.position
       local min, pole = math.abs(distance(self.lastPole.position, checkpos)), nil
