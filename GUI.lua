@@ -47,7 +47,7 @@ GUI = {
         collectWood = settings.collectWood,
         dropWood = settings.dropWood,
         root = settings.root
-        
+
       }
     end,
 
@@ -60,7 +60,7 @@ GUI = {
         if e.type == "checkbox" then
           if e.state == nil then
             e.state = false
-          end 
+          end
           if type(bind) == "string" then
             e.state = Settings.loadByPlayer(parent.gui.player)[e.name]
           else
@@ -72,6 +72,9 @@ GUI = {
       local ret = parent.add(e)
       if bind and e.type == "textfield" then
         ret.text = bind
+      end
+      if e.type == "checkbox" and e.state == nil then
+        e.state = false
       end
       return ret
     end,
@@ -105,51 +108,14 @@ GUI = {
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
       GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
       --GUI.add(rows,{type="checkbox", name="maintenance", caption="Replace"},GUI.toggleMaintenance)
-      if landfillInstalled then
-        GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
-      end
+      GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
     end,
 
     destroyGui = function(player)
       if player.gui.left.farl == nil then return end
       player.gui.left.farl.destroy()
     end,
-    
---    createAIGui = function(player, farl)
---      player.print("Opened "..farl.locomotive.backername)
---      if player.gui.left.farlAI ~= nil then return end
---      local psettings = Settings.loadByPlayer(player)
---      --GUI.init(player)
---      local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farlAI"})
---      local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
---      local span = 3
---      if game.getplayer("Choumiko") then
---        span = 4
---      end
---      local buttons = GUI.add(rows, {type="table", name="buttons", colspan=span})
---      GUI.addButton(buttons, {name="start", style="farl_button"}, GUI.toggleStart)
---      GUI.addButton(buttons, {name="cc"}, GUI.toggleCC)
---      if game.getplayer("Choumiko") then
---        GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
---      end
---      GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
---      GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
---      --GUI.add(rows,{type="checkbox", name="maintenance", caption="Replace"},GUI.toggleMaintenance)
---      if landfillInstalled then
---        GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
---      end
---    end,
---    
---    destroyAIGui = function(player)
---      player.print("Closed ui")
---      if player.gui.left.farlAI == nil then return end
---      player.gui.left.farlAI.destroy()
---    end,
---    
---    onAIGuiClick = function(event, farl, player)
---      GUI.onGuiClick(event,farl,player)
---    end,
-    
+
     onGuiClick = function(event, farl, player)
       local name = event.element.name
       if GUI.callbacks[name] then
@@ -158,8 +124,6 @@ GUI = {
       local psettings = Settings.loadByPlayer(player)
       if name == "debug" then
         saveVar(glob,"debug")
-        --glob.debug = {}
-        --glob.action = {}
         farl:debugInfo()
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
         or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" then
@@ -172,11 +136,7 @@ GUI = {
           end
         end
       elseif name == "bridge" then
-        if landfillInstalled then
-          psettings.bridge = not psettings.bridge
-        else
-          psettings.bridge = false
-        end
+        psettings.bridge = not psettings.bridge
       elseif name == "poweredRails" then
         if not electricInstalled then
           psettings.rail = rails.basic
@@ -199,7 +159,7 @@ GUI = {
     toggleStart = function(event, farl, player)
       farl:toggleActive()
     end,
-    
+
     debugInfo = function(event, farl, player)
       farl:debugInfo()
     end,
@@ -244,12 +204,12 @@ GUI = {
     toggleCC = function(event, farl, player)
       farl:toggleCruiseControl()
     end,
-    
+
     toggleRootMode = function(event, farl, player)
       farl:toggleRootMode()
       GUI.updateGui(farl)
     end,
-    
+
     toggleSettingsWindow = function(event, farl, player)
       local row = player.gui.left.farl.rows
       local psettings = Settings.loadByPlayer(player)
@@ -300,13 +260,13 @@ GUI = {
     findBlueprintsInHotbar = function(player)
       local blueprints = {}
       if player ~= nil then
-        local hotbar = player.getinventory(1)
+        local hotbar = player.get_inventory(1)
         if hotbar ~= nil then
           local i = 1
           while (i < 30) do
             local itemStack
             if pcall(function () itemStack = hotbar[i] end) then
-              if itemStack ~= nil and itemStack.type == "blueprint" then
+              if itemStack ~= nil and itemStack.valid_for_read and itemStack.type == "blueprint" then
                 table.insert(blueprints, itemStack)
               end
               i = i + 1
@@ -324,7 +284,7 @@ GUI = {
       if blueprints ~= nil then
         local ret = {}
         for i, blueprint in ipairs(blueprints) do
-          if blueprint.isblueprintsetup() then
+          if blueprint.is_blueprint_setup() then
             table.insert(ret, blueprint)
           end
         end
@@ -348,8 +308,8 @@ GUI = {
         medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight},
         big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}}
       psettings.activeBP = psettings.medium and psettings.bp.medium or psettings.bp.big
-      if glob.savedBlueprints[player.name] then
-        glob.savedBlueprints[player.name] = nil
+      if global.savedBlueprints[player.name] then
+        global.savedBlueprints[player.name] = nil
       end
       farl:print("Cleared blueprints")
       GUI.destroyGui(player)
@@ -370,7 +330,7 @@ GUI = {
         --GUI.init(farl.driver)
         farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
-        farl.driver.gui.left.farl.rows.root.state = farl.settings.root or false
+        farl.driver.gui.left.farl.rows.root.state = farl.settings.root
       end
     end,
 }

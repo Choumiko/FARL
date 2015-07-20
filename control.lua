@@ -10,16 +10,12 @@ godmode = false
 removeStone = true
 
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
-landfillInstalled = game.entityprototypes["landfill2by2"] and true or false
-electricInstalled = (game.entityprototypes["straight-power-rail"] and remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated) and true or false
+electricInstalled = (game.entity_prototypes["straight-power-rail"] and remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated) and true or false
 
 cargoTypes = { ["straight-rail"] = true, ["curved-rail"] = true,["rail-signal"] = true,
   ["big-electric-pole"] = true, ["medium-electric-pole"] = true, ["small-lamp"] = true,
   ["green-wire"] = true, ["red-wire"] = true
 }
-if landfillInstalled then
-  cargoTypes["landfill2by2"] = true
-end
 
 if electricInstalled then
   cargoTypes["straight-power-rail"] = true
@@ -72,22 +68,24 @@ inputToNewDir =
   }--{[]={pos={x=,y=},diag},[]={pos={x=,y=},diag}}
 
 --clearArea[curveDir%4]
-clearAreas =
-  {
-    [0]={{{x=-3.5,y=-3.5},{x=0.5,y=-2.5}},{{x=-3.5,y=-1.5},{x=1.5,y=-1.5}},
-      {{x=-2.5,y=-0.5},{x=1.5,y=-0.5}},{{x=-1.5,y=0.5},{x=2.5,y=0.5}},
-      {{x=-1.5,y=1.5}, {x=3.5,y=1.5}},{{x=-0.5,y=2.5},{x=3.5,y=3.5}}},
-    [1]={{{x=-0.5,y=-3.5},{x=3.5,y=-2.5}},{{x=-1.5,y=-1.5},{x=3.5,y=-1.5}},
-      {{x=-1.5,y=-0.5},{x=2.5,y=-0.5}},{{x=-2.5,y=0.5},{x=1.5,y=0.5}},
-      {{x=-3.5,y=1.5},{x=1.5,y=1.5}},{{x=-3.5,y=2.5},{x=0.5,y=3.5}}},
-    [2]={{{x=2.5,y=-3,5},{x=3.5,y=0.5}},{{x=1.5,y=-3,5},{x=1.5,y=1.5}},
-      {{x=0.5,y=-2.5},{x=0.5,y=1.5}},{{x=-0.5,y=-1.5},{x=-0.5,y=2.5}},
-      {{x=-1.5,y=-1.5},{x=-1.5,y=3.5}},{{x=-3.5,y=-0.5},{x=-2.5,y=3.5}}},
-    [3]={{{x=2.5,y=-0,5},{x=3.5,y=3.5}},{{x=1.5,y=-1,5},{x=1.5,y=3.5}},
-      {{x=0.5,y=-1.5},{x=0.5,y=2.5}},{{x=-0.5,y=-2.5},{x=-0.5,y=1.5}},
-      {{x=-1.5,y=-3.5},{x=-1.5,y=1.5}},{{x=-3.5,y=-3.5},{x=-2.5,y=0.5}}}
+clearAreas = {
+  [0]={
+    {{x=-2.5,y=-3.5},{x=0.5,y=0.5}},
+    {{x=-0.5,y=-0.5},{x=2.5,y=3.5}}
+  },
+  [1]={
+    {{x=-2.5,y=-0.5},{x=0.5,y=3.5}},
+    {{x=-0.5,y=-3.5},{x=2.5,y=0.5}}
+  },
+  [2]={
+    {{x=-3.5,y=-0.5},{x=0.5,y=2.5}},
+    {{x=-0.5,y=-2.5},{x=3.5,y=0.5}}
+  },
+  [3]={
+    {{x=-3.5,y=-2.5},{x=0.5,y=0.5}},
+    {{x=-0.5,y=-0.5},{x=3.5,y=2.5}},
   }
-
+}
   --poleDistance = 1, side = right
   defaultsDiagonal = {
     direction = 3,
@@ -157,34 +155,7 @@ clearAreas =
   end
 
   local function onTick(event)
-
-    if event.tick % 10 == 0  then
-      for pi, player in ipairs(game.players) do
-        if (player.vehicle ~= nil and player.vehicle.name == "farl") then
-          if player.gui.left.farl == nil then
-            FARL.onPlayerEnter(player)
-            GUI.createGui(player)
-          end
-        end
-        if player.vehicle == nil and player.gui.left.farl ~= nil then
-          FARL.onPlayerLeave(player)
-          GUI.destroyGui(player)
-        end
---        if player.opened ~= nil and player.gui.left.farlAI == nil and player.opened.name == "farl" then
---          local i = FARL.findByLocomotive(player.opened)
---          if i then
---            glob.farl[i].settings = Settings.loadByPlayer(player)
---            GUI.createAIGui(player, glob.farl[i])
---          else
---            table.insert(glob.farl, FARL.new(player, player.opened))
---          end
---        end
---        if player.gui.left.farlAI ~= nil and player.opened == nil then
---          GUI.destroyAIGui(player)
---        end
-      end
-    end
-    for i, farl in ipairs(glob.farl) do
+    for i, farl in ipairs(global.farl) do
       farl:update(event)
       if farl.driver and farl.driver.name ~= "farl_player" then
         GUI.updateGui(farl)
@@ -193,118 +164,31 @@ clearAreas =
   end
 
   local function initGlob()
-    if glob.version == nil then
-      glob = {}
-      glob.version = "0.0.0"
+    if global.version == nil or global.version < "0.3.0" then
+      global = {}
+      global.version = "0.0.0"
     end
-    if glob.version < "0.2.8" then
-      migrate()
-    end
-    glob.players = glob.players or {}
-    glob.savedBlueprints = glob.savedBlueprints or {}
-    glob.farl = glob.farl or {}
-    glob.railInfoLast = glob.railInfoLast or {}
-    glob.debug = glob.debug or {}
-    glob.action = glob.action or {}
-    if glob.godmode == nil then glob.godmode = false end
-    godmode = glob.godmode
-    for i,farl in ipairs(glob.farl) do
+    global.players = global.players or {}
+    global.savedBlueprints = global.savedBlueprints or {}
+    global.farl = global.farl or {}
+    global.railInfoLast = global.railInfoLast or {}
+    if global.godmode == nil then global.godmode = false end
+    godmode = global.godmode
+    for i,farl in ipairs(global.farl) do
       farl = resetMetatable(farl, FARL)
     end
-    if glob.version < "0.2.8" then
-      --saveVar(glob,"preMigrate")
-      local bps = {"big", "medium"}
-      if glob.activeBP then
-        if glob.activeBP.diagonal.lamps then
-          glob.activeBP.diagonal.poleEntities = glob.activeBP.diagonal.lamps
-          glob.activeBP.straight.poleEntities = glob.activeBP.straight.lamps
-        end
-      end
-      for _, k in pairs(bps) do
-        if glob.settings.bp[k] then
-          if glob.settings.bp[k].diagonal.lamps then
-            glob.settings.bp[k].diagonal.poleEntities = util.table.deepcopy(glob.settings.bp[k].diagonal.lamps)
-            glob.settings.bp[k].diagonal.lamps = nil
-            glob.settings.bp[k].straight.poleEntities = util.table.deepcopy(glob.settings.bp[k].straight.lamps)
-            glob.settings.bp[k].straight.lamps = nil
-          end
-        end
-      end
-      --saveVar(glob, "postMigrate")
-      local stg = {
-        activeBP = glob.activeBP,
-        bp = glob.settings.bp,
-        ccNet = glob.settings.ccNet,
-        ccWires = glob.settings.ccWires,
-        collectWood = glob.settings.collectWood,
-        curvedWeight = glob.settings.curvedWeight,
-        cruiseSpeed = glob.cruiseSpeed,
-        dropWood = glob.settings.dropWood,
-        electric = glob.settings.electric,
-        flipPoles = glob.settings.flipPoles,
-        flipSignals = false,
-        signalDistance = glob.settings.signalDistance,
-        medium = glob.medium,
-        minPoles = glob.minPoles,
-        poles = glob.poles,
-        rail = glob.rail,
-        signals = glob.signals,
-        bridge = glob.bridge,
-      }
-      glob.players = {}
-      for pi, player in pairs(game.players) do
-        local settings = Settings.loadByPlayer(player)
-        settings = resetMetatable(settings,Settings)
-        settings:update(util.table.deepcopy(stg))
-      end
-      glob.settings = nil
-      glob.electricInstalled = nil
-      for k, v in pairs(stg) do
-        if k ~= "farl" and k ~= "players" then
-          if glob[k] ~= nil then
-            glob[k] = nil
-          end
-        end
-      end
-      for i,f in pairs(glob.farl) do
-        for k,v in pairs(cargoTypes) do
-          if f[k] ~= nil then
-            f[k] = nil
-          end
-        end
-      end
-      --saveVar(glob, "postMigrate2")
-    end
-    if glob.version < "0.2.9" then
-      glob.savedBlueprints = {}
-      for name, s in pairs(glob.players) do
-        if s.medium then
-          s.activeBP.diagonal = defaultsMediumDiagonal
-          s.activeBP.straight = defaultsMediumStraight
-          s.bp.big.diagonal = defaultsDiagonal
-          s.bp.big.straight = defaultsStraight  
-        else
-          s.activeBP.diagonal = defaultsDiagonal
-          s.activeBP.straight = defaultsStraight
-          s.bp.medium.diagonal = defaultsMediumDiagonal
-          s.bp.medium.straight = defaultsMediumStraight  
-        end
-      end
-    end
-    for name, s in pairs(glob.players) do
+    for name, s in pairs(global.players) do
       s = resetMetatable(s,Settings)
       s:checkMods()
-      --assert(getmetatable(s) == Settings)
-      --s:dump()
     end
-    glob.version = "0.2.9"
+    global.version = "0.3.0"
   end
 
   local function oninit() initGlob() end
 
   local function onload()
     initGlob()
-    for i,f in pairs(glob.farl) do
+    for i,f in pairs(global.farl) do
       if f.driver and f.driver.gui.left.farl then
         GUI.destroyGui(f.driver)
         GUI.createGui(f.driver)
@@ -313,7 +197,7 @@ clearAreas =
   end
 
   local function onGuiClick(event)
-    local index = event.playerindex or event.name
+    local index = event.player_index
     local player = game.players[index]
     if player.gui.left.farl ~= nil then --and player.gui.left.farlAI == nil then
       local farl = FARL.findByPlayer(player)
@@ -324,39 +208,25 @@ clearAreas =
         GUI.destroyGui(player)
       end
     end
---    if player.gui.left.farlAI ~= nil and player.gui.left.farl == nil then
---      if player.opened and player.opened.name == "farl" then
---        local farl = FARL.findByLocomotive(player.opened)
---        if farl then
---          GUI.onAIGuiClick(event, glob.farl[farl], player)
---        else
---          player.print("AI gui: Could not find train")
---          GUI.destroyAIGui(player)
---        end
---      else
---        player.print("AI gui without train!")
---        GUI.destroyAIGui(player)
---      end
---    end
   end
 
   function onpreplayermineditem(event)
     local ent = event.entity
     local cname = ent.name
     if ent.type == "locomotive" and cname == "farl" then
-      for i=1,#glob.farl do
-        if glob.farl[i].name == ent.backername then
-          glob.farl[i].delete = true
+      for i=1,#global.farl do
+        if global.farl[i].name == ent.backer_name then
+          global.farl[i].delete = true
         end
       end
     end
   end
 
   function onplayermineditem(event)
-    if event.itemstack.name == "farl" then
-      for i=#glob.farl,1,-1 do
-        if glob.farl[i].delete then
-          table.remove(glob.farl, i)
+    if event.item_stack.name == "farl" then
+      for i=#global.farl,1,-1 do
+        if global.farl[i].delete then
+          table.remove(global.farl, i)
         end
       end
     end
@@ -367,23 +237,39 @@ clearAreas =
     if ent.type == "locomotive" and ent.name == "farl" then
       local i = FARL.findByLocomotive(event.entity)
       if i then
-        table.remove(glob.farl, i)
+        table.remove(global.farl, i)
       end
     end
   end
 
-  game.oninit(oninit)
-  game.onload(onload)
-  game.onevent(defines.events.ontick, onTick)
-  game.onevent(defines.events.onguiclick, onGuiClick)
-  --game.onevent(defines.events.ontrainchangedstate, ontrainchangedstate)
-  game.onevent(defines.events.onplayermineditem, onplayermineditem)
-  game.onevent(defines.events.onpreplayermineditem, onpreplayermineditem)
-  --game.onevent(defines.events.onbuiltentity, onbuiltentity)
-  game.onevent(defines.events.onentitydied, onentitydied)
+  function onPlayerDrivingChangedState(event)
+    local player = game.players[event.player_index]
+    if (player.vehicle ~= nil and player.vehicle.name == "farl") then
+      if player.gui.left.farl == nil then
+        FARL.onPlayerEnter(player)
+        GUI.createGui(player)
+      end
+    end
+    if player.vehicle == nil and player.gui.left.farl ~= nil then
+      FARL.onPlayerLeave(player)
+      GUI.destroyGui(player)
+    end
+  end
+
+  game.on_init(oninit)
+  game.on_load(onload)
+  game.on_event(defines.events.on_tick, onTick)
+  game.on_event(defines.events.on_gui_click, onGuiClick)
+  --game.on_event(defines.events.on_train_changed_state, ontrainchangedstate)
+  game.on_event(defines.events.on_player_mined_item, onplayermineditem)
+  game.on_event(defines.events.on_preplayer_mined_item, onpreplayermineditem)
+  --game.onevent(defines.events.on_built_entity, onbuiltentity)
+  game.on_event(defines.events.on_entity_died, onentitydied)
+
+  game.on_event(defines.events.on_player_driving_changed_state, onPlayerDrivingChangedState)
 
   local function onplayercreated(event)
-    local player = game.getplayer(event.playerindex)
+    local player = game.get_player(event.player_index)
     local gui = player.gui
     if gui.top.farl ~= nil then
       gui.top.farl.destroy()
@@ -391,7 +277,7 @@ clearAreas =
     --debugDump("onplayercreated",true)
   end
 
-  game.onevent(defines.events.onplayercreated, onplayercreated)
+  game.on_event(defines.events.on_player_created, onplayercreated)
 
   function debugDump(var, force)
     if false or force then
@@ -411,7 +297,7 @@ clearAreas =
     local var = var or glob
     local n = name or ""
     game.makefile("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
-    --game.makefile("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
+    --game.make_file("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
   end
 
   --  driverNextDir = 1
@@ -430,30 +316,30 @@ clearAreas =
   --    end
   --  end
 
-  remote.addinterface("farl",
+  remote.add_interface("farl",
     {
       railInfo = function(rail)
         debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
-        if type(glob.railInfoLast) == "table" and glob.railInfoLast.valid then
-          local pos = glob.railInfoLast.position
+        if type(global.railInfoLast) == "table" and global.railInfoLast.valid then
+          local pos = global.railInfoLast.position
           local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
-          --debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
-          --debugDump("Distance (util): "..util.distance(pos, rail.position),true)
+          debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
+          debugDump("Distance (util): "..util.distance(pos, rail.position),true)
           if AStar then
-            local max = AStar.heuristic(glob.railInfoLast, rail)
+            local max = AStar.heuristic(global.railInfoLast, rail)
             debugDump("Distance (heuristic): "..max, true)
           end
-          glob.railInfoLast = false
+          global.railInfoLast = false
         else
-          glob.railInfoLast = rail
+          global.railInfoLast = rail
         end
       end,
       debugInfo = function()
         saveVar(glob, "console")
-        --saveVar(glob.debug, "RailDebug")
+        --saveVar(global.debug, "RailDebug")
       end,
       reset = function()
-        glob.farl = {}
+        global.farl = {}
         if game.forces.player.technologies["rail-signals"].researched then
           game.forces.player.recipes["farl"].enabled = true
         end
@@ -465,22 +351,22 @@ clearAreas =
       end,
 
       setCurvedWeight = function(weight)
-        local w = tonumber(weight) or glob.settings.curvedWeight
-        glob.settings.curvedWeight = w < 0 and 1 or w
+        local w = tonumber(weight) or global.settings.curvedWeight
+        global.settings.curvedWeight = w < 0 and 1 or w
       end,
 
       godmode = function(bool)
-        glob.godmode = bool
+        global.godmode = bool
         godmode = bool
       end,
       setSpeed = function(speed)
-        for name, s in pairs(glob.players) do
+        for name, s in pairs(global.players) do
           s.cruiseSpeed = speed
         end
       end,
 
       tileAt = function(x,y)
-        debugDump(game.gettile(x, y).name,true)
+        debugDump(game.get_tile(x, y).name,true)
       end,
 
       quickstart = function()
