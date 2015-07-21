@@ -60,6 +60,7 @@ function distance(pos1, pos2)
 end
 
 function expandPos(pos, range)
+  if not pos or not pos.x then error("invalid pos",3) end
   return {{pos.x - range, pos.y - range}, {pos.x + range, pos.y + range}}
 end
 
@@ -201,35 +202,34 @@ FARL = {
           end
         end
         self.cruiseInterrupt = self.driver.riding_state.acceleration
-        if not self.maintenance then
-          if self.active then
-            --self.train.manual_mode = true
-            --if self.active and self.settings.root then
-            local lastWagon = self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
-            local firstWagon = not self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
+        if self.active then
+          local lastWagon = self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
+          local firstWagon = not self.frontmover and self.train.carriages[#self.train.carriages].position or self.train.carriages[1].position
+          if (self.frontmover and self.train.speed >= 0) or (not self.frontmover and self.train.speed <= 0) then
+            --debugDump(distance(firstWagon, self.path[1].position),true)
             local c = #self.path
             local behind = self.path[c].name
             local dist = distance(lastWagon, self.path[c].position)
             while dist > 10 and distance(firstWagon, self.path[c].position) > dist do
-              --if dist >= 6 then
-              --flyingText = function(self, line, color, show, pos)
               --self:flyingText("c", RED, true, self.path[c].position)
-              if self.path[c].valid and (self.path[c].name == self.settings.rail.curved or self.path[c].name == self.settings.rail.straight) then
-                --self:flyingText(#self.path, GREEN,true, self.path[c].position)
-                if self.settings.root then
-                  self.path[c].destroy()
-                  self:addItemToCargo(behind,1)
+              if c < 15 then
+                break
+              else
+                if self.path[c].valid and (self.path[c].name == self.settings.rail.curved or self.path[c].name == self.settings.rail.straight) then
+                  --self:flyingText(#self.path, GREEN,true, self.path[c].position)
+                  if self.settings.root then
+                    self.path[c].destroy()
+                    self:addItemToCargo(behind,1)
+                  end
+                  table.remove(self.path, c)
+                  c = #self.path
+                  dist = distance(lastWagon, self.path[c].position)
                 end
-                table.remove(self.path, c)
-                c = #self.path
-                dist = distance(lastWagon, self.path[c].position)
               end
             end
           end
-          self:layRails()
-        else
-          self:replaceMode()
         end
+        self:layRails()
       end
     end
   end,
@@ -415,7 +415,8 @@ FARL = {
           local dir, last = self:placeRails(self.previousDirection, self.lastrail, self.direction, nextRail, newTravelDir)
           if dir then
             if not last.position and not last.name then
-              error("Placed rail but no entity returned", 2)
+              self:deactivate("Placed rail but no entity returned")
+              return
             end
             table.insert(self.path, 1, last)
             if self.settings.poles then
@@ -578,6 +579,7 @@ FARL = {
     self.lastrail = nil
     self.direction = nil
     self.lastPole, self.lastCheckPole = nil,nil
+    self.ccNetPole = nil
     self.previousDirection, self.lastCheckDir = nil, nil
     self.recheckRails = {}
   end,
@@ -983,7 +985,7 @@ FARL = {
         end
         for i=1,#c do
           if self:getCargoCount(items[i]) > 0 then
-            pole.connect_neighbour{target_entity = self.ccNetPole, wire=c[i]}
+            pole.connect_neighbour({target_entity = self.ccNetPole, wire=c[i]})
             self:removeItemFromCargo(items[i], 1)
           end
         end
@@ -1163,7 +1165,6 @@ FARL = {
           self:findLastPole()
           self:flyingText({"","Out of ", "",name}, YELLOW, true, addPos(self.locomotive.position, {x=0,y=0}))
           --self:print({"","Out of ","",name})
-          debugDump()
         end
         if not canPlace then
           debugDump("Can`t place pole@"..pos2Str(polePos),true)
@@ -1218,9 +1219,9 @@ FARL = {
         min = dist
       end
     end
+    local lastrail = self.lastrail or self:findLastRail()
+    local trainDir = self:calcTrainDir()
     if not pole then
-      local trainDir = self:calcTrainDir()
-      local lastrail = self.lastrail or self:findLastRail()
       local offset = {x=1,y=1}
       if lastrail.name ~= self.settings.rail.curved then
         offset = self:calcPole(lastrail, trainDir)
@@ -1237,7 +1238,12 @@ FARL = {
     else
       self.ccNetPole = pole
       self.lastPole = pole
-      --self.lastCheckPole = {x=pole.position.x,y=pole.position.y}
+      self:flyingText2("p", GREEN, true, pole.position)
+      local tmp = moveposition(fixPos(self:calcPole(lastrail, trainDir)), trainDir, -1)
+      tmp.x, tmp.y = tmp[1], tmp[2]
+      self.lastCheckPole = addPos(self.lastrail.position, tmp)
+      self:flyingText2("cp", GREEN, true, self.lastCheckPole)
+      self.lastCheckDir = trainDir
     end
   end,
 
