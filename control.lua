@@ -5,7 +5,7 @@ require "GUI"
 require "migrate"
 
 
-debugButton = true
+debugButton = false
 godmode = false
 removeStone = true
 
@@ -357,9 +357,11 @@ clearAreas = {
         initGlob()
       end,
 
-      setCurvedWeight = function(weight)
-        local w = tonumber(weight) or global.settings.curvedWeight
-        global.settings.curvedWeight = w < 0 and 1 or w
+      setCurvedWeight = function(weight, player)
+        local w = tonumber(weight) or 4
+        local s = Settings.loadByPlayer(player)
+        s.curvedWeight = weight
+        --saveVar(s)
       end,
 
       godmode = function(bool)

@@ -60,6 +60,7 @@ function distance(pos1, pos2)
 end
 
 function expandPos(pos, range)
+  local range = range or 0.5
   if not pos or not pos.x then error("invalid pos",3) end
   return {{pos.x - range, pos.y - range}, {pos.x + range, pos.y + range}}
 end
@@ -186,7 +187,7 @@ FARL = {
   end,
 
   update = function(self, event)
-    if self.driver then
+    if self.driver and self.driver.valid then
       if not self.train.valid then
         if self.locomotive.valid then
           self.train = self.locomotive.train
@@ -234,20 +235,26 @@ FARL = {
     end
   end,
 
-  prepareArea = function(self,pos, area)
-    if not area then
-      area = expandPos(pos,1.5)
+  --prepare an area for entity so it can be placed
+  prepareArea = function(self,entity,range)
+    local pos = entity.position
+    local area = false
+    local range = range or 1.5
+    area = expandPos(pos,range)
+    if not self:genericCanPlace(entity) then
+      self:removeTrees(area)
+      self:pickupItems(area)
+      self:removeStone(area)
     else
-      local tl, lr = fixPos(addPos(pos,area[1])), fixPos(addPos(pos,area[2]))
-      area = {{tl[1]-1,tl[2]-1},{lr[1]+1,lr[2]+1}}
+      return true
     end
-    self:removeTrees(pos, area)
-    self:pickupItems(pos, area)
-    self:removeStone(area)
-    self:fillWater(area)
+    if not self:genericCanPlace(entity) then
+      self:fillWater(area)
+    end
+    return self:genericCanPlace(entity)
   end,
 
-  removeTrees = function(self, pos, area)
+  removeTrees = function(self, area)
     for _, entity in pairs(self.surface.find_entities_filtered{area = area, type = "tree"}) do
       entity.die()
       if not godmode and self.settings.collectWood then self:addItemToCargo("raw-wood", 1) end
@@ -292,7 +299,7 @@ FARL = {
     end
   end,
 
-  pickupItems = function(self,pos, area)
+  pickupItems = function(self, area)
     for _, entity in ipairs(self.surface.find_entities_filtered{area = area, name="item-on-ground"}) do
       self:addItemToCargo(entity.stack.name, entity.stack.count)
       entity.destroy()
@@ -429,6 +436,7 @@ FARL = {
             if self.settings.signals and not self.settings.root then
               local signalWeight = nextRail.name == self.settings.rail.curved and self.settings.curvedWeight or 1
               self.signalCount = self.signalCount + signalWeight
+              --self:print(self.signalCount)
               if self:getCargoCount("rail-signal") > 0 then
                 if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
               else
@@ -807,21 +815,23 @@ FARL = {
       local newDir = nextRail.direction
       local newPos = nextRail.position
       local newRail = {name = nextRail.name, position = newPos, direction = newDir}
-      local canplace = self:genericCanPlace(newRail)
-      --      if not canplace then
-      self:prepareArea(newPos)
-      if nextRail.name == self.settings.rail.curved then
-        local areas = clearAreas[nextRail.direction%4]
-        for i=1,6 do
-          self:prepareArea(newPos, areas[i])
-          --              if self:genericCanPlace(newRail) then
-          --                break
-          --              end
+
+      if newRail.name == self.settings.rail.curved then
+        local areas = clearAreas[newRail.direction%4]
+        for i=1,2 do
+          local area = areas[i]
+          local tl, lr = fixPos(addPos(newRail.position,area[1])), fixPos(addPos(newRail.position,area[2]))
+          area = {{tl[1]-1,tl[2]-1},{lr[1]+1,lr[2]+1}}
+          self:removeTrees(area)
+          self:pickupItems(area)
+          self:removeStone(area)
+          if not self:genericCanPlace(newRail) then
+            self:fillWater(area)
+          end
         end
       end
-      --      end
-      local hasRail = self:getCargoCount(nextRail.name) > 0
-      canplace = self:genericCanPlace(newRail)
+      local canplace = self:prepareArea(newRail)
+      local hasRail = self:getCargoCount(newRail.name) > 0
       if canplace and hasRail then
         newRail.force = game.forces.player
         local _, ent = self:genericPlace(newRail)
@@ -949,11 +959,7 @@ FARL = {
           local pos = addPos(pole, offset)
           --debugDump(pos, true)
           local entity = {name = poleEntities[i].name, position = pos}
-          local canplace = self:genericCanPlace(entity)
-          --if not canplace then
-          self:prepareArea(pos)
-          --end
-          if self:genericCanPlace(entity) then
+          if self:prepareArea(entity) then
             local _, ent = self:genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = game.forces.player}
             if ent then
               self:removeItemFromCargo(poleEntities[i].name, 1)
@@ -1120,10 +1126,7 @@ FARL = {
       end
       local pole = {name = name, position = polePos}
       --debugDump(util.distance(pole.position, self.lastPole.position),true)
-      --if not self:genericCanPlace(pole) then
-      self:prepareArea(polePos)
-      --end
-      local canPlace = self:genericCanPlace(pole)
+      local canPlace = self:prepareArea(pole)
       local hasPole = self:getCargoCount(name) > 0
       if canPlace and hasPole then
         local success, pole = self:genericPlace{name = name, position = polePos, force = game.forces.player}
@@ -1192,9 +1195,8 @@ FARL = {
       end
       local pos = addPos(rail.position, offset)
       local signal = {name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
-      --if not self:genericCanPlace(signal) then
-      self:prepareArea(pos)
-      --end
+
+      self:prepareArea(signal)
       local success, entity = self:genericPlace(signal)
       if entity then
         self:removeItemFromCargo(signal.name, 1)
