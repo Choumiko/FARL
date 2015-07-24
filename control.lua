@@ -281,7 +281,6 @@ clearAreas = {
     if gui.top.farl ~= nil then
       gui.top.farl.destroy()
     end
-    --debugDump("onplayercreated",true)
   end
 
   game.on_event(defines.events.on_player_created, onplayercreated)
@@ -304,7 +303,6 @@ clearAreas = {
     local var = var or glob
     local n = name or ""
     game.makefile("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
-    --game.make_file("farl/loco"..n..".lua", serpent.block(findAllEntitiesByType("locomotive")))
   end
 
   --  driverNextDir = 1
@@ -361,7 +359,6 @@ clearAreas = {
         local w = tonumber(weight) or 4
         local s = Settings.loadByPlayer(player)
         s.curvedWeight = weight
-        --saveVar(s)
       end,
 
       godmode = function(bool)
@@ -409,5 +406,4 @@ clearAreas = {
           debugDump({i=i,type=w.type},true)
         end
       end
-    --/c local radius = 1024;game.forces.player.chart{{-radius, -radius}, {radius, radius}}
     })

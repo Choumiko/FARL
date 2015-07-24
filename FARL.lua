@@ -809,7 +809,7 @@ FARL = {
       self:print("Couldn't create junction")
     end
   end,
-  --self:placeRails(self.previousDirection, self.lastrail, self.direction, nextRail, newTravelDir
+
   placeRails = function(self, lastInDir, lastRail, newInDir, nextRail, newTravelDir)
     if newTravelDir and nextRail.position then
       local newDir = nextRail.direction
