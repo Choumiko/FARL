@@ -275,11 +275,17 @@ FARL = {
       -- following code mostly pulled from landfill mod itself and adjusted to fit
       local tiles = {}
       local st, ft = area[1],area[2]
+      local dw, w = 0, 0
       for x = st[1], ft[1], 1 do
         for y = st[2], ft[2], 1 do
           local tileName = self.surface.get_tile(x, y).name
           -- check that tile is water, if it is add it to a list of tiles to be changed to grass
           if tileName == "water" or tileName == "deepwater" then
+            if tileName == "water" then
+              w = w+1
+            else
+              dw = dw+1
+            end
             table.insert(tiles,{name="grass", position={x, y}})
           end
         end
@@ -287,7 +293,8 @@ FARL = {
       -- check to make sure water tiles were found
       if #tiles ~= 0 then
         -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
-        local lfills = math.ceil(#tiles/2)
+        local lfills = math.ceil(w/2 + dw*1.5)
+        local lfills = lfills > 20 and 20 or lfills
         -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
         if self:getCargoCount("concrete") >= lfills then
           self.surface.set_tiles(tiles)
