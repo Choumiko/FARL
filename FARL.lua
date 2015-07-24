@@ -543,7 +543,7 @@ FARL = {
             end
           end
           self.signalCount = signalCount
-          --self:flyingText("SignalCount: "..self.signalCount, GREEN, true)
+          --self:print("SignalCount: "..self.signalCount, GREEN, true)
           check = self:findNeighbours(check[1][2], check[1][1])
           if check and type(check) == "table" and check[1] and check[1][2] then
             --debugDump(check[1][2],true)
@@ -1252,7 +1252,8 @@ FARL = {
     local locomotive = self.locomotive
     local player = self.driver
     --if not self.active then self:activate() end
-    self:print("Train@"..pos2Str(locomotive.position).." dir:"..self:calcTrainDir())
+    self:print("Train@"..pos2Str(locomotive.position).." dir:"..self:calcTrainDir().." orient:"..locomotive.orientation)
+    self:print("calcDir: "..self.locomotive.orientation * 8)
     local rail = self:railBelowTrain()
     if rail then
       --self:flyingText2("B", GREEN, true, rail.position)
@@ -1275,7 +1276,8 @@ FARL = {
   end,
 
   calcTrainDir = function(self)
-    return math.floor(self.locomotive.orientation * 8)
+    local r = (self.locomotive.orientation > 0.99 and self.locomotive.orientation < 1) and 0 or self.locomotive.orientation
+    return math.floor(r * 8)
   end,
 
   --    curve  traindirs

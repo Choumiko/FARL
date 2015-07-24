@@ -5,7 +5,7 @@ require "GUI"
 require "migrate"
 
 
-debugButton = false
+debugButton = true
 godmode = false
 removeStone = true
 
@@ -181,6 +181,13 @@ clearAreas = {
       s = resetMetatable(s,Settings)
       s:checkMods()
     end
+--    if global.version < "0.3.1" then
+--      for _, s in pairs(global.players) do
+--        s.signalDistance = s.signalDistance * 2
+--        s.curvedWeight = s.curvedWeight * 2
+--      end
+--      global.version = "0.3.1"
+--    end
     global.version = "0.3.0"
   end
 
@@ -373,6 +380,14 @@ clearAreas = {
         local items = {"farl", "curved-rail", "straight-rail", "medium-electric-pole", "big-electric-pole",
           "small-lamp", "solid-fuel", "rail-signal", "blueprint", "cargo-wagon"}
         local count = {5,50,50,50,50,50,50,50,10,5}
+        for i=1,#items do
+          game.player.insert{name=items[i], count=count[i]}
+        end
+      end,
+            quickstart2 = function()
+        local items = {"basic-modular-armor", "personal-roboport-equipment", "solar-panel-equipment",
+          "blueprint", "deconstruction-planner", "battery-equipment", "construction-robot"}
+        local count = {1,1,7,1,1,7,10}
         for i=1,#items do
           game.player.insert{name=items[i], count=count[i]}
         end
