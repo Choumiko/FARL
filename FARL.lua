@@ -219,6 +219,7 @@ FARL = {
                 if self.path[c].valid and (self.path[c].name == self.settings.rail.curved or self.path[c].name == self.settings.rail.straight) then
                   --self:flyingText(#self.path, GREEN,true, self.path[c].position)
                   if self.settings.root then
+
                     self.path[c].destroy()
                     self:addItemToCargo(behind,1)
                   end
@@ -1250,7 +1251,7 @@ FARL = {
       self:flyingText2("p", GREEN, true, pole.position)
       local tmp = moveposition(fixPos(self:calcPole(lastrail, trainDir)), trainDir, -1)
       tmp.x, tmp.y = tmp[1], tmp[2]
-      self.lastCheckPole = addPos(self.lastrail.position, tmp)
+      self.lastCheckPole = addPos(lastrail.position, tmp)
       self:flyingText2("cp", GREEN, true, self.lastCheckPole)
       self.lastCheckDir = trainDir
     end
