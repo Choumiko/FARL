@@ -301,7 +301,7 @@ FARL = {
           self.surface.set_tiles(tiles)
           self:removeItemFromCargo("concrete", lfills)
         else
-          self:print("Not enough concrete")
+          self:print({"msg-not-enough-concrete"})
         end
       end
     end
@@ -430,7 +430,7 @@ FARL = {
           local dir, last = self:placeRails(self.previousDirection, self.lastrail, self.direction, nextRail, newTravelDir)
           if dir then
             if not last.position and not last.name then
-              self:deactivate("Placed rail but no entity returned")
+              self:deactivate({"msg-no-entity"})
               return
             end
             table.insert(self.path, 1, last)
@@ -568,19 +568,19 @@ FARL = {
           end
           limit = limit + 1
         end
-        self:flyingText2("Behind", RED, true, behind.position)
+        self:flyingText2( {"text-behind"}, RED, true, behind.position)
         self.path = path
         if self.settings.root and not self:rootModeAllowed() then
-          self:print("-root mode disabled")
-          self:print("-root mode requires FARL at each end of the train")
+          self:print({"msg-root-disabled"})
+          self:print({"msg-root-error"})
           self.settings.root = false
         end
         self.active = true
       else
-        self:print("Error activating, drive on straight rails and try again")
+        self:print({"msg-error-activating"})
       end
     else
-      self:deactivate("Error (no valid rail found)", true)
+      self:deactivate({"msg-error-2"}, true)
     end
   end,
 
@@ -590,7 +590,7 @@ FARL = {
     self.cruise = false
     self.path = nil
     if reason then
-      self:print("Deactivated: "..reason)
+      self:print({"", {"msg-deactivated"}, ": ", reason})
     end
     self.lastrail = nil
     self.direction = nil
@@ -635,7 +635,7 @@ FARL = {
     if self:rootModeAllowed() then
       self.settings.root = not self.settings.root
     else
-      self:print("-root mode requires FARL at each end of the train")
+      self:print({"msg-root-error"})
       self.settings.root = false
     end
   end,
@@ -665,7 +665,7 @@ FARL = {
       count = count + 1
     end
     if last then
-      self:flyingText2("Last", RED, true, last.position)
+      self:flyingText2({"text-front"}, RED, true, last.position)
     end
     return last
   end,
@@ -769,7 +769,7 @@ FARL = {
       if rail and offsets.pole then
         local type = (rail.direction == 0 or rail.direction == 4) and "straight" or "diagonal"
         if type == "diagonal" and not (rail.direction == 3 or rail.direction == 7) then
-          self:print("Invalid rail")
+          self:print({"msg-invalid-rail"})
           break
         end
         local lamps = {}
@@ -796,7 +796,7 @@ FARL = {
         saveBlueprint(self.driver, poleType, type, bp)
         self:print("Saved blueprint for "..type.." rail with "..poleType.. " pole")
       else
-        self:print("No rail in blueprint #"..j)
+        self:print({"", {"msg-bp-no-rail"}, " ",j})
       end
     end
   end,
@@ -849,14 +849,14 @@ FARL = {
         if ent then
           self:removeItemFromCargo(nextRail.name, 1)
         else
-          self:deactivate("Placed rail but no entity returned.")
+          self:deactivate({"msg-no-entity"})
           return false
         end
         return true, ent
       elseif not canplace then
-        return false, "Can't place rail"
+        return false, {"msg-cant-place"}
       elseif not hasRail then
-        return false, "Out of rails"
+        return false, {"msg-out-of-rails"}
       end
     else
       error("nooo",2)
@@ -1140,7 +1140,7 @@ FARL = {
         local success, pole = self:genericPlace{name = name, position = polePos, force = game.forces.player}
         if pole then
           if not pole.neighbours.copper[1] then
-            self:flyingText("Placed unconnected pole", RED, true)
+            self:flyingText({"msg-unconnected-pole"}, RED, true)
           end
           self:placePoleEntities(poleDir, polePos)
           self:removeItemFromCargo(name, 1)
@@ -1274,7 +1274,7 @@ FARL = {
         self:print("Fixed: "..pos2Str(fixed).." dir:"..rail.direction)
       end
     else
-      self:print("No rail found")
+      self:print({"msg-no-rail"})
     end
     local last = self:findLastRail()
     if last then
