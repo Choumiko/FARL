@@ -197,8 +197,8 @@ clearAreas = {
     initGlob()
     for i,f in pairs(global.farl) do
       if f.driver and f.driver.gui.left.farl then
-        GUI.destroyGui(f.driver)
-        GUI.createGui(f.driver)
+        --GUI.destroyGui(f.driver)
+        --GUI.createGui(f.driver)
       end
     end
   end
