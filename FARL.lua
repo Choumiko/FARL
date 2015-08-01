@@ -1328,7 +1328,7 @@ FARL = {
     end
     if curves[1] then
       if not ignore then
-        self:deactivate("Can't start on curves", true) end
+        self:deactivate({"msg-error-curves"}, true) end
     else
       return curves[1]
     end
