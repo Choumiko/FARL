@@ -181,14 +181,13 @@ clearAreas = {
       s = resetMetatable(s,Settings)
       s:checkMods()
     end
---    if global.version < "0.3.1" then
---      for _, s in pairs(global.players) do
---        s.signalDistance = s.signalDistance * 2
---        s.curvedWeight = s.curvedWeight * 2
---      end
---      global.version = "0.3.1"
---    end
-    global.version = "0.3.0"
+    if global.version < "0.3.1" then
+      for i,farl in pairs(global.farl) do
+        farl.recheckRails = farl.recheckRails or {}
+      end
+      global.version = "0.3.1"
+    end
+    global.version = "0.3.1"
   end
 
   local function oninit() initGlob() end

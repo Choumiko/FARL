@@ -139,7 +139,8 @@ FARL = {
       driver=driver, active=false, lastrail=false,
       direction = false, input = 1, name = vehicle.backer_name,
       signalCount = 0, cruise = false, cruiseInterrupt = 0,
-      lastposition = false, maintenance = false, surface = vehicle.surface
+      lastposition = false, maintenance = false, surface = vehicle.surface,
+      recheckRails = {}
     }
     new.settings = Settings.loadByPlayer(player)
     setmetatable(new, {__index=FARL})
@@ -649,6 +650,7 @@ FARL = {
     local trainDir = self:calcTrainDir()
     local test = self:railBelowTrain()
     local last = test
+    self.recheckRails = self.recheckRails or {}
     table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})
     local limit, count = limit, 1
     while test and test.name ~= self.settings.rail.curved do

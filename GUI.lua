@@ -87,6 +87,27 @@ GUI = {
       return GUI.add(parent, e, bind)
     end,
 
+    addLabel = function(parent, e, bind)
+      local e = e
+      if type(e) == "string" or type(e) == "number" or (type(e) == "table" and e[1]) then
+        e = {caption=e}
+      end
+      e.type="label"
+      return GUI.add(parent,e,bind)
+    end,
+
+    addTextfield = function(parent, e, bind)
+      e.type="textfield"
+      return GUI.add(parent, e, bind)
+    end,
+
+    addPlaceHolder = function(parent, count)
+      local c = count or 1
+      for i=1,c do
+        GUI.add(parent, {type="label", caption=""})
+      end
+    end,
+
     createGui = function(player)
       if player.gui.left.farl ~= nil then return end
       local psettings = Settings.loadByPlayer(player)
@@ -115,7 +136,7 @@ GUI = {
       if player.gui.left.farl == nil then return end
       player.gui.left.farl.destroy()
     end,
-
+    
     onGuiClick = function(event, farl, player)
       local name = event.element.name
       if GUI.callbacks[name] then
