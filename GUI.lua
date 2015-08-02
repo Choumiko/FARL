@@ -147,7 +147,7 @@ GUI = {
         saveVar(glob,"debug")
         farl:debugInfo()
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
-        or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" then
+        or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" or name == "poleEntities" then
         psettings[name] = not psettings[name]
         if name == "poles" then
           if not psettings[name] then
@@ -265,6 +265,9 @@ GUI = {
 
         GUI.add(settings, {type="checkbox", name="minPoles", caption={"stg-minPoles"}}, "minPoles")
         GUI.add(settings, {type="label", caption=""})
+        
+        GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}},"poleEntities")
+        GUI.addPlaceHolder(settings)
 
         GUI.add(settings, {type="checkbox", name="ccNet", caption={"stg-ccNet"}, state=psettings.ccNet})
         local row2 = GUI.add(settings, {type="table", name="row3", colspan=2})

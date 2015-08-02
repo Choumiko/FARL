@@ -142,6 +142,7 @@ clearAreas = {
     medium = false,
     minPoles = true,
     poles = true,
+    poleEntities = true,
     rail = rails.basic,
     signals = true,
     bridge = false,
@@ -187,7 +188,12 @@ clearAreas = {
       end
       global.version = "0.3.1"
     end
-    global.version = "0.3.1"
+    if global.version < "0.3.2" then
+      for i,player in pairs(global.players) do
+        player.poleEntities = defaultSettings.poleEntities        
+      end
+    end
+    global.version = "0.3.2"
   end
 
   local function oninit() initGlob() end
@@ -339,7 +345,7 @@ clearAreas = {
         end
       end,
       debugInfo = function()
-        saveVar(glob, "console")
+        saveVar(global, "console")
         --saveVar(global.debug, "RailDebug")
       end,
       reset = function()

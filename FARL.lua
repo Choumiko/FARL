@@ -210,6 +210,10 @@ FARL = {
           if (self.frontmover and self.train.speed >= 0) or (not self.frontmover and self.train.speed <= 0) then
             --debugDump(distance(firstWagon, self.path[1].position),true)
             local c = #self.path
+            while not self.path[c].valid do
+              table.remove(self.path, c)
+              c = #self.path
+            end
             local behind = self.path[c].name
             local dist = distance(lastWagon, self.path[c].position)
             while dist > 10 and distance(firstWagon, self.path[c].position) > dist do
@@ -1144,7 +1148,9 @@ FARL = {
           if not pole.neighbours.copper[1] then
             self:flyingText({"msg-unconnected-pole"}, RED, true)
           end
-          self:placePoleEntities(poleDir, polePos)
+          if self.settings.poleEntities then
+            self:placePoleEntities(poleDir, polePos)
+          end
           self:removeItemFromCargo(name, 1)
           self:connectCCNet(pole)
           self.lastPole = pole

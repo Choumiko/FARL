@@ -20,6 +20,7 @@ Settings = {
       medium = false,
       minPoles = true,
       poles = true,
+      poleEntities = true,
       rail = {},
       signals = true,
       bridge = false,
