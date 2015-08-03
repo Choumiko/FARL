@@ -334,7 +334,9 @@ FARL = {
         if lastRail.name == self.settings.rail.straight then      --diagonal after diagonal
           if data.direction == lastRail.direction then
             local mul = 1
-            if travelDir == 1 or travelDir == 5 then mul = -1 end
+            if travelDir == 1 or travelDir == 5 then
+              mul = -1
+            end
             newDir = (data.direction+4) % 8
             pos = {x=data.pos.y*mul, y=data.pos.x*mul}
         end
@@ -753,6 +755,112 @@ FARL = {
     return canPlace, entity
   end,
 
+  --parese blueprints
+  -- chain signal: needs direction == 4, defines track that FARL drives on
+  --normal signals: define signal position for other tracks
+  parseBlueprints2 = function(self, bp)
+    for j=1,#bp do
+      local vertSignal = signalOffset[0]
+      local diagSignal = signalOffset[1]
+      local e = bp[j].get_blueprint_entities()
+      local offsets = {pole=false, chain=false, poleEntities={}, rails={}, signals={}}
+      local bpType = false
+      for i=1,#e do
+        local dir = e[i].direction or 0
+        if e[i].name == "rail-chain-signal" and not offsets.chain then
+          offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
+        elseif e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
+          offsets.pole = {name = e[i].name, direction = dir, position = e[i].position}
+        elseif e[i].name == "straight-rail" then
+          if not bpType then
+            bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
+          end
+          if (bpType == "diagonal" and (dir == 3 or dir == 7)) or (bpType == "straight" and (dir == 0 or dir == 4)) then
+            table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position})
+          else
+            self:print("Invalid blueprint")
+            break
+          end
+        elseif e[i].name == "rail-signal" then
+          table.insert(offsets.signals, {name = e[i].name, direction = dir, position = e[i].position})
+        else
+          table.insert(offsets.poleEntities, {name = e[i].name, direction = dir, position = e[i].position})
+        end
+      end
+      if offsets.chain and bpType then
+        saveVar(e,"bp2E")
+        local mainRail = false
+        for i,rail in pairs(offsets.rails) do
+          local traveldir = (bpType == "straight") and 0 or 1
+          local signalOff = signalOffset[traveldir]
+          local signalDir = signalOff.dir
+          signalOff = (traveldir == 0) and signalOff.pos or signalOff[rail.direction]
+          local relChain = subPos(offsets.chain.position,rail.position)
+          local mainPos = subPos(relChain, signalOff)
+          if not mainRail and mainPos.x == 0 and mainPos.y == 0 and signalDir == offsets.chain.direction then
+            rail.main = true
+            mainRail = rail
+            offsets.mainRail = rail
+            if mainRail.direction % 2 == 1 then
+              local _1
+              _1, offsets.mainRailAlt = self:getRail(mainRail, 1, 1)
+              offsets.mainRailAlt.main = true
+            end
+          end
+        end
+        saveVar(offsets,"bp2Offsets")
+        local lamps = {}
+        for _, l in ipairs(offsets.poleEntities) do
+          table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position), direction = l.direction})
+        end
+        local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
+        local railPos = mainRail.position
+        if bpType == "diagonal" then
+          local x,y = 0,0
+          if mainRail.direction == 3 then
+            x = mainRail.position.x + 0.5
+            y = mainRail.position.y + 0.5
+          elseif mainRail.direction == 7 then
+            x = mainRail.position.x - 0.5
+            y = mainRail.position.y - 0.5
+          end
+          railPos = self:fixDiagonalPos(mainRail)
+        end
+        offsets.pole.position = subPos(offsets.pole.position,railPos)
+
+        local rails = {}
+        for _, l in pairs(offsets.rails) do
+          if not l.main then
+            local tmp =
+              {name=l.name, position=subPos(l.position, mainRail.position),
+                direction = l.direction, flipped = (l.direction ~= mainRail.direction)}
+            local altRail, dir
+            if l.direction % 2 == 1 then
+              dir, altRail = self:getRail(tmp, 5, 1)
+              tmp.altRail = altRail
+            end
+            table.insert(rails, tmp)
+          end
+        end
+        local signals = {}
+        for _, l in pairs(offsets.signals) do
+          table.insert(signals,
+            {name=l.name, position=subPos(l.position, offsets.chain.position),
+              direction = l.direction, reverse = (l.direction ~= offsets.chain.direction)})
+        end
+
+        local bp = {mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps, rails = rails, signals = signals}
+        
+        saveVar(bp, "bp2Relative")
+        self.settings.bp[poleType][bpType] = bp
+        saveBlueprint(self.driver, poleType, bpType, bp)
+        self:print("Saved blueprint for "..bpType.." rail with "..poleType.. " pole")
+        saveVar(global, "bpSaved")
+      else
+        self:print("Invalid blueprint")
+      end
+    end
+  end,
   parseBlueprints = function(self, bp)
     for j=1,#bp do
       local e = bp[j].get_blueprint_entities()
@@ -854,6 +962,10 @@ FARL = {
         end
         if ent then
           self:removeItemFromCargo(nextRail.name, 1)
+          --if self.settings.parallelTracks and newRail.name ~= self.settings.rail.curved then
+          if newRail.name ~= self.settings.rail.curved then
+            self:placeParallelTracks(newInDir, newRail)
+          end
         else
           self:deactivate({"msg-no-entity"})
           return false
@@ -869,6 +981,66 @@ FARL = {
       return false, "noooo"
     end
     return true, true
+  end,
+
+  placeParallelTracks = function(self, traveldir, lastRail)
+    local rails = traveldir % 2 == 0 and self.settings.activeBP.straight.rails or self.settings.activeBP.diagonal.rails
+    local mainRail = traveldir % 2 == 0 and self.settings.activeBP.straight.mainRail or self.settings.activeBP.diagonal.mainRail
+    if rails and type(rails) == "table" then
+      local diff = traveldir % 2 == 0 and traveldir or traveldir-1
+      local rad = diff * (math.pi/4)
+      for i=1,#rails do
+        if self:getCargoCount(rails[i].name) > 1 then
+          local entity = {name = rails[i].name, direction = lastRail.direction, force = game.forces.player}
+          local offset, f = rails[i].position, false
+          if traveldir % 2 == 1 and rails[i].flipped and lastRail.direction == (rails[i].direction+lastRail.direction)%8 then
+            entity.direction = rails[i].altRail.direction
+            offset = rails[i].altRail.position
+          end
+          
+          offset = rotate(offset, rad)
+          local pos = addPos(lastRail.position, offset)
+          entity.position = pos
+          --debugDump(lastRail,true)
+          --debugDump(entity,true)
+
+          if self:prepareArea(entity) then
+            local _, ent = self:genericPlace(entity)
+            if ent then
+              self:removeItemFromCargo(rails[i].name, 1)
+            else
+              self:deactivate("Trying to place "..rails[i].name.." failed")
+            end
+          end
+        end
+      end
+    end
+  end,
+
+  placeParallelSignals = function(self,traveldir, signal)
+    local signals = traveldir % 2 == 0 and self.settings.activeBP.straight.signals or self.settings.activeBP.diagonal.signals
+    if signals and type(signals) == "table" then
+      local diff = traveldir % 2 == 0 and traveldir or traveldir-1
+      local rad = diff * (math.pi/4)
+      for i=1,#signals do
+        if self:getCargoCount(signals[i].name) > 1 then
+          local offset = signals[i].position
+          offset = rotate(offset, rad)
+          local pos = addPos(signal.position, offset)
+          --debugDump(pos, true)
+          local entity = {name = signals[i].name, position = pos, force = game.forces.player}
+          entity.direction = signals[i].reverse and ((signal.direction+4)%8)or signal.direction
+          if self:prepareArea(entity) then
+            local _, ent = self:genericPlace(entity)
+            if ent then
+              self:removeItemFromCargo(signals[i].name, 1)
+            else
+              self:deactivate("Trying to place "..signals[i].name.." failed")
+            end
+          end
+        end
+      end
+    end
   end,
 
   flipEntity = function(self, pos, traveldir)
@@ -905,7 +1077,7 @@ FARL = {
     return ret
   end,
 
-  fixDiagonalPos = function(self, rail)
+  fixDiagonalPos = function(self, rail, mul)
     local x,y = 0,0
     -- 1 +x -y
     if rail.direction == 1 then
@@ -917,6 +1089,10 @@ FARL = {
       x, y = - 0.5, 0.5
     elseif rail.direction == 7 then
       x, y = - 0.5, - 0.5
+    end
+    if mul then
+      x = x*mul
+      y = y*mul
     end
     return addPos({x=x,y=y}, rail.position)
   end,
@@ -1216,6 +1392,7 @@ FARL = {
       local success, entity = self:genericPlace(signal)
       if entity then
         self:removeItemFromCargo(signal.name, 1)
+        self:placeParallelSignals(traveldir, entity)
         return success, entity
       else
         --self:print("Can't place signal@"..pos2Str(pos))

@@ -319,7 +319,7 @@ GUI = {
     readBlueprint = function(event, farl, player)
       local bp = GUI.findSetupBlueprintsInHotbar(player)
       if bp then
-        farl:parseBlueprints(bp)
+        farl:parseBlueprints2(bp)
         GUI.destroyGui(player)
         GUI.createGui(player)
         return

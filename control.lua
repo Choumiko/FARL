@@ -90,25 +90,29 @@ clearAreas = {
   defaultsDiagonal = {
     direction = 3,
     poleEntities = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
-    pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}}
+    pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}},
+    rails = {}, signals = {}
   }
 
   defaultsStraight = {
     direction = 0,
     poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
-    pole = {name = "big-electric-pole", position = {x = 3, y = 0}}
+    pole = {name = "big-electric-pole", position = {x = 3, y = 0}},
+    rails = {}, signals = {}
   }
 
   defaultsMediumDiagonal = {
     direction = 7,
     poleEntities = {{name = "small-lamp", position = {x = -1, y = 1}}},
-    pole = {name = "medium-electric-pole", position = {x = 2, y = 2}}
+    pole = {name = "medium-electric-pole", position = {x = 2, y = 2}},
+    rails = {}, signals = {}
   }
 
   defaultsMediumStraight = {
     direction = 0,
     poleEntities = {{name = "small-lamp", position = {x = 0,y = 1}}},
-    pole = {name = "medium-electric-pole", position = {x = 2.5,y = -0.5}}
+    pole = {name = "medium-electric-pole", position = {x = 2.5,y = -0.5}},
+    rails = {}, signals = {}
   }
 
   --[traveldir] ={[raildir]
@@ -410,5 +414,8 @@ clearAreas = {
         for i,w in ipairs(game.player.selected.train.carriages) do
           debugDump({i=i,type=w.type},true)
         end
+      end,
+      shiftRail = function(rail, dir, dist)
+        
       end
     })
