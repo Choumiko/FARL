@@ -564,6 +564,15 @@ FARL = {
                 break
               end
             end
+            if not lastSignal then
+              for _, entity in pairs(self.surface.find_entities_filtered{area = expandPos(signalPos,range), name = "rail-chain-signal"}) do
+                self:flyingText2("S", GREEN, true, entity.position)
+                if entity.direction == signalDir then
+                  lastSignal = entity
+                  break
+                end
+              end
+            end
           end
           self.signalCount = signalCount
           --self:print("SignalCount: "..self.signalCount, GREEN, true)
@@ -850,7 +859,7 @@ FARL = {
         end
 
         local bp = {mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps, rails = rails, signals = signals}
-        
+
         saveVar(bp, "bp2Relative")
         self.settings.bp[poleType][bpType] = bp
         saveBlueprint(self.driver, poleType, bpType, bp)
@@ -997,7 +1006,7 @@ FARL = {
             entity.direction = rails[i].altRail.direction
             offset = rails[i].altRail.position
           end
-          
+
           offset = rotate(offset, rad)
           local pos = addPos(lastRail.position, offset)
           entity.position = pos
