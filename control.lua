@@ -172,7 +172,9 @@ clearAreas = {
         end
         if player.vehicle == nil and player.gui.left.farl ~= nil then
           FARL.onPlayerLeave(player)
+          debugDump("FARL.onPlayerLeave done", true)
           GUI.destroyGui(player)
+          debugDump("GUI.destroyGui done", true)
         end
       end
     end
