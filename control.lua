@@ -151,7 +151,7 @@ clearAreas = {
     signals = true,
     bridge = false,
     root = false,
-    parallelTracks = false,
+    parallelTracks = true,
     parallelLag = 6
   }
   defaultSettings.activeBP = defaultSettings.bp.big

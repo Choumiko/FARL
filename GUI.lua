@@ -149,7 +149,8 @@ GUI = {
         saveVar(glob,"debug")
         farl:debugInfo()
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
-        or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood" or name == "poleEntities" then
+        or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
+        or name == "poleEntities" or name == "parallelTracks" then
         psettings[name] = not psettings[name]
         if name == "poles" then
           if not psettings[name] then
@@ -240,8 +241,11 @@ GUI = {
         local s = row.settings
         local sDistance = tonumber(s.signalDistance.text) or psettings.signalDistance
         sDistance = sDistance < 0 and 0 or sDistance
+        local pLag = tonumber(s.parallelLag.text) or psettings.signalDistance
+        pLag = pLag < 1 and 1 or pLag
+        pLag = pLag > 20 and 20 or pLag
         player.gui.left.farl.rows.buttons.settings.caption={"text-settings"}
-        GUI.saveSettings({signalDistance=sDistance}, player)
+        GUI.saveSettings({signalDistance = sDistance, parallelLag = pLag}, player)
         row.settings.destroy()
       else
         local captionPole = psettings.medium and {"stg-poleMedium"} or {"stg-poleBig"}
@@ -266,10 +270,16 @@ GUI = {
         GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=psettings.flipPoles})
 
         GUI.add(settings, {type="checkbox", name="minPoles", caption={"stg-minPoles"}}, "minPoles")
-        GUI.add(settings, {type="label", caption=""})
+        GUI.addPlaceHolder(settings)
         
         GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}},"poleEntities")
         GUI.addPlaceHolder(settings)
+        
+        GUI.add(settings,{type="checkbox", name="parallelTracks", caption={"stg-parallel-tracks"}}, "parallelTracks")
+        GUI.addPlaceHolder(settings)
+        
+        GUI.add(settings, {type="label", caption={"stg-parallel-lag"}})
+        GUI.add(settings,{type="textfield", name="parallelLag", style="farl_textfield_small"}, psettings.parallelLag)
 
         GUI.add(settings, {type="checkbox", name="ccNet", caption={"stg-ccNet"}, state=psettings.ccNet})
         local row2 = GUI.add(settings, {type="table", name="row3", colspan=2})

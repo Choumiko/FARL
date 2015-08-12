@@ -221,7 +221,7 @@ FARL = {
             local dist = distance(lastWagon, self.path[c].rail.position)
             while dist > 10 and distance(firstWagon, self.path[c].rail.position) > dist do
               --self:flyingText("c", RED, true, self.path[c].rail.position)
-              if c < 15 then
+              if c <= 20 then
                 break
               else
                 if self.path[c].rail.valid and (self.path[c].rail.name == self.settings.rail.curved or self.path[c].rail.name == self.settings.rail.straight) then
@@ -592,7 +592,7 @@ FARL = {
             end
             limit = limit + 1
           end
-          if lastSignal.valid then
+          if lastSignal and lastSignal.valid then
             self:flyingText2("S", GREEN, true, lastSignal.position)
           end
           self:flyingText2( {"text-behind"}, RED, true, behind.position)
@@ -983,7 +983,7 @@ FARL = {
           self:removeItemFromCargo(nextRail.name, 1)
           if newRail.name ~= self.settings.rail.curved then
             self.lastCurve = self.lastCurve + 1
-            if self.lastCurve > self.settings.parallelLag then
+            if self.settings.parallelTracks and self.lastCurve > self.settings.parallelLag and not self.settings.root then
               self:placeParallelTracks(newTravelDir, newRail)
             end
           else
@@ -1477,7 +1477,7 @@ FARL = {
       local success, entity = self:genericPlace(signal)
       if entity then
         self:removeItemFromCargo(signal.name, 1)
-        if self.lastCurve > self.settings.parallelLag and not self.settings.root then
+        if self.settings.parallelTracks and self.lastCurve > self.settings.parallelLag and not self.settings.root then
           self:placeParallelSignals(traveldir, entity)
         end
         return success, entity
