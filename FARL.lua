@@ -44,6 +44,9 @@ end
 
 function fixPos(pos)
   local ret = {}
+  if not pos then
+    error("Position is nil", 2)
+  end
   if pos.x then ret[1] = pos.x end
   if pos.y then ret[2] = pos.y end
   return ret
@@ -210,27 +213,27 @@ FARL = {
           if (self.frontmover and self.train.speed >= 0) or (not self.frontmover and self.train.speed <= 0) then
             --debugDump(distance(firstWagon, self.path[1].position),true)
             local c = #self.path
-            while not self.path[c].valid do
+            while not self.path[c].rail.valid do
               table.remove(self.path, c)
               c = #self.path
             end
-            local behind = self.path[c].name
-            local dist = distance(lastWagon, self.path[c].position)
-            while dist > 10 and distance(firstWagon, self.path[c].position) > dist do
-              --self:flyingText("c", RED, true, self.path[c].position)
+            local behind = self.path[c].rail.name
+            local dist = distance(lastWagon, self.path[c].rail.position)
+            while dist > 10 and distance(firstWagon, self.path[c].rail.position) > dist do
+              --self:flyingText("c", RED, true, self.path[c].rail.position)
               if c < 15 then
                 break
               else
-                if self.path[c].valid and (self.path[c].name == self.settings.rail.curved or self.path[c].name == self.settings.rail.straight) then
-                  --self:flyingText(#self.path, GREEN,true, self.path[c].position)
+                if self.path[c].rail.valid and (self.path[c].rail.name == self.settings.rail.curved or self.path[c].rail.name == self.settings.rail.straight) then
+                  --self:flyingText(#self.path, GREEN,true, self.path[c].rail.position)
                   if self.settings.root then
 
-                    self.path[c].destroy()
+                    self.path[c].rail.destroy()
                     self:addItemToCargo(behind,1)
                   end
                   table.remove(self.path, c)
                   c = #self.path
-                  dist = distance(lastWagon, self.path[c].position)
+                  dist = distance(lastWagon, self.path[c].rail.position)
                 end
               end
             end
@@ -414,6 +417,7 @@ FARL = {
       self.acc = self.driver.riding_state.acceleration
       local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
       if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and distance(self.lastrail.position, firstWagon.position) < 6 then
+        --debugDump(#self.path, true)
         self.input = self.driver.riding_state.direction
         if self.driver.name == "farl_player" then
           if self.course and self.course[1] then
@@ -440,7 +444,11 @@ FARL = {
               self:deactivate({"msg-no-entity"})
               return
             end
-            table.insert(self.path, 1, last)
+            table.insert(self.path, 1, {rail = last, traveldir = newTravelDir})
+--            local parallel = self.path[self.settings.parallelLag] 
+--            if parallel and parallel.rail.valid and not self.settings.root then
+--               self:placeParallelTracks(self.path[10].traveldir, self.path[10].rail)
+--            end
             if self.settings.poles then
               if self:getCargoCount("big-electric-pole") > 0 or self:getCargoCount("medium-electric-pole") > 0 then
                 local poleRails = self:getPoleRails(self.lastrail, self.previousDirection, self.direction)
@@ -531,72 +539,80 @@ FARL = {
   end,
 
   activate = function(self)
-    self.lastrail = false
-    self.signalCount = 0
-    self.recheckRails = {}
-    self.lastrail = self:findLastRail()
-    self.lastCheckIndex = 1
-    if self.lastrail then
-      self:findLastPole()
-      self.direction = self:calcTrainDir()
-      if self.direction and self.lastPole then --and self.lastCheckPole then
-        local carriages = #self.train.carriages
-        local behind, check = self.lastrail, {[1]={[1] = oppositedirection(self.direction), [2] = self.lastrail, [3]=self.lastrail}}
-        local lastSignal, signalCount, signalDir = false, -1, signalOffset[self.direction].dir
-        local limit = 1
-        local path = {self.lastrail}
-        while (check and type(check) == "table" and check[1] and check[1][2]) and limit < carriages*7 do
-          if not lastSignal then
-            signalCount = signalCount + 1
-            local signalOffset = signalOffset[self.direction]
-            if self.direction % 2 == 1 then
-              signalOffset = signalOffset[check[1][3].direction]
-            else
-              signalOffset = signalOffset.pos
-            end
-            local signalPos = addPos(check[1][3].position, signalOffset)
-            --self:flyingText2("s",RED,true,signalPos)
-            local range = (self.direction % 2 == 0) and 1 or 0.5
-            for _, entity in pairs(self.surface.find_entities_filtered{area = expandPos(signalPos,range), name = "rail-signal"}) do
-              self:flyingText2("S", GREEN, true, entity.position)
-              if entity.direction == signalDir then
-                lastSignal = entity
-                break
-              end
-            end
+    local status, err = pcall(function()
+      self.lastrail = false
+      self.signalCount = 0
+      self.recheckRails = {}
+      self.lastrail = self:findLastRail()
+      self.lastCheckIndex = 1
+      if self.lastrail then
+        self:findLastPole()
+        self.direction = self:calcTrainDir()
+        if self.direction and self.lastPole then --and self.lastCheckPole then
+          local carriages = #self.train.carriages
+          local behind, check = self.lastrail, {[1]={[1] = oppositedirection(self.direction), [2] = self.lastrail, [3]=self.lastrail}}
+          local lastSignal, signalCount, signalDir = false, -1, signalOffset[self.direction].dir
+          local limit = 1
+          local path = {rail = self.lastrail, traveldir = self.direction}
+          while (check and type(check) == "table" and check[1] and check[1][2]) and limit < carriages*7 do
             if not lastSignal then
-              for _, entity in pairs(self.surface.find_entities_filtered{area = expandPos(signalPos,range), name = "rail-chain-signal"}) do
-                self:flyingText2("S", GREEN, true, entity.position)
+              signalCount = signalCount + 1
+              local signalOffset = signalOffset[self.direction]
+              if self.direction % 2 == 1 then
+                signalOffset = signalOffset[check[1][3].direction]
+              else
+                signalOffset = signalOffset.pos
+              end
+              local signalPos = addPos(check[1][3].position, signalOffset)
+              --self:flyingText2("s",RED,true,signalPos)
+              local range = (self.direction % 2 == 0) and 1 or 0.5
+              for _, entity in pairs(self.surface.find_entities_filtered{area = expandPos(signalPos,range), name = "rail-signal"}) do
                 if entity.direction == signalDir then
                   lastSignal = entity
                   break
                 end
               end
+              if not lastSignal then
+                for _, entity in pairs(self.surface.find_entities_filtered{area = expandPos(signalPos,range), name = "rail-chain-signal"}) do
+                  self:flyingText2("S", GREEN, true, entity.position)
+                  if entity.direction == signalDir then
+                    lastSignal = entity
+                    break
+                  end
+                end
+              end
             end
+            self.signalCount = signalCount
+            --self:print("SignalCount: "..self.signalCount, GREEN, true)
+            check = self:findNeighbours(check[1][2], check[1][1])
+            if check and type(check) == "table" and check[1] and check[1][2] then
+              --debugDump(check[1][2],true)
+              table.insert(path, {rail=check[1][3], traveldir=check[1][1]})
+              behind = check[1][2]
+            end
+            limit = limit + 1
           end
-          self.signalCount = signalCount
-          --self:print("SignalCount: "..self.signalCount, GREEN, true)
-          check = self:findNeighbours(check[1][2], check[1][1])
-          if check and type(check) == "table" and check[1] and check[1][2] then
-            --debugDump(check[1][2],true)
-            table.insert(path, check[1][3])
-            behind = check[1][2]
+          if lastSignal.valid then
+            self:flyingText2("S", GREEN, true, lastSignal.position)
           end
-          limit = limit + 1
+          self:flyingText2( {"text-behind"}, RED, true, behind.position)
+          self.path = path
+          self.lastCurve = #self.path
+          if self.settings.root and not self:rootModeAllowed() then
+            self:print({"msg-root-disabled"})
+            self:print({"msg-root-error"})
+            self.settings.root = false
+          end
+          self.active = true
+        else
+          self:print({"msg-error-activating"})
         end
-        self:flyingText2( {"text-behind"}, RED, true, behind.position)
-        self.path = path
-        if self.settings.root and not self:rootModeAllowed() then
-          self:print({"msg-root-disabled"})
-          self:print({"msg-root-error"})
-          self.settings.root = false
-        end
-        self.active = true
       else
-        self:print({"msg-error-activating"})
+        self:deactivate({"msg-error-2"}, true)
       end
-    else
-      self:deactivate({"msg-error-2"}, true)
+    end)
+    if not status then
+      self:deactivate({"", {"msg-error-activating"}, err})
     end
   end,
 
@@ -609,6 +625,7 @@ FARL = {
       self:print({"", {"msg-deactivated"}, ": ", reason})
     end
     self.lastrail = nil
+    self.lastCurve = 0
     self.direction = nil
     self.lastPole, self.lastCheckPole = nil,nil
     self.ccNetPole = nil
@@ -810,11 +827,17 @@ FARL = {
           local signalOff = signalOffset[traveldir]
           local signalDir = signalOff.dir
           signalOff = (traveldir == 0) and signalOff.pos or signalOff[rail.direction]
-          local relChain = subPos(offsets.chain.position,rail.position)
-          local mainPos = subPos(relChain, signalOff)
-          if not mainRail and mainPos.x == 0 and mainPos.y == 0 and signalDir == offsets.chain.direction then
+          --local relChain = subPos(offsets.chain.position,rail.position)
+          --local mainPos = subPos(relChain, signalOff)
+          local pos = addPos(rail.position, signalOff)
+          if not mainRail and pos.x == offsets.chain.position.x and pos.y == offsets.chain.position.y and signalDir == offsets.chain.direction then
+          --if not mainRail and mainPos.x == 0 and mainPos.y == 0 and signalDir == offsets.chain.direction then
             rail.main = true
             mainRail = rail
+            if rail.direction == 3 then
+              rail.position.x = rail.position.x + 2
+              rail.direction = 7
+            end
             offsets.mainRail = rail
           end
         end
@@ -826,15 +849,7 @@ FARL = {
         local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
         local railPos = mainRail.position
         if bpType == "diagonal" then
-          local x,y = 0,0
-          if mainRail.direction == 3 then
-            x = mainRail.position.x + 0.5
-            y = mainRail.position.y + 0.5
-          elseif mainRail.direction == 7 then
-            x = mainRail.position.x - 0.5
-            y = mainRail.position.y - 0.5
-          end
-          railPos = self:fixDiagonalPos(mainRail)
+            railPos = self:fixDiagonalPos(mainRail)
         end
         offsets.pole.position = subPos(offsets.pole.position,railPos)
 
@@ -966,9 +981,13 @@ FARL = {
         end
         if ent then
           self:removeItemFromCargo(nextRail.name, 1)
-          --if self.settings.parallelTracks and newRail.name ~= self.settings.rail.curved then
           if newRail.name ~= self.settings.rail.curved then
-            self:placeParallelTracks(newInDir, newRail)
+            self.lastCurve = self.lastCurve + 1
+            if self.lastCurve > self.settings.parallelLag then
+              self:placeParallelTracks(newTravelDir, newRail)
+            end
+          else
+            self.lastCurve = 0
           end
         else
           self:deactivate({"msg-no-entity"})
@@ -1001,12 +1020,12 @@ FARL = {
           local pos = addPos(lastRail.position, offset)
           entity.position = pos
           if traveldir % 2 == 1 then
-            entity = self:fixDiagonalParallelTracks(entity, traveldir)
+            entity = self:fixDiagonalParallelTracks(entity, traveldir, mainRail.direction)
           end
           --debugDump(lastRail,true)
           --debugDump(entity,true)
 
-          if self:prepareArea(entity, 1.75) then
+          if self:prepareArea(entity) then
             local _, ent = self:genericPlace(entity)
             if ent then
               self:removeItemFromCargo(rails[i].name, 1)
@@ -1101,73 +1120,103 @@ FARL = {
     return addPos({x=x,y=y}, rail.position)
   end,
 
-  fixDiagonalParallelTracks = function(self, rail, dir)
-    --debugDump({railDir = rail.direction, tdir = dir},true)
+  fixDiagonalParallelTracks = function(self, rail, dir, mainRailDir)
+  --debugDump({railDir = rail.direction, tdir = dir},true)
     local x,y = 0,0
     local newDir = rail.direction
     local mul = {x=1,y=1}
+    local mainMul = {x=1,y=1}
+    local data = {}
+    --data[raildir][traveldir] = {x,y,newDir}
+    data[1] = { [3] = {x=0,y=0,dir=5},
+                [7] = {x=2,y=-2,dir=5}}
+    data[3] = { [1] = {x=2,y=2,dir=7},
+                [5] = {x=0,y=0,dir=7}}
+    data[5] = { [3] = {x=-2,y=2,dir=1},
+                [7] = {x=0,y=0,dir=1}}
+    data[7] = { [1] = {x=0,y=0,dir=3},
+                [5] = {x=-2,y=-2,dir=3}}
     -- 1 +x -y
     if rail.direction == 1 and (dir == 3 or dir == 7) then
       x, y = 2, - 2
       mul = (dir == 3) and {x=0,y=0} or mul
+      --mainMul = {x=3,y=1}
+      --mul = mainRailDir==3 and {x=1,y=1} or mul
       newDir = 5
     elseif rail.direction == 3 and (dir == 1 or dir == 5) then
       x, y = 2, 2
-      mul = (dir == 5) and {x=0,y=0} or mul 
-      newDir = 7      
+      mul = (dir == 5) and {x=0,y=0} or mul
+      --mainMul = (dir == 1) and {x=-1,y=-1} or {x=2,y=2}
+      --mul = mainRailDir==3 and {x=1,y=-1} or mul
+      newDir = 7
       -- 5 -x +y
     elseif rail.direction == 5 and (dir == 3 or dir == 7) then
       x, y = - 2, 2
       mul = (dir == 7) and {x=0,y=0} or mul
+      --mainMul = {x=-4,y=-2}
+      --mul = mainRailDir==3 and {x=1,y=1} or mul
       newDir = 1
     elseif rail.direction == 7 and (dir == 1 or dir == 5) then
-      x, y = - 0.5, - 0.5
-      mul = (dir == 5) and {x=4,y=4} or mul 
+      x, y = - 2, - 2
+      mul = (dir == 1) and {x=0,y=0} or mul
+      --mainMul = (dir == 1) and {x=-1,y=-1} or {x=2,y=2}
+      --mul = mainRailDir==3 and {x=1,y=-1} or mul
       newDir = 3
-    else
-      x, y = 0, 0
     end
     local tmp = util.table.deepcopy(rail)
-    tmp.direction = newDir
-    tmp.position = addPos({x=x*mul.x,y=y*mul.y}, rail.position)
+    local c = {x=x,y=y,dir=newDir}
+--    if mainRailDir == 3 then
+--      c.x = c.x*mainMul.x
+--      c.y = c.y*mainMul.y
+--      --c.dir = rail.direction
+--    end
+    tmp.direction = c.dir
+    tmp.position = addPos({x= c.x*mul.x, y= c.y*mul.y}, rail.position)
     return tmp
   end,
 
   calcPole = function(self,lastrail, traveldir)
-    local offset
-    if not lastrail then error("no rail",2) end
-    if type(lastrail)~="table" then error("no table", 2) end
-    if not lastrail.name then error("calcPole: no name", 2) end
-    if lastrail.name ~= self.settings.rail.curved then
-      local diagonal = traveldir % 2 == 1 and true or false
-      local pole = not diagonal and self.settings.activeBP.straight.pole or self.settings.activeBP.diagonal.pole
-      local pos = addPos(pole.position)
-      local diff = not diagonal and traveldir or traveldir-1
-      local rad = diff * (math.pi/4)
-      offset = rotate(pos, rad)
-      if self.settings.flipPoles then
-        offset = self:mirrorEntity(offset, traveldir)
-      end
-      if diagonal then
-        local x,y = 0,0
-        -- 1 +x -y
-        if lastrail.direction == 1 then
-          x, y = 0.5, - 0.5
-        elseif lastrail.direction == 3 then
-          x, y = 0.5, 0.5
-          -- 5 -x +y
-        elseif lastrail.direction == 5 then
-          x, y = - 0.5, 0.5
-        elseif lastrail.direction == 7 then
-          x, y = - 0.5, - 0.5
+    local status, err = pcall(function()
+      local offset
+      if not lastrail then error("no rail",2) end
+      if type(lastrail)~="table" then error("no table", 2) end
+      if not lastrail.name then error("calcPole: no name", 2) end
+      if lastrail.name ~= self.settings.rail.curved then
+        local diagonal = traveldir % 2 == 1 and true or false
+        local pole = not diagonal and self.settings.activeBP.straight.pole or self.settings.activeBP.diagonal.pole
+        local pos = addPos(pole.position)
+        local diff = not diagonal and traveldir or traveldir-1
+        local rad = diff * (math.pi/4)
+        offset = rotate(pos, rad)
+        if self.settings.flipPoles then
+          offset = self:mirrorEntity(offset, traveldir)
         end
-        local railPos = {x=x,y=y}
-        offset = addPos(railPos, offset)
+        if diagonal then
+          local x,y = 0,0
+          -- 1 +x -y
+          if lastrail.direction == 1 then
+            x, y = 0.5, - 0.5
+          elseif lastrail.direction == 3 then
+            x, y = 0.5, 0.5
+            -- 5 -x +y
+          elseif lastrail.direction == 5 then
+            x, y = - 0.5, 0.5
+          elseif lastrail.direction == 7 then
+            x, y = - 0.5, - 0.5
+          end
+          local railPos = {x=x,y=y}
+          offset = addPos(railPos, offset)
+        end
+      else
+        error("calcPole called with curved", 2)
       end
+      return offset
+    end)
+    if not status then
+      self:deactivate("Error with calcPole: "..serpent.dump({lr=lastrail, tdir=traveldir}, {name="args", comment=false, sparse=false, sortkeys=true}))
     else
-      error("calcPole called with curved", 2)
+      return err
     end
-    return offset
   end,
 
   placePoleEntities = function(self,traveldir,pole)
@@ -1428,7 +1477,9 @@ FARL = {
       local success, entity = self:genericPlace(signal)
       if entity then
         self:removeItemFromCargo(signal.name, 1)
-        self:placeParallelSignals(traveldir, entity)
+        if self.lastCurve > self.settings.parallelLag and not self.settings.root then
+          self:placeParallelSignals(traveldir, entity)
+        end
         return success, entity
       else
         --self:print("Can't place signal@"..pos2Str(pos))

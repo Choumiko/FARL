@@ -150,7 +150,9 @@ clearAreas = {
     rail = rails.basic,
     signals = true,
     bridge = false,
-    root = false
+    root = false,
+    parallelTracks = false,
+    parallelLag = 6
   }
   defaultSettings.activeBP = defaultSettings.bp.big
 
@@ -206,19 +208,28 @@ clearAreas = {
         player.poleEntities = defaultSettings.poleEntities        
       end
     end
-    global.version = "0.3.2"
+    if global.version < "0.3.3" then
+      for i,farl in pairs(global.farl) do
+        farl:deactivate("reset")
+      end
+      for i,player in pairs(global.players) do
+        player.parallelTracks = defaultSettings.parallelTracks
+        player.parallelLag = defaultSettings.parallelLag        
+      end
+    end
+    global.version = "0.3.3"
   end
 
   local function oninit() initGlob() end
 
   local function onload()
     initGlob()
-    for i,f in pairs(global.farl) do
-      if f.driver and f.driver.gui.left.farl then
-        --GUI.destroyGui(f.driver)
-        --GUI.createGui(f.driver)
-      end
-    end
+--    for i,f in pairs(global.farl) do
+--      if f.driver and f.driver.gui.left.farl then
+--        --GUI.destroyGui(f.driver)
+--        --GUI.createGui(f.driver)
+--      end
+--    end
   end
 
   local function onGuiClick(event)
