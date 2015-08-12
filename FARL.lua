@@ -774,6 +774,12 @@ FARL = {
       local e = bp[j].get_blueprint_entities()
       local offsets = {pole=false, chain=false, poleEntities={}, rails={}, signals={}}
       local bpType = false
+      local rails = 0
+      for i=1,#e do
+        if e[i].name == "straight-rail" then
+          rails = rails + 1
+        end
+      end
       for i=1,#e do
         local dir = e[i].direction or 0
         if e[i].name == "rail-chain-signal" and not offsets.chain then
@@ -810,11 +816,6 @@ FARL = {
             rail.main = true
             mainRail = rail
             offsets.mainRail = rail
-            if mainRail.direction % 2 == 1 then
-              local _1
-              _1, offsets.mainRailAlt = self:getRail(mainRail, 1, 1)
-              offsets.mainRailAlt.main = true
-            end
           end
         end
         saveVar(offsets,"bp2Offsets")
@@ -842,11 +843,11 @@ FARL = {
           if not l.main then
             local tmp =
               {name=l.name, position=subPos(l.position, mainRail.position),
-                direction = l.direction, flipped = (l.direction ~= mainRail.direction)}
+                direction = l.direction}
             local altRail, dir
-            if l.direction % 2 == 1 then
+            if l.direction % 2 == 1 and mainRail.direction == l.direction then
               dir, altRail = self:getRail(tmp, 5, 1)
-              tmp.altRail = altRail
+              tmp = altRail
             end
             table.insert(rails, tmp)
           end
@@ -866,61 +867,55 @@ FARL = {
         self:print("Saved blueprint for "..bpType.." rail with "..poleType.. " pole")
         saveVar(global, "bpSaved")
       else
-        self:print("Invalid blueprint")
+        if rails == 1 then
+          self:parseBlueprint(e)
+        else
+          self:print("Invalid blueprint")
+        end
       end
     end
   end,
-  parseBlueprints = function(self, bp)
-    for j=1,#bp do
-      local e = bp[j].get_blueprint_entities()
-      local offsets = {pole=false, poleEntities={}}
-      local rail
 
-      for i=1,#e do
-        if e[i].name == "straight-rail" or e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
-          if not rail and e[i].name == "straight-rail" then
-            local dir = e[i].direction or 0
-            rail = {direction = dir, name = e[i].name, position = e[i].position}
-          end
-          if e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
-            offsets.pole = {name = e[i].name, direction = e[i].direction, position = e[i].position}
-          end
-        else
-          table.insert(offsets.poleEntities, {name = e[i].name, direction = e[i].direction, position = e[i].position})
+  parseBlueprint = function(self, bpEntities)
+    local e = bpEntities
+    local offsets = {pole=false, poleEntities={}}
+    local rail
+
+    for i=1,#e do
+      if e[i].name == "straight-rail" or e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
+        if not rail and e[i].name == "straight-rail" then
+          local dir = e[i].direction or 0
+          rail = {direction = dir, name = e[i].name, position = e[i].position}
         end
-      end
-      if rail and offsets.pole then
-        local type = (rail.direction == 0 or rail.direction == 4) and "straight" or "diagonal"
-        if type == "diagonal" and not (rail.direction == 3 or rail.direction == 7) then
-          self:print({"msg-invalid-rail"})
-          break
+        if e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
+          offsets.pole = {name = e[i].name, direction = e[i].direction, position = e[i].position}
         end
-        local lamps = {}
-        for _, l in ipairs(offsets.poleEntities) do
-          table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position)})
-        end
-        local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
-        local railPos = rail.position
-        if type == "diagonal" then
-          --          local x,y = 0,0
-          --          if rail.direction == 3 then
-          --            x = rail.position.x + 0.5
-          --            y = rail.position.y + 0.5
-          --          elseif rail.direction == 7 then
-          --            x = rail.position.x - 0.5
-          --            y = rail.position.y - 0.5
-          --          end
-          railPos = self:fixDiagonalPos(rail)
-          --railPos = {x=x,y=y}
-        end
-        offsets.pole.position = subPos(offsets.pole.position,railPos)
-        local bp = {direction=rail.direction, pole = offsets.pole, poleEntities = lamps}
-        self.settings.bp[poleType][type] = bp
-        saveBlueprint(self.driver, poleType, type, bp)
-        self:print("Saved blueprint for "..type.." rail with "..poleType.. " pole")
       else
-        self:print({"", {"msg-bp-no-rail"}, " ",j})
+        table.insert(offsets.poleEntities, {name = e[i].name, direction = e[i].direction, position = e[i].position})
       end
+    end
+    if rail and offsets.pole then
+      local type = (rail.direction == 0 or rail.direction == 4) and "straight" or "diagonal"
+      if type == "diagonal" and not (rail.direction == 3 or rail.direction == 7) then
+        self:print({"msg-invalid-rail"})
+        return
+      end
+      local lamps = {}
+      for _, l in ipairs(offsets.poleEntities) do
+        table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position)})
+      end
+      local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
+      local railPos = rail.position
+      if type == "diagonal" then
+        railPos = self:fixDiagonalPos(rail)
+      end
+      offsets.pole.position = subPos(offsets.pole.position,railPos)
+      local bp = {direction=rail.direction, pole = offsets.pole, poleEntities = lamps}
+      self.settings.bp[poleType][type] = bp
+      saveBlueprint(self.driver, poleType, type, bp)
+      self:print("Saved blueprint for "..type.." rail with "..poleType.. " pole")
+    else
+      self:print({"", {"msg-bp-no-rail"}, " ",j})
     end
   end,
 
@@ -1001,19 +996,17 @@ FARL = {
       for i=1,#rails do
         if self:getCargoCount(rails[i].name) > 1 then
           local entity = {name = rails[i].name, direction = lastRail.direction, force = game.forces.player}
-          local offset, f = rails[i].position, false
-          if traveldir % 2 == 1 and rails[i].flipped and lastRail.direction == (rails[i].direction+lastRail.direction)%8 then
-            entity.direction = rails[i].altRail.direction
-            offset = rails[i].altRail.position
-          end
-
+          local offset = rails[i].position
           offset = rotate(offset, rad)
           local pos = addPos(lastRail.position, offset)
           entity.position = pos
+          if traveldir % 2 == 1 then
+            entity = self:fixDiagonalParallelTracks(entity, traveldir)
+          end
           --debugDump(lastRail,true)
           --debugDump(entity,true)
 
-          if self:prepareArea(entity) then
+          if self:prepareArea(entity, 1.75) then
             local _, ent = self:genericPlace(entity)
             if ent then
               self:removeItemFromCargo(rails[i].name, 1)
@@ -1098,12 +1091,46 @@ FARL = {
       x, y = - 0.5, 0.5
     elseif rail.direction == 7 then
       x, y = - 0.5, - 0.5
+    else
+      x, y = 0, 0
     end
     if mul then
       x = x*mul
       y = y*mul
     end
     return addPos({x=x,y=y}, rail.position)
+  end,
+
+  fixDiagonalParallelTracks = function(self, rail, dir)
+    --debugDump({railDir = rail.direction, tdir = dir},true)
+    local x,y = 0,0
+    local newDir = rail.direction
+    local mul = {x=1,y=1}
+    -- 1 +x -y
+    if rail.direction == 1 and (dir == 3 or dir == 7) then
+      x, y = 2, - 2
+      mul = (dir == 3) and {x=0,y=0} or mul
+      newDir = 5
+    elseif rail.direction == 3 and (dir == 1 or dir == 5) then
+      x, y = 2, 2
+      mul = (dir == 5) and {x=0,y=0} or mul 
+      newDir = 7      
+      -- 5 -x +y
+    elseif rail.direction == 5 and (dir == 3 or dir == 7) then
+      x, y = - 2, 2
+      mul = (dir == 7) and {x=0,y=0} or mul
+      newDir = 1
+    elseif rail.direction == 7 and (dir == 1 or dir == 5) then
+      x, y = - 0.5, - 0.5
+      mul = (dir == 5) and {x=4,y=4} or mul 
+      newDir = 3
+    else
+      x, y = 0, 0
+    end
+    local tmp = util.table.deepcopy(rail)
+    tmp.direction = newDir
+    tmp.position = addPos({x=x*mul.x,y=y*mul.y}, rail.position)
+    return tmp
   end,
 
   calcPole = function(self,lastrail, traveldir)
