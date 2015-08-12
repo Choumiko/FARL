@@ -820,7 +820,6 @@ FARL = {
         end
       end
       if offsets.chain and bpType then
-        saveVar(e,"bp2E")
         local mainRail = false
         for i,rail in pairs(offsets.rails) do
           local traveldir = (bpType == "straight") and 0 or 1
@@ -841,46 +840,47 @@ FARL = {
             offsets.mainRail = rail
           end
         end
-        saveVar(offsets,"bp2Offsets")
-        local lamps = {}
-        for _, l in ipairs(offsets.poleEntities) do
-          table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position), direction = l.direction})
-        end
-        local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
-        local railPos = mainRail.position
-        if bpType == "diagonal" then
-            railPos = self:fixDiagonalPos(mainRail)
-        end
-        offsets.pole.position = subPos(offsets.pole.position,railPos)
-
-        local rails = {}
-        for _, l in pairs(offsets.rails) do
-          if not l.main then
-            local tmp =
-              {name=l.name, position=subPos(l.position, mainRail.position),
-                direction = l.direction}
-            local altRail, dir
-            if l.direction % 2 == 1 and mainRail.direction == l.direction then
-              dir, altRail = self:getRail(tmp, 5, 1)
-              tmp = altRail
-            end
-            table.insert(rails, tmp)
+        if mainRail then
+          local lamps = {}
+          for _, l in ipairs(offsets.poleEntities) do
+            table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position), direction = l.direction})
           end
+          local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
+          local railPos = mainRail.position
+          if bpType == "diagonal" then
+              railPos = self:fixDiagonalPos(mainRail)
+          end
+          offsets.pole.position = subPos(offsets.pole.position,railPos)
+  
+          local rails = {}
+          for _, l in pairs(offsets.rails) do
+            if not l.main then
+              local tmp =
+                {name=l.name, position=subPos(l.position, mainRail.position),
+                  direction = l.direction}
+              local altRail, dir
+              if l.direction % 2 == 1 and mainRail.direction == l.direction then
+                dir, altRail = self:getRail(tmp, 5, 1)
+                tmp = altRail
+              end
+              table.insert(rails, tmp)
+            end
+          end
+          local signals = {}
+          for _, l in pairs(offsets.signals) do
+            table.insert(signals,
+              {name=l.name, position=subPos(l.position, offsets.chain.position),
+                direction = l.direction, reverse = (l.direction ~= offsets.chain.direction)})
+          end
+  
+          local bp = {mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps, rails = rails, signals = signals}
+  
+          self.settings.bp[poleType][bpType] = bp
+          saveBlueprint(self.driver, poleType, bpType, bp)
+          self:print("Saved blueprint for "..bpType.." rail with "..poleType.. " pole")
+        else
+          self:print("Invalid blueprint. Make sure your chain-signals arrows point north or north-east")
         end
-        local signals = {}
-        for _, l in pairs(offsets.signals) do
-          table.insert(signals,
-            {name=l.name, position=subPos(l.position, offsets.chain.position),
-              direction = l.direction, reverse = (l.direction ~= offsets.chain.direction)})
-        end
-
-        local bp = {mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps, rails = rails, signals = signals}
-
-        saveVar(bp, "bp2Relative")
-        self.settings.bp[poleType][bpType] = bp
-        saveBlueprint(self.driver, poleType, bpType, bp)
-        self:print("Saved blueprint for "..bpType.." rail with "..poleType.. " pole")
-        saveVar(global, "bpSaved")
       else
         if rails == 1 then
           self:parseBlueprint(e)

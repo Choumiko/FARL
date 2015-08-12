@@ -329,12 +329,17 @@ GUI = {
     end,
 
     readBlueprint = function(event, farl, player)
-      local bp = GUI.findSetupBlueprintsInHotbar(player)
-      if bp then
-        farl:parseBlueprints2(bp)
-        GUI.destroyGui(player)
-        GUI.createGui(player)
-        return
+      local status, err = pcall(function()
+        local bp = GUI.findSetupBlueprintsInHotbar(player)
+        if bp then
+          farl:parseBlueprints2(bp)
+          GUI.destroyGui(player)
+          GUI.createGui(player)
+          return
+        end
+      end)
+      if not status then
+        debugDump("Error: "..err,true)
       end
     end,
 

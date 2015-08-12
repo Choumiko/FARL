@@ -162,29 +162,13 @@ clearAreas = {
   end
 
   local function onTick(event)
-    if event.tick % 10 == 0  then
-      for pi, player in ipairs(game.players) do
-        if (player.vehicle ~= nil and player.vehicle.name == "farl") then
-          if player.gui.left.farl == nil then
-            FARL.onPlayerEnter(player)
-            GUI.createGui(player)
-          end
-        end
-        if player.vehicle == nil and player.gui.left.farl ~= nil then
-          FARL.onPlayerLeave(player)
-          debugDump("FARL.onPlayerLeave done", true)
-          GUI.destroyGui(player)
-          debugDump("GUI.destroyGui done", true)
-        end
+    if global.destroyNextTick[event.tick] then
+      local pis = global.destroyNextTick[event.tick]
+      for _, pi in pairs(pis) do
+        GUI.destroyGui(game.players[pi])
       end
+      global.destroyNextTick[event.tick] = nil
     end
-    --    if global.destroyNextTick[event.tick] then
-    --      local pis = global.destroyNextTick[event.tick]
-    --      for _, pi in pairs(pis) do
-    --        GUI.destroyGui(game.players[pi])
-    --      end
-    --      global.destroyNextTick[event.tick] = nil
-    --    end
     for i, farl in pairs(global.farl) do
       farl:update(event)
       if farl.driver and farl.driver.name ~= "farl_player" then
@@ -240,12 +224,6 @@ clearAreas = {
 
   local function onload()
     initGlob()
-    --    for i,f in pairs(global.farl) do
-    --      if f.driver and f.driver.gui.left.farl then
-    --        --GUI.destroyGui(f.driver)
-    --        --GUI.createGui(f.driver)
-    --      end
-    --    end
   end
 
   local function onGuiClick(event)
@@ -322,7 +300,7 @@ clearAreas = {
   --game.onevent(defines.events.on_built_entity, onbuiltentity)
   game.on_event(defines.events.on_entity_died, onentitydied)
 
-  --game.on_event(defines.events.on_player_driving_changed_state, onPlayerDrivingChangedState)
+  game.on_event(defines.events.on_player_driving_changed_state, onPlayerDrivingChangedState)
 
   local function onplayercreated(event)
     local player = game.get_player(event.player_index)
