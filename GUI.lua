@@ -133,8 +133,10 @@ GUI = {
     end,
 
     destroyGui = function(player)
-      if player.gui.left.farl == nil then return end
-      player.gui.left.farl.destroy()
+      if player.valid then
+        if player.gui.left.farl == nil then return end
+        player.gui.left.farl.destroy()
+      end
     end,
     
     onGuiClick = function(event, farl, player)

@@ -160,7 +160,14 @@ clearAreas = {
   end
 
   local function onTick(event)
-    for i, farl in ipairs(global.farl) do
+    if global.destroyNextTick[event.tick] then
+      local pis = global.destroyNextTick[event.tick]
+      for _, pi in pairs(pis) do
+        GUI.destroyGui(game.players[pi])
+      end
+      global.destroyNextTick[event.tick] = nil
+    end
+    for i, farl in pairs(global.farl) do
       farl:update(event)
       if farl.driver and farl.driver.name ~= "farl_player" then
         GUI.updateGui(farl)
@@ -179,6 +186,8 @@ clearAreas = {
     global.railInfoLast = global.railInfoLast or {}
     if global.godmode == nil then global.godmode = false end
     godmode = global.godmode
+    global.destroyNextTick = global.destroyNextTick or {}
+    
     for i,farl in ipairs(global.farl) do
       farl = resetMetatable(farl, FARL)
     end
@@ -268,7 +277,11 @@ clearAreas = {
     end
     if player.vehicle == nil and player.gui.left.farl ~= nil then
       FARL.onPlayerLeave(player)
-      GUI.destroyGui(player)
+      local tick = event.tick + 1
+      if not global.destroyNextTick[tick] then
+        global.destroyNextTick[tick] = {}
+      end
+      table.insert(global.destroyNextTick[tick], event.player_index) 
     end
   end
 
