@@ -143,7 +143,7 @@ FARL = {
       direction = false, input = 1, name = vehicle.backer_name,
       signalCount = 0, cruise = false, cruiseInterrupt = 0,
       lastposition = false, maintenance = false, surface = vehicle.surface,
-      recheckRails = {}
+      recheckRails = {}, destroy = false
     }
     new.settings = Settings.loadByPlayer(player)
     setmetatable(new, {__index=FARL})
@@ -155,16 +155,18 @@ FARL = {
     if i then
       global.farl[i].driver = player
       global.farl[i].settings = Settings.loadByPlayer(player)
+      global.farl[i].destroy = false
     else
       table.insert(global.farl, FARL.new(player))
     end
   end,
 
-  onPlayerLeave = function(player)
+  onPlayerLeave = function(player, tick)
     for i,f in ipairs(global.farl) do
       if f.driver and f.driver.name == player.name then
         f:deactivate()
         f.driver = false
+        f.destroy = tick
         --f.settings = false
         break
       end

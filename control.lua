@@ -166,13 +166,21 @@ clearAreas = {
       local pis = global.destroyNextTick[event.tick]
       for _, pi in pairs(pis) do
         GUI.destroyGui(game.players[pi])
+        debugDump("Gui destroyed (on tick)")
       end
       global.destroyNextTick[event.tick] = nil
     end
     for i, farl in pairs(global.farl) do
-      farl:update(event)
-      if farl.driver and farl.driver.name ~= "farl_player" then
-        GUI.updateGui(farl)
+      if not farl.destroy then
+        farl:update(event)
+        if farl.driver and farl.driver.name ~= "farl_player" then
+          GUI.updateGui(farl)
+        end
+      else
+        if farl.destroy == event.tick then
+          farl.destroy = false
+          farl.settings = false
+        end
       end
     end
   end
@@ -281,8 +289,9 @@ clearAreas = {
       end
     end
     if player.vehicle == nil and player.gui.left.farl ~= nil then
-      FARL.onPlayerLeave(player)
-      local tick = event.tick + 1
+      FARL.onPlayerLeave(player, event.tick + 5)
+      debugDump("onPlayerLeave (driving state changed)")
+      local tick = event.tick + 5
       if not global.destroyNextTick[tick] then
         global.destroyNextTick[tick] = {}
       end
