@@ -162,13 +162,27 @@ clearAreas = {
   end
 
   local function onTick(event)
-    if global.destroyNextTick[event.tick] then
-      local pis = global.destroyNextTick[event.tick]
-      for _, pi in pairs(pis) do
-        GUI.destroyGui(game.players[pi])
+    if event.tick % 10 == 0  then
+      for pi, player in ipairs(game.players) do
+        if (player.vehicle ~= nil and player.vehicle.name == "farl") then
+          if player.gui.left.farl == nil then
+            FARL.onPlayerEnter(player)
+            GUI.createGui(player)
+          end
+        end
+        if player.vehicle == nil and player.gui.left.farl ~= nil then
+          FARL.onPlayerLeave(player)
+          GUI.destroyGui(player)
+        end
       end
-      global.destroyNextTick[event.tick] = nil
     end
+    --    if global.destroyNextTick[event.tick] then
+    --      local pis = global.destroyNextTick[event.tick]
+    --      for _, pi in pairs(pis) do
+    --        GUI.destroyGui(game.players[pi])
+    --      end
+    --      global.destroyNextTick[event.tick] = nil
+    --    end
     for i, farl in pairs(global.farl) do
       farl:update(event)
       if farl.driver and farl.driver.name ~= "farl_player" then
@@ -189,7 +203,7 @@ clearAreas = {
     if global.godmode == nil then global.godmode = false end
     godmode = global.godmode
     global.destroyNextTick = global.destroyNextTick or {}
-    
+
     for i,farl in ipairs(global.farl) do
       farl = resetMetatable(farl, FARL)
     end
@@ -205,7 +219,7 @@ clearAreas = {
     end
     if global.version < "0.3.2" then
       for i,player in pairs(global.players) do
-        player.poleEntities = defaultSettings.poleEntities        
+        player.poleEntities = defaultSettings.poleEntities
       end
     end
     if global.version < "0.3.3" then
@@ -214,7 +228,7 @@ clearAreas = {
       end
       for i,player in pairs(global.players) do
         player.parallelTracks = defaultSettings.parallelTracks
-        player.parallelLag = defaultSettings.parallelLag        
+        player.parallelLag = defaultSettings.parallelLag
       end
     end
     global.version = "0.3.3"
@@ -224,12 +238,12 @@ clearAreas = {
 
   local function onload()
     initGlob()
---    for i,f in pairs(global.farl) do
---      if f.driver and f.driver.gui.left.farl then
---        --GUI.destroyGui(f.driver)
---        --GUI.createGui(f.driver)
---      end
---    end
+    --    for i,f in pairs(global.farl) do
+    --      if f.driver and f.driver.gui.left.farl then
+    --        --GUI.destroyGui(f.driver)
+    --        --GUI.createGui(f.driver)
+    --      end
+    --    end
   end
 
   local function onGuiClick(event)
@@ -292,7 +306,7 @@ clearAreas = {
       if not global.destroyNextTick[tick] then
         global.destroyNextTick[tick] = {}
       end
-      table.insert(global.destroyNextTick[tick], event.player_index) 
+      table.insert(global.destroyNextTick[tick], event.player_index)
     end
   end
 
@@ -306,7 +320,7 @@ clearAreas = {
   --game.onevent(defines.events.on_built_entity, onbuiltentity)
   game.on_event(defines.events.on_entity_died, onentitydied)
 
-  game.on_event(defines.events.on_player_driving_changed_state, onPlayerDrivingChangedState)
+  --game.on_event(defines.events.on_player_driving_changed_state, onPlayerDrivingChangedState)
 
   local function onplayercreated(event)
     local player = game.get_player(event.player_index)
@@ -416,7 +430,7 @@ clearAreas = {
           game.player.insert{name=items[i], count=count[i]}
         end
       end,
-            quickstart2 = function()
+      quickstart2 = function()
         local items = {"basic-modular-armor", "personal-roboport-equipment", "solar-panel-equipment",
           "blueprint", "deconstruction-planner", "battery-equipment", "construction-robot"}
         local count = {1,1,7,1,1,7,10}

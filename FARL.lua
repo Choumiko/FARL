@@ -165,7 +165,7 @@ FARL = {
       if f.driver and f.driver.name == player.name then
         f:deactivate()
         f.driver = false
-        f.settings = false
+        --f.settings = false
         break
       end
     end
