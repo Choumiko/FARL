@@ -439,7 +439,4 @@ clearAreas = {
           debugDump({i=i,type=w.type},true)
         end
       end,
-      shiftRail = function(rail, dir, dist)
-        
-      end
     })
