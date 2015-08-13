@@ -799,10 +799,10 @@ FARL = {
       for i=1,#e do
         if box.tl.x > e[i].position.x then box.tl.x = e[i].position.x end
         if box.tl.y > e[i].position.y then box.tl.y = e[i].position.y end
-        
+
         if box.br.x < e[i].position.x then box.br.x = e[i].position.x end
         if box.br.y < e[i].position.y then box.br.y = e[i].position.y end
-      
+
         local dir = e[i].direction or 0
         if e[i].name == "rail-chain-signal" and not offsets.chain then
           offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
@@ -883,7 +883,7 @@ FARL = {
 
           local bp = {mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps, rails = rails, signals = signals}
           bp.boundingBox = {tl = subPos(box.tl, mainRail.position),
-                            br = subPos(box.br, mainRail.position)}
+            br = subPos(box.br, mainRail.position)}
           self.settings.bp[poleType][bpType] = bp
           saveBlueprint(self.driver, poleType, bpType, bp)
           self:print("Saved blueprint for "..bpType.." rail with "..poleType.. " pole")
@@ -1016,8 +1016,36 @@ FARL = {
   end,
 
   placeParallelTracks = function(self, traveldir, lastRail)
+    local bp =  traveldir % 2 == 0 and self.settings.activeBP or self.settings.activeBP
     local rails = traveldir % 2 == 0 and self.settings.activeBP.straight.rails or self.settings.activeBP.diagonal.rails
     local mainRail = traveldir % 2 == 0 and self.settings.activeBP.straight.mainRail or self.settings.activeBP.diagonal.mainRail
+    if traveldir % 2 == 0 then
+      local bb = bp.straight.boundingBox
+      local tl = addPos(bb.tl)
+      local br = addPos(bb.br)
+      local tl1, br1 = {x=tl.x,y=tl.y},{x=br.x,y=br.y}
+      if traveldir == 2 then
+        tl1.x, br1.x = -br.y, -tl.y
+        tl1.y, br1.y = tl.x, br.x
+      elseif traveldir == 4 then
+        tl1, br1 = {x=-br.x,y=-br.y}, {x=-tl.x,y=-tl.y}
+      elseif traveldir == 6 then
+        tl1.x, br1.x = -br.y, -tl.y
+        tl1.y, br1.y = -br.x, -tl.x
+      end
+      debugDump({tl=tl1,br=br1},true)
+      tl = addPos(lastRail.position, tl1)
+      br = addPos(lastRail.position, br1)
+
+
+      local tiles = {}
+      for x = tl.x,br.x do
+        for y = tl.y,br.y do
+          table.insert(tiles, {name="concrete", position={x,y}})
+        end
+      end
+      self.surface.set_tiles(tiles)
+    end
     if rails and type(rails) == "table" then
       local diff = traveldir % 2 == 0 and traveldir or traveldir-1
       local rad = diff * (math.pi/4)
@@ -1031,8 +1059,6 @@ FARL = {
           if traveldir % 2 == 1 then
             entity = self:fixDiagonalParallelTracks(entity, traveldir, mainRail.direction)
           end
-          --debugDump(lastRail,true)
-          --debugDump(entity,true)
 
           if self:prepareArea(entity) then
             local _, ent = self:genericPlace(entity)
@@ -1141,7 +1167,7 @@ FARL = {
     data[7] = {[5] = {x=-2,y=-2}}
     local tmp = util.table.deepcopy(rail)
     tmp.direction = (rail.direction + 4) % 8
-    local c = (data[rail.direction] and data[rail.direction][dir]) and data[rail.direction][dir] or {x=0,y=0} 
+    local c = (data[rail.direction] and data[rail.direction][dir]) and data[rail.direction][dir] or {x=0,y=0}
     tmp.position = addPos(c, rail.position)
     return tmp
   end,
