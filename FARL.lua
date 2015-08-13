@@ -447,10 +447,6 @@ FARL = {
               return
             end
             table.insert(self.path, 1, {rail = last, traveldir = newTravelDir})
---            local parallel = self.path[self.settings.parallelLag] 
---            if parallel and parallel.rail.valid and not self.settings.root then
---               self:placeParallelTracks(self.path[10].traveldir, self.path[10].rail)
---            end
             if self.settings.poles then
               if self:getCargoCount("big-electric-pole") > 0 or self:getCargoCount("medium-electric-pole") > 0 then
                 local poleRails = self:getPoleRails(self.lastrail, self.previousDirection, self.direction)
@@ -799,7 +795,14 @@ FARL = {
           rails = rails + 1
         end
       end
+      local box = {tl={x=0,y=0}, br={x=0,y=0}}
       for i=1,#e do
+        if box.tl.x > e[i].position.x then box.tl.x = e[i].position.x end
+        if box.tl.y > e[i].position.y then box.tl.y = e[i].position.y end
+        
+        if box.br.x < e[i].position.x then box.br.x = e[i].position.x end
+        if box.br.y < e[i].position.y then box.br.y = e[i].position.y end
+      
         local dir = e[i].direction or 0
         if e[i].name == "rail-chain-signal" and not offsets.chain then
           offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
@@ -822,6 +825,9 @@ FARL = {
         end
       end
       if offsets.chain and bpType then
+        if bpType == "straight" then
+          saveVar(e, "bpE")
+        end
         local mainRail = false
         for i,rail in pairs(offsets.rails) do
           local traveldir = (bpType == "straight") and 0 or 1
@@ -832,7 +838,7 @@ FARL = {
           --local mainPos = subPos(relChain, signalOff)
           local pos = addPos(rail.position, signalOff)
           if not mainRail and pos.x == offsets.chain.position.x and pos.y == offsets.chain.position.y and signalDir == offsets.chain.direction then
-          --if not mainRail and mainPos.x == 0 and mainPos.y == 0 and signalDir == offsets.chain.direction then
+            --if not mainRail and mainPos.x == 0 and mainPos.y == 0 and signalDir == offsets.chain.direction then
             rail.main = true
             mainRail = rail
             if rail.direction == 3 then
@@ -850,10 +856,10 @@ FARL = {
           local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
           local railPos = mainRail.position
           if bpType == "diagonal" then
-              railPos = self:fixDiagonalPos(mainRail)
+            railPos = self:fixDiagonalPos(mainRail)
           end
           offsets.pole.position = subPos(offsets.pole.position,railPos)
-  
+
           local rails = {}
           for _, l in pairs(offsets.rails) do
             if not l.main then
@@ -874,9 +880,10 @@ FARL = {
               {name=l.name, position=subPos(l.position, offsets.chain.position),
                 direction = l.direction, reverse = (l.direction ~= offsets.chain.direction)})
           end
-  
+
           local bp = {mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps, rails = rails, signals = signals}
-  
+          bp.boundingBox = {tl = subPos(box.tl, mainRail.position),
+                            br = subPos(box.br, mainRail.position)}
           self.settings.bp[poleType][bpType] = bp
           saveBlueprint(self.driver, poleType, bpType, bp)
           self:print("Saved blueprint for "..bpType.." rail with "..poleType.. " pole")
@@ -1122,58 +1129,20 @@ FARL = {
     return addPos({x=x,y=y}, rail.position)
   end,
 
-  fixDiagonalParallelTracks = function(self, rail, dir, mainRailDir)
-  --debugDump({railDir = rail.direction, tdir = dir},true)
+  fixDiagonalParallelTracks = function(self, rail, dir)
+    --debugDump({railDir = rail.direction, tdir = dir},true)
     local x,y = 0,0
     local newDir = rail.direction
-    local mul = {x=1,y=1}
-    local mainMul = {x=1,y=1}
     local data = {}
     --data[raildir][traveldir] = {x,y,newDir}
-    data[1] = { [3] = {x=0,y=0,dir=5},
-                [7] = {x=2,y=-2,dir=5}}
-    data[3] = { [1] = {x=2,y=2,dir=7},
-                [5] = {x=0,y=0,dir=7}}
-    data[5] = { [3] = {x=-2,y=2,dir=1},
-                [7] = {x=0,y=0,dir=1}}
-    data[7] = { [1] = {x=0,y=0,dir=3},
-                [5] = {x=-2,y=-2,dir=3}}
-    -- 1 +x -y
-    if rail.direction == 1 and (dir == 3 or dir == 7) then
-      x, y = 2, - 2
-      mul = (dir == 3) and {x=0,y=0} or mul
-      --mainMul = {x=3,y=1}
-      --mul = mainRailDir==3 and {x=1,y=1} or mul
-      newDir = 5
-    elseif rail.direction == 3 and (dir == 1 or dir == 5) then
-      x, y = 2, 2
-      mul = (dir == 5) and {x=0,y=0} or mul
-      --mainMul = (dir == 1) and {x=-1,y=-1} or {x=2,y=2}
-      --mul = mainRailDir==3 and {x=1,y=-1} or mul
-      newDir = 7
-      -- 5 -x +y
-    elseif rail.direction == 5 and (dir == 3 or dir == 7) then
-      x, y = - 2, 2
-      mul = (dir == 7) and {x=0,y=0} or mul
-      --mainMul = {x=-4,y=-2}
-      --mul = mainRailDir==3 and {x=1,y=1} or mul
-      newDir = 1
-    elseif rail.direction == 7 and (dir == 1 or dir == 5) then
-      x, y = - 2, - 2
-      mul = (dir == 1) and {x=0,y=0} or mul
-      --mainMul = (dir == 1) and {x=-1,y=-1} or {x=2,y=2}
-      --mul = mainRailDir==3 and {x=1,y=-1} or mul
-      newDir = 3
-    end
+    data[1] = {[7] = {x=2,y=-2}}
+    data[3] = {[1] = {x=2,y=2}}
+    data[5] = {[3] = {x=-2,y=2}}
+    data[7] = {[5] = {x=-2,y=-2}}
     local tmp = util.table.deepcopy(rail)
-    local c = {x=x,y=y,dir=newDir}
---    if mainRailDir == 3 then
---      c.x = c.x*mainMul.x
---      c.y = c.y*mainMul.y
---      --c.dir = rail.direction
---    end
-    tmp.direction = c.dir
-    tmp.position = addPos({x= c.x*mul.x, y= c.y*mul.y}, rail.position)
+    tmp.direction = (rail.direction + 4) % 8
+    local c = (data[rail.direction] and data[rail.direction][dir]) and data[rail.direction][dir] or {x=0,y=0} 
+    tmp.position = addPos(c, rail.position)
     return tmp
   end,
 
