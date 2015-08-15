@@ -826,7 +826,7 @@ FARL = {
       end
       if offsets.chain and bpType then
         if bpType == "straight" then
-          saveVar(e, "bpE")
+          --saveVar(e, "bpE")
         end
         local mainRail = false
         for i,rail in pairs(offsets.rails) do
@@ -1064,6 +1064,9 @@ FARL = {
             local _, ent = self:genericPlace(entity)
             if ent then
               self:removeItemFromCargo(rails[i].name, 1)
+              if self.settings.electric then
+                remote.call("dim_trains", "railCreated", entity.position)
+              end
             else
               self:deactivate("Trying to place "..rails[i].name.." failed")
             end
