@@ -24,7 +24,10 @@ Settings = {
       rail = {},
       signals = true,
       bridge = false,
-      root = false
+      root = false,
+      boundingBoxOffsets = {
+      straight = {tl={x=-0.5,y=0},br={x=0,y=0}},
+      diagonal = {tl={x=0,y=0},br={x=0.5,y=0.5}}}
     }
     setmetatable(new, {__index=Settings})
     return new

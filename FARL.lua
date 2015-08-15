@@ -836,9 +836,8 @@ FARL = {
         end
       end
       if offsets.chain and bpType then
-        if bpType == "straight" then
-        --saveVar(e, "bpE")
-        end
+          box.tl = addPos(box.tl, self.settings.boundingBoxOffsets[bpType].tl)
+          box.br = addPos(box.br, self.settings.boundingBoxOffsets[bpType].br)
         local mainRail = false
         for i,rail in pairs(offsets.rails) do
           local traveldir = (bpType == "straight") and 0 or 1
@@ -1027,44 +1026,47 @@ FARL = {
   end,
 
   placeParallelTracks = function(self, traveldir, lastRail)
-    local bp =  traveldir % 2 == 0 and self.settings.activeBP or self.settings.activeBP
-    local rails = traveldir % 2 == 0 and self.settings.activeBP.straight.rails or self.settings.activeBP.diagonal.rails
-    local mainRail = traveldir % 2 == 0 and self.settings.activeBP.straight.mainRail or self.settings.activeBP.diagonal.mainRail
-    local bb = bp.straight.boundingBox
+    local rtype = traveldir % 2 == 0 and "straight" or "diagonal" 
+    local bp =  self.settings.activeBP[rtype]
+    local rails = bp.rails
+    local mainRail = bp.mainRail
+    local bb = bp.boundingBox
     local tl, br
     if bb then
       tl = addPos(bb.tl)
       br = addPos(bb.br)
-      if traveldir % 2 == 0 then
-
-        local tl1, br1 = {x=tl.x,y=tl.y},{x=br.x,y=br.y}
-        if traveldir == 2 then
-          tl1.x, br1.x = -br.y, -tl.y
-          tl1.y, br1.y = tl.x, br.x
-        elseif traveldir == 4 then
-          tl1, br1 = {x=-br.x,y=-br.y}, {x=-tl.x,y=-tl.y}
-        elseif traveldir == 6 then
-          tl1.x, br1.x = -br.y, -tl.y
-          tl1.y, br1.y = -br.x, -tl.x
-        end
-        --debugDump({tl=tl1,br=br1},true)
-        tl = addPos(lastRail.position, tl1)
-        br = addPos(lastRail.position, br1)
-
-        local tiles = {}
-        for x = tl.x,br.x do
-          for y = tl.y,br.y do
-            table.insert(tiles, {name="concrete", position={x,y}})
-          end
-        end
-        self.surface.set_tiles(tiles)
-
+      local tl1, br1 = {x=tl.x,y=tl.y},{x=br.x,y=br.y}
+      if traveldir == 2 or traveldir == 3 then
+        tl1.x, br1.x = -br.y, -tl.y
+        tl1.y, br1.y = tl.x, br.x
+      elseif traveldir == 4 or traveldir == 5 then
+        tl1, br1 = {x=-br.x,y=-br.y}, {x=-tl.x,y=-tl.y}
+      elseif traveldir == 6 or traveldir == 7 then
+        tl1.x, br1.x = -br.y, -tl.y
+        tl1.y, br1.y = -br.x, -tl.x
       end
-      -- 337,165,113,54
+      if traveldir == 7 then
+        tl1.y = tl1.y-2
+        tl1.x = tl1.x+1
+        br1.y = br1.y - 2
+        br1.x = br1.x + 1
+      end
+      --debugDump({tl=tl1,br=br1},true)
+      tl = addPos(lastRail.position, tl1)
+      br = addPos(lastRail.position, br1)
+
+--        local tiles = {}
+--        for x = tl.x,br.x do
+--          for y = tl.y,br.y do
+--            table.insert(tiles, {name="concrete", position={x,y}})
+--            --table.insert(tiles, {name="stone-path", position={x,y}})
+--          end
+--        end
+--        self.surface.set_tiles(tiles)
+
       self:removeTrees({tl,br})
       self:pickupItems({tl,br})
       self:removeStone({tl,br})
-      --301,267,113,70
     else
       self:print("No bounding box found. Reread blueprints")
     end

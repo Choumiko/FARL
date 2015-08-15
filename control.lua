@@ -152,7 +152,10 @@ clearAreas = {
     bridge = false,
     root = false,
     parallelTracks = true,
-    parallelLag = 6
+    parallelLag = 6,
+    boundingBoxOffsets = {
+      straight = {tl={x=-0.5,y=0},br={x=0,y=0}},
+      diagonal = {tl={x=0,y=0},br={x=0.5,y=0.5}}}
   }
   defaultSettings.activeBP = defaultSettings.bp.big
 
@@ -225,7 +228,16 @@ clearAreas = {
         player.parallelLag = defaultSettings.parallelLag
       end
     end
-    global.version = "0.3.3"
+    if global.version < "0.3.4" then
+      for i,farl in pairs(global.farl) do
+        farl:deactivate("reset")
+      end
+      for i,player in pairs(global.players) do
+        player.boundingBoxOffsets = util.table.deepcopy(defaultSettings.boundingBoxOffsets)
+      end
+      global.version = "0.3.4"
+    end
+    global.version = "0.3.4"
   end
 
   local function oninit() initGlob() end
@@ -440,6 +452,18 @@ clearAreas = {
       wagons = function()
         for i,w in ipairs(game.player.selected.train.carriages) do
           debugDump({i=i,type=w.type},true)
+        end
+      end,
+      
+      setBoundingBox = function(type, corner, x,y, player)
+        local player = player
+        if not player then player = game.players[1] end
+        local psettings = Settings.loadByPlayer(player)
+        if psettings then
+          local bb = psettings.boundingBoxOffsets[type][corner]
+          local x = x and x or bb.x
+          local y = y and y or bb.y
+          psettings.boundingBoxOffsets[type][corner] = {x=x,y=y} 
         end
       end,
     })
