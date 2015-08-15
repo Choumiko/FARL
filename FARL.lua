@@ -454,6 +454,10 @@ FARL = {
           local newTravelDir = newTravelDirs[i]
           local dir, last = self:placeRails(self.previousDirection, self.lastrail, self.direction, nextRail, newTravelDir)
           if dir then
+            if self.maintenance and type(dir) == "number" then
+              newTravelDir = dir
+              nextRail = last
+            end
             if not last.position and not last.name then
               self:deactivate({"msg-no-entity"})
               return
@@ -527,6 +531,8 @@ FARL = {
         if railEnt then
           paths[i] = {newTravel, nrail, railEnt}
           found = true
+        else
+          paths[i] = false
         end
       else
         paths[i] = false
@@ -535,11 +541,22 @@ FARL = {
     return found and paths or false
   end,
 
+  findNeighbour = function(self, rail, travelDir, input)
+    local neighbour = false
+    local newTravel, nrail = self:getRail(rail, travelDir, i)
+    if type(newTravel) == "number" then
+      local railEnt = self:findRail(nrail)
+      if railEnt then
+        neighbour = {newTravel, nrail, railEnt}
+      end
+    end
+    return neighbour
+  end,
+
   findRail = function(self, rail)
     local area = expandPos(rail.position,0.4)
     local found = false
-    local rails = self.surface.find_entities_filtered{area=area, name=rail.name}
-    for i,r in pairs(rails) do
+    for i,r in pairs(self.surface.find_entities_filtered{area=area, name=rail.name}) do
       if r.position.x == rail.position.x and r.position.y == rail.position.y and r.direction == rail.direction then
         found = r
         break
@@ -553,7 +570,8 @@ FARL = {
       self.lastrail = false
       self.signalCount = 0
       self.recheckRails = {}
-      self.lastrail = self:findLastRail()
+      local maintenance = self.maintenance and 10 or false
+      self.lastrail = self:findLastRail(maintenance)
       self.lastCheckIndex = 1
       if self.lastrail then
         self:findLastPole()
@@ -682,6 +700,13 @@ FARL = {
       self.settings.root = false
     end
   end,
+  
+  toggleMaintenance = function(self)
+    if self.active then
+      self:deactivate("Changing modes")
+    end
+    self.maintenance = not self.maintenance
+  end,
 
   resetPoleData = function(self)
     self.recheckRails = {}
@@ -695,11 +720,12 @@ FARL = {
     self.recheckRails = self.recheckRails or {}
     table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})
     local limit, count = limit, 1
+    if not limit then limit = 5 end
     while test and test.name ~= self.settings.rail.curved do
       local protoDir, protoRail = self:getRail(last, trainDir,1)
       protoRail = protoRail[1] or protoRail
       local rail = self:findRail(protoRail)
-      if rail then
+      if rail and (not self.maintenance or (self.maintenance and count < limit)) then
         test = rail
         last = rail
         table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})
@@ -836,8 +862,8 @@ FARL = {
         end
       end
       if offsets.chain and bpType then
-          box.tl = addPos(box.tl, self.settings.boundingBoxOffsets[bpType].tl)
-          box.br = addPos(box.br, self.settings.boundingBoxOffsets[bpType].br)
+        box.tl = addPos(box.tl, self.settings.boundingBoxOffsets[bpType].tl)
+        box.br = addPos(box.br, self.settings.boundingBoxOffsets[bpType].br)
         local mainRail = false
         for i,rail in pairs(offsets.rails) do
           local traveldir = (bpType == "straight") and 0 or 1
@@ -975,31 +1001,53 @@ FARL = {
       local newDir = nextRail.direction
       local newPos = nextRail.position
       local newRail = {name = nextRail.name, position = newPos, direction = newDir}
-
-      if newRail.name == self.settings.rail.curved then
-        local areas = clearAreas[newRail.direction%4]
-        for i=1,2 do
-          local area = areas[i]
-          local tl, lr = fixPos(addPos(newRail.position,area[1])), fixPos(addPos(newRail.position,area[2]))
-          area = {{tl[1]-1,tl[2]-1},{lr[1]+1,lr[2]+1}}
-          self:removeTrees(area)
-          self:pickupItems(area)
-          self:removeStone(area)
-          if not self:genericCanPlace(newRail) then
-            self:fillWater(area)
+      if not self.maintenance then
+        if newRail.name == self.settings.rail.curved then
+          local areas = clearAreas[newRail.direction%4]
+          for i=1,2 do
+            local area = areas[i]
+            local tl, lr = fixPos(addPos(newRail.position,area[1])), fixPos(addPos(newRail.position,area[2]))
+            area = {{tl[1]-1,tl[2]-1},{lr[1]+1,lr[2]+1}}
+            self:removeTrees(area)
+            self:pickupItems(area)
+            self:removeStone(area)
+            if not self:genericCanPlace(newRail) then
+              self:fillWater(area)
+            end
           end
         end
-      end
-      local canplace = self:prepareArea(newRail)
-      local hasRail = self:getCargoCount(newRail.name) > 0
-      if canplace and hasRail then
-        newRail.force = game.forces.player
-        local _, ent = self:genericPlace(newRail)
-        if self.settings.electric then
-          remote.call("dim_trains", "railCreated", newPos)
+        local canplace = self:prepareArea(newRail)
+        local hasRail = self:getCargoCount(newRail.name) > 0
+        if canplace and hasRail then
+          newRail.force = game.forces.player
+          local _, ent = self:genericPlace(newRail)
+          if self.settings.electric then
+            remote.call("dim_trains", "railCreated", newPos)
+          end
+          if ent then
+            self:removeItemFromCargo(nextRail.name, 1)
+            if newRail.name ~= self.settings.rail.curved then
+              self.lastCurve = self.lastCurve + 1
+              if self.settings.parallelTracks and self.lastCurve > self.settings.parallelLag and not self.settings.root then
+                self:placeParallelTracks(newTravelDir, newRail)
+              end
+            else
+              self.lastCurve = 0
+            end
+          else
+            self:deactivate({"msg-no-entity"})
+            return false
+          end
+          return true, ent
+        elseif not canplace then
+          return false, {"msg-cant-place"}
+        elseif not hasRail then
+          return false, {"msg-out-of-rails"}
         end
+      --maintenance mode
+      else
+        local ent = self:findRail(newRail) 
         if ent then
-          self:removeItemFromCargo(nextRail.name, 1)
           if newRail.name ~= self.settings.rail.curved then
             self.lastCurve = self.lastCurve + 1
             if self.settings.parallelTracks and self.lastCurve > self.settings.parallelLag and not self.settings.root then
@@ -1008,15 +1056,30 @@ FARL = {
           else
             self.lastCurve = 0
           end
+          return true, ent
         else
-          self:deactivate({"msg-no-entity"})
-          return false
+          local paths = self:findNeighbours(lastRail, self.previousDirection)
+          debugDump(paths,true)
+          saveVar(paths)
+          if paths then
+            for i=0,2 do
+              local path = paths[i]
+              if type(path) == "table" then
+                if path[3].name ~= self.settings.rail.curved then
+                  self.lastCurve = self.lastCurve + 1
+                  if self.settings.parallelTracks and self.lastCurve > self.settings.parallelLag and not self.settings.root then
+                    self:placeParallelTracks(path[1], path[3])
+                  end
+                else
+                  self.lastCurve = 0
+                end
+              
+                return path[1], path[3]
+              end
+            end
+          end
+          return false, "Maintenance end"
         end
-        return true, ent
-      elseif not canplace then
-        return false, {"msg-cant-place"}
-      elseif not hasRail then
-        return false, {"msg-out-of-rails"}
       end
     else
       error("nooo",2)
@@ -1026,7 +1089,7 @@ FARL = {
   end,
 
   placeParallelTracks = function(self, traveldir, lastRail)
-    local rtype = traveldir % 2 == 0 and "straight" or "diagonal" 
+    local rtype = traveldir % 2 == 0 and "straight" or "diagonal"
     local bp =  self.settings.activeBP[rtype]
     local rails = bp.rails
     local mainRail = bp.mainRail
@@ -1055,14 +1118,14 @@ FARL = {
       tl = addPos(lastRail.position, tl1)
       br = addPos(lastRail.position, br1)
 
---        local tiles = {}
---        for x = tl.x,br.x do
---          for y = tl.y,br.y do
---            table.insert(tiles, {name="concrete", position={x,y}})
---            --table.insert(tiles, {name="stone-path", position={x,y}})
---          end
---        end
---        self.surface.set_tiles(tiles)
+      --        local tiles = {}
+      --        for x = tl.x,br.x do
+      --          for y = tl.y,br.y do
+      --            table.insert(tiles, {name="concrete", position={x,y}})
+      --            --table.insert(tiles, {name="stone-path", position={x,y}})
+      --          end
+      --        end
+      --        self.surface.set_tiles(tiles)
 
       self:removeTrees({tl,br})
       self:pickupItems({tl,br})

@@ -413,6 +413,7 @@ clearAreas = {
         global.godmode = bool
         godmode = bool
       end,
+      
       setSpeed = function(speed)
         for name, s in pairs(global.players) do
           s.cruiseSpeed = speed
