@@ -117,7 +117,7 @@ end
 local RED = {r = 0.9}
 local GREEN = {g = 0.7}
 local YELLOW = {r = 0.8, g = 0.8}
-
+apiCalls = {find=0,canplace=0,create=0,count=0}
 FARL = {
   curvePositions = {
     [0] = {straight={dir=0, off={x=1,y=3}}, diagonal = {dir=5, off={x=-1,y=-3}}},
@@ -171,6 +171,8 @@ FARL = {
         break
       end
     end
+    debugDump(apiCalls,true)
+    apiCalls = {find=0,canplace=0,create=0,count=0}
   end,
 
   findByLocomotive = function(loco)
@@ -249,9 +251,9 @@ FARL = {
   --prepare an area for entity so it can be placed
   prepareArea = function(self,entity,range)
     local pos = entity.position
-    local area = false
-    local range = range or 1.5
-    area = expandPos(pos,range)
+    local area = (type(range) == "table") and range or false
+    local range = (type(range) ~= "number") and 1.5 or false
+    area = area and area or expandPos(pos,range)
     if not self:genericCanPlace(entity) then
       self:removeTrees(area)
       self:pickupItems(area)
@@ -266,14 +268,20 @@ FARL = {
   end,
 
   removeTrees = function(self, area)
-    for _, entity in pairs(self.surface.find_entities_filtered{area = area, type = "tree"}) do
-      entity.die()
-      if not godmode and self.settings.collectWood then self:addItemToCargo("raw-wood", 1) end
+    apiCalls.count = apiCalls.count + 1
+    if self.surface.count_entities_filtered{area = area, type = "tree"} > 0 then
+      apiCalls.find = apiCalls.find + 1
+      for _, entity in pairs(self.surface.find_entities_filtered{area = area, type = "tree"}) do
+        entity.die()
+        if not godmode and self.settings.collectWood then self:addItemToCargo("raw-wood", 1) end
+      end
     end
   end,
 
   removeStone = function(self, area)
-    if removeStone then
+    apiCalls.count = apiCalls.count + 1
+    if removeStone and self.surface.count_entities_filtered{area = area, name = "stone-rock"} > 0 then
+      apiCalls.find = apiCalls.find + 1
       for _, entity in pairs(self.surface.find_entities_filtered{area = area, name = "stone-rock"}) do
         entity.die()
       end
@@ -318,9 +326,13 @@ FARL = {
   end,
 
   pickupItems = function(self, area)
-    for _, entity in ipairs(self.surface.find_entities_filtered{area = area, name="item-on-ground"}) do
-      self:addItemToCargo(entity.stack.name, entity.stack.count)
-      entity.destroy()
+    apiCalls.count = apiCalls.count + 1
+    if self.surface.count_entities_filtered{area = area, name = "item-on-ground"} > 0 then
+      apiCalls.find = apiCalls.find + 1
+      for _, entity in ipairs(self.surface.find_entities_filtered{area = area, name="item-on-ground"}) do
+        self:addItemToCargo(entity.stack.name, entity.stack.count)
+        entity.destroy()
+      end
     end
   end,
 
@@ -752,6 +764,7 @@ FARL = {
       error("no name", 2)
     end
     local name = arg.innername or arg.name
+    apiCalls.canplace = apiCalls.canplace + 1
     if not arg.direction then
       return self.surface.can_place_entity{name = name, position = arg.position}
     else
@@ -771,10 +784,8 @@ FARL = {
       local direction = arg.direction or 0
       local force = arg.force or game.forces.player
       arg.force = force
-      for _,ent in pairs(self.surface.find_entities_filtered{area=expandPos(arg.position,0.4), name="ghost"}) do
-        debugDump(ent.name.." "..pos2Str(ent.position),true)
-      end
       entity = self.surface.create_entity(arg)
+      apiCalls.create = apiCalls.create + 1
     end
     return canPlace, entity
   end,
@@ -826,7 +837,7 @@ FARL = {
       end
       if offsets.chain and bpType then
         if bpType == "straight" then
-          --saveVar(e, "bpE")
+        --saveVar(e, "bpE")
         end
         local mainRail = false
         for i,rail in pairs(offsets.rails) do
@@ -1019,32 +1030,43 @@ FARL = {
     local bp =  traveldir % 2 == 0 and self.settings.activeBP or self.settings.activeBP
     local rails = traveldir % 2 == 0 and self.settings.activeBP.straight.rails or self.settings.activeBP.diagonal.rails
     local mainRail = traveldir % 2 == 0 and self.settings.activeBP.straight.mainRail or self.settings.activeBP.diagonal.mainRail
-    if traveldir % 2 == 0 then
-      local bb = bp.straight.boundingBox
-      local tl = addPos(bb.tl)
-      local br = addPos(bb.br)
-      local tl1, br1 = {x=tl.x,y=tl.y},{x=br.x,y=br.y}
-      if traveldir == 2 then
-        tl1.x, br1.x = -br.y, -tl.y
-        tl1.y, br1.y = tl.x, br.x
-      elseif traveldir == 4 then
-        tl1, br1 = {x=-br.x,y=-br.y}, {x=-tl.x,y=-tl.y}
-      elseif traveldir == 6 then
-        tl1.x, br1.x = -br.y, -tl.y
-        tl1.y, br1.y = -br.x, -tl.x
-      end
-      debugDump({tl=tl1,br=br1},true)
-      tl = addPos(lastRail.position, tl1)
-      br = addPos(lastRail.position, br1)
+    local bb = bp.straight.boundingBox
+    local tl, br
+    if bb then
+      tl = addPos(bb.tl)
+      br = addPos(bb.br)
+      if traveldir % 2 == 0 then
 
-
-      local tiles = {}
-      for x = tl.x,br.x do
-        for y = tl.y,br.y do
-          table.insert(tiles, {name="concrete", position={x,y}})
+        local tl1, br1 = {x=tl.x,y=tl.y},{x=br.x,y=br.y}
+        if traveldir == 2 then
+          tl1.x, br1.x = -br.y, -tl.y
+          tl1.y, br1.y = tl.x, br.x
+        elseif traveldir == 4 then
+          tl1, br1 = {x=-br.x,y=-br.y}, {x=-tl.x,y=-tl.y}
+        elseif traveldir == 6 then
+          tl1.x, br1.x = -br.y, -tl.y
+          tl1.y, br1.y = -br.x, -tl.x
         end
+        --debugDump({tl=tl1,br=br1},true)
+        tl = addPos(lastRail.position, tl1)
+        br = addPos(lastRail.position, br1)
+
+        local tiles = {}
+        for x = tl.x,br.x do
+          for y = tl.y,br.y do
+            table.insert(tiles, {name="concrete", position={x,y}})
+          end
+        end
+        self.surface.set_tiles(tiles)
+
       end
-      self.surface.set_tiles(tiles)
+      -- 337,165,113,54
+      self:removeTrees({tl,br})
+      self:pickupItems({tl,br})
+      self:removeStone({tl,br})
+      --301,267,113,70
+    else
+      self:print("No bounding box found. Reread blueprints")
     end
     if rails and type(rails) == "table" then
       local diff = traveldir % 2 == 0 and traveldir or traveldir-1
@@ -1059,7 +1081,7 @@ FARL = {
           if traveldir % 2 == 1 then
             entity = self:fixDiagonalParallelTracks(entity, traveldir, mainRail.direction)
           end
-
+          local area = bb and {bb.tl, bb.br} or false
           if self:prepareArea(entity) then
             local _, ent = self:genericPlace(entity)
             if ent then
