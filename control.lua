@@ -88,32 +88,33 @@ clearAreas = {
 }
   --poleDistance = 1, side = right
   defaultsDiagonal = {
-    direction = 3,
+    direction = 7,
     poleEntities = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
     pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}},
-    rails = {}, signals = {}
-  }
+    rails = {}, signals = {},
+    boundingBox = {br = {x = 2.5, y = 4}, tl = {x = -1, y = 0}}}
 
   defaultsStraight = {
     direction = 0,
     poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
-    pole = {name = "big-electric-pole", position = {x = 3, y = 0}},
-    rails = {}, signals = {}
-  }
+    pole = {name = "big-electric-pole", position = {x = 3, y = -1}},
+    rails = {}, signals = {},
+    boundingBox = {br = {x = 3, y = 0.5}, tl = {x = -0.5, y = -1}}}
 
   defaultsMediumDiagonal = {
     direction = 7,
     poleEntities = {{name = "small-lamp", position = {x = -1, y = 1}}},
     pole = {name = "medium-electric-pole", position = {x = 2, y = 2}},
-    rails = {}, signals = {}
-  }
+    rails = {}, signals = {},
+    boundingBox = {br = {x = 1, y = 4}, tl = {x = -2, y = 0}}}
 
   defaultsMediumStraight = {
     direction = 0,
     poleEntities = {{name = "small-lamp", position = {x = 0,y = 1}}},
     pole = {name = "medium-electric-pole", position = {x = 2.5,y = -0.5}},
-    rails = {}, signals = {}
-  }
+    rails = {}, signals = {},
+    boundingBox = {br = {x = 2.5, y = 0.5}, tl = {x = -1.5, y = -1}}}
+
 
   --[traveldir] ={[raildir]
   signalOffset =
@@ -229,9 +230,6 @@ clearAreas = {
       end
     end
     if global.version < "0.3.4" then
-      for i,farl in pairs(global.farl) do
-        farl:deactivate("reset")
-      end
       for i,player in pairs(global.players) do
         player.boundingBoxOffsets = util.table.deepcopy(defaultSettings.boundingBoxOffsets)
       end

@@ -171,7 +171,7 @@ FARL = {
         break
       end
     end
-    debugDump(apiCalls,true)
+    --debugDump(apiCalls,true)
     apiCalls = {find=0,canplace=0,create=0,count=0}
   end,
 
@@ -700,7 +700,7 @@ FARL = {
       self.settings.root = false
     end
   end,
-  
+
   toggleMaintenance = function(self)
     if self.active then
       self:deactivate("Changing modes")
@@ -1044,9 +1044,9 @@ FARL = {
         elseif not hasRail then
           return false, {"msg-out-of-rails"}
         end
-      --maintenance mode
+        --maintenance mode
       else
-        local ent = self:findRail(newRail) 
+        local ent = self:findRail(newRail)
         if ent then
           if newRail.name ~= self.settings.rail.curved then
             self.lastCurve = self.lastCurve + 1
@@ -1073,7 +1073,7 @@ FARL = {
                 else
                   self.lastCurve = 0
                 end
-              
+
                 return path[1], path[3]
               end
             end
@@ -1118,20 +1118,20 @@ FARL = {
       tl = addPos(lastRail.position, tl1)
       br = addPos(lastRail.position, br1)
 
-      --        local tiles = {}
-      --        for x = tl.x,br.x do
-      --          for y = tl.y,br.y do
-      --            table.insert(tiles, {name="concrete", position={x,y}})
-      --            --table.insert(tiles, {name="stone-path", position={x,y}})
-      --          end
+      --      local tiles = {}
+      --      for x = tl.x,br.x do
+      --        for y = tl.y,br.y do
+      --          table.insert(tiles, {name="concrete", position={x,y}})
+      --          --table.insert(tiles, {name="stone-path", position={x,y}})
       --        end
-      --        self.surface.set_tiles(tiles)
+      --      end
+      --      self.surface.set_tiles(tiles)
 
       self:removeTrees({tl,br})
       self:pickupItems({tl,br})
       self:removeStone({tl,br})
     else
-      self:print("No bounding box found. Reread blueprints")
+      --self:print("No bounding box found. Reread blueprints")
     end
     if rails and type(rails) == "table" then
       local diff = traveldir % 2 == 0 and traveldir or traveldir-1
