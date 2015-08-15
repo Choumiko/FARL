@@ -166,26 +166,40 @@ clearAreas = {
   end
 
   local function onTick(event)
-    if global.destroyNextTick[event.tick] then
-      local pis = global.destroyNextTick[event.tick]
-      for _, pi in pairs(pis) do
-        GUI.destroyGui(game.players[pi])
-        debugDump("Gui destroyed (on tick)")
-      end
-      global.destroyNextTick[event.tick] = nil
-    end
-    for i, farl in pairs(global.farl) do
-      if not farl.destroy then
-        farl:update(event)
-        if farl.driver and farl.driver.name ~= "farl_player" then
-          GUI.updateGui(farl)
+    local status, err = pcall(function()
+      if global.destroyNextTick[event.tick] then
+        local pis = global.destroyNextTick[event.tick]
+        for _, pi in pairs(pis) do
+          GUI.destroyGui(game.players[pi])
+          debugDump("Gui destroyed (on tick)")
         end
-      else
-        if farl.destroy == event.tick then
-          farl.destroy = false
-          farl.settings = false
+        global.destroyNextTick[event.tick] = nil
+      end
+      for i, farl in pairs(global.farl) do
+        if not farl.destroy then
+          local status, err = pcall(function()
+            farl:update(event)
+            if farl.driver and farl.driver.name ~= "farl_player" then
+              GUI.updateGui(farl)
+            end
+          end)
+          if not status then
+            if farl and farl.active then
+              farl:deactivate("Unexpected error: "..err)
+            end
+            debugDump("Unexpected error: "..err,true)
+          end
+        else
+          if farl.destroy == event.tick then
+            farl.destroy = false
+            farl.settings = false
+          end
         end
       end
+    end)
+    if not status then
+      debugDump("Unexpected error:",true)
+      debugDump(err,true)
     end
   end
 
@@ -411,7 +425,7 @@ clearAreas = {
         global.godmode = bool
         godmode = bool
       end,
-      
+
       setSpeed = function(speed)
         for name, s in pairs(global.players) do
           s.cruiseSpeed = speed
@@ -453,7 +467,7 @@ clearAreas = {
           debugDump({i=i,type=w.type},true)
         end
       end,
-      
+
       setBoundingBox = function(type, corner, x,y, player)
         local player = player
         if not player then player = game.players[1] end
@@ -462,7 +476,7 @@ clearAreas = {
           local bb = psettings.boundingBoxOffsets[type][corner]
           local x = x and x or bb.x
           local y = y and y or bb.y
-          psettings.boundingBoxOffsets[type][corner] = {x=x,y=y} 
+          psettings.boundingBoxOffsets[type][corner] = {x=x,y=y}
         end
       end,
     })
