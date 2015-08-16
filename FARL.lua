@@ -114,6 +114,13 @@ function saveBlueprint(player, poleType, type, bp)
   global.savedBlueprints[player.name][poleType][type] = util.table.deepcopy(bp)
 end
 
+function protectedKey(ent)
+  if ent.valid then
+    return ent.name .. ":" .. ent.position.x..":"..ent.position.y..":"..ent.direction
+  end
+  return false
+end
+
 local RED = {r = 0.9}
 local GREEN = {g = 0.7}
 local YELLOW = {r = 0.8, g = 0.8}
@@ -164,6 +171,7 @@ FARL = {
   onPlayerLeave = function(player, tick)
     for i,f in ipairs(global.farl) do
       if f.driver and f.driver.name == player.name then
+        --debugDump(f.protectedCount,true)
         f:deactivate()
         f.driver = false
         f.destroy = tick
@@ -287,6 +295,29 @@ FARL = {
     end
   end,
 
+  -- args = {area=area, name="name"} or {area=area,type="type"}
+  -- exclude: table with entities as keys
+  removeEntitiesFiltered = function(self, args, exclude)
+    apiCalls.count = apiCalls.count + 1
+    local exclude = exclude or {}
+    if self.surface.count_entities_filtered(args) > 0 then
+      apiCalls.find = apiCalls.find + 1
+      for _, entity in pairs(self.surface.find_entities_filtered(args)) do
+        if not self:isProtected(entity) then
+          if entity.prototype.items_to_place_this then
+            local item
+            for k, v in pairs(entity.prototype.items_to_place_this) do
+              item = k
+              break
+            end
+            self:addItemToCargo(item, 1)
+          end
+          entity.destroy()
+        end
+      end
+    end
+  end,
+
   fillWater = function(self, area)
     -- check if bridging is turned on in settings
     if self.settings.bridge then
@@ -388,6 +419,7 @@ FARL = {
         end
       elseif lastRail.name == self.settings.rail.curved and name == self.settings.rail.curved then
         local pos
+        if not data.curve[lastRail.direction] then error("maintenance1", 4) end
         if not data.curve[lastRail.direction].diag then -- curves connect directly
           pos = addPos(lastRail.position, data.curve[lastRail.direction].pos)
           retDir, retRail = newTravelDir, {name=name, position=pos, direction=data.direction}
@@ -431,9 +463,9 @@ FARL = {
       local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
       if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and distance(self.lastrail.position, firstWagon.position) < 6 then
         --debugDump(#self.path, true)
-        self:flyingText2("L", RED, true, self.lastrail.position)
+        --self:flyingText2("L", RED, true, self.lastrail.position)
         if type(self.path == "table") and self.path[1] then
-          self:flyingText2("B", RED, true, self.path[#self.path].rail.position)
+        --self:flyingText2("B", RED, true, self.path[#self.path].rail.position)
         end
         self.input = self.driver.riding_state.direction
         if self.driver.name == "farl_player" then
@@ -466,6 +498,7 @@ FARL = {
               return
             end
             table.insert(self.path, 1, {rail = last, traveldir = newTravelDir})
+            self:protect(last)
             if self.settings.poles then
               if self:getCargoCount("big-electric-pole") > 0 or self:getCargoCount("medium-electric-pole") > 0 then
                 local poleRails = self:getPoleRails(self.lastrail, self.previousDirection, self.direction)
@@ -573,6 +606,9 @@ FARL = {
       self.lastrail = false
       self.signalCount = 0
       self.recheckRails = {}
+      self.protected = {}
+      self.protectedCount = 0
+      self.protectedCalls = {}
       local maintenance = self.maintenance and 10 or false
       self.lastrail = self:findLastRail(maintenance)
       self.lastCheckIndex = 1
@@ -584,7 +620,8 @@ FARL = {
           local behind, check = self.lastrail, {[1]={[1] = oppositedirection(self.direction), [2] = self.lastrail, [3]=self.lastrail}}
           local lastSignal, signalCount, signalDir = false, -1, signalOffset[self.direction].dir
           local limit = 1
-          local path = {rail = self.lastrail, traveldir = self.direction}
+          local path = {{rail = self.lastrail, traveldir = self.direction}}
+          self:protect(self.lastrail)
           while (check and type(check) == "table" and check[1] and check[1][2])
             and ((not self.maintenance and limit < carriages*7) or (self.maintenance and limit < math.max(16,carriages*7))) do
             if not lastSignal then
@@ -620,28 +657,35 @@ FARL = {
             if check and type(check) == "table" and check[1] and check[1][2] then
               --debugDump(check[1][2],true)
               table.insert(path, {rail=check[1][3], traveldir=check[1][1]})
+              self:protect(check[1][3])
+
               behind = check[1][2]
             end
             limit = limit + 1
           end
           if lastSignal and lastSignal.valid then
             self:flyingText2("S", GREEN, true, lastSignal.position)
+            if self.maintenance then
+              self:protect(lastSignal)
+            end
           end
           self:flyingText2( {"text-behind"}, RED, true, behind.position)
           self.path = path
           self.lastCurve = #self.path
-          if self.maintenance and type(self.path) == "table" and #self.path > 10 then
-            local lag = 4
-
+          if self.maintenance and type(self.path) == "table" and #self.path >= 10 then
+            local lag = 8
             self.maintenanceRail = self.path[1].rail
-            self.maintenanceDir = (self.path[1].traveldir+4)%8
+            self.maintenanceDir = self.path[1].traveldir
             self.lastrail = self.path[lag].rail
             self.direction = (self.path[lag].traveldir +4) % 8
+            self:protect(self.lastPole)
+            self:flyingText2( "L", RED, true, self.lastrail.position)
           else
             if self.maintenance then
               self:deactivate("No path for maintenance found")
               self.maintenanceRail = nil
               self.maintenanceDir = nil
+              self.protected = {}
               self.active = false
             end
           end
@@ -680,6 +724,9 @@ FARL = {
     self.recheckRails = {}
     self.maintenanceRail = nil
     self.maintenanceDir = nil
+    self.protected = nil
+    self.protectedCount = nil
+    self.protectedCalls = {}
   end,
 
   toggleActive = function(self)
@@ -805,7 +852,6 @@ FARL = {
 
   genericCanPlace = function(self, arg)
     if not arg.position or not arg.position.x or not arg.position.y then
-      debugDump(arg,true)
       error("invalid position", 2)
     elseif not arg.name then
       error("no name", 2)
@@ -908,7 +954,9 @@ FARL = {
         if mainRail then
           local lamps = {}
           for _, l in ipairs(offsets.poleEntities) do
-            table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position), direction = l.direction})
+            if l.name ~= "wooden-chest" then
+              table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position), direction = l.direction})
+            end
           end
           local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
           local railPos = mainRail.position
@@ -1069,12 +1117,11 @@ FARL = {
       else
         local ent = self:findRail(newRail)
         local retDir, retEnt
-        local input = 1
         if ent then
-          if newRail.name ~= self.settings.rail.curved then
+          if ent.name ~= self.settings.rail.curved then
             self.lastCurve = self.lastCurve + 1
             if self.settings.parallelTracks and self.lastCurve > self.settings.parallelLag and not self.settings.root then
-              self:placeParallelTracks(newTravelDir, newRail)
+              self:placeParallelTracks(newTravelDir, ent)
             end
           else
             self.lastCurve = 0
@@ -1104,8 +1151,12 @@ FARL = {
             end
           end
         end
-        if self:findNextMaintenanceRail() then
+
+        local tmp = self:findNextMaintenanceRail()
+        if tmp then
           self:prepareMaintenance(self.maintenanceDir, self.maintenanceRail)
+        else
+          retDir = false
         end
         if retDir then
           return retDir, retEnt
@@ -1121,22 +1172,88 @@ FARL = {
   end,
 
   findNextMaintenanceRail = function(self)
-    debugDump({self.maintenanceRail.position,self.maintenanceDir},true)
+    --debugDump({self.maintenanceRail.position,self.maintenanceDir},true)
     local paths = self:findNeighbours(self.maintenanceRail, self.maintenanceDir)
-    local found = false
+    local found = 0
     if paths then
       for i=0,2 do
         local path = paths[i]
         if type(path) == "table" then
-          self.maintenanceRail = path[3]
-          self.maintenanceDir = path[1]
-          self:flyingText2("M", RED, true, path[3].position)
-          found = true
-          break
+          if found == 0 then
+            self.maintenanceRail = path[3]
+            self.maintenanceDir = path[1]
+            self:protect(path[3])
+            --self:flyingText2("M", RED, true, path[3].position)
+          end
+          found = found + 1
         end
       end
     end
-    return found
+    if found == 1 then
+      return self:protectRails(self.maintenanceRail, self.maintenanceDir, 10)
+    else
+      if found > 0 then
+        debugDump(self.protectedCount,true)
+        self:deactivate("Junction detected")
+      end
+      return false
+    end
+  end,
+
+  protect = function(self, ent)
+    self.protected = self.protected or {}
+    self.protectedCount = self.protectedCount or 0
+    self.protected[protectedKey(ent)] = ent
+    self.protectedCount = self.protectedCount + 1
+  end,
+
+  isProtected = function(self, ent)
+    local key = protectedKey(ent)
+    if self.protected[key] == ent then
+      self.protectedCalls[key] = self.protectedCalls[key] and self.protectedCalls[key] + 1 or 1
+      --debugDump(key.." "..self.protectedCalls[key],true)
+      --if self.protectedCalls[key] >= 10 then
+      --self.protectedCalls[key] = nil
+      --self.protected[key] = nil
+      --self.protectedCount = self.protectedCount - 1
+      --debugDump(self.protectedCount,true)
+      --end
+      return true
+    end
+    return false
+  end,
+
+  protectRails = function(self, last, dir, limit)
+    local last, dir = last, dir
+    local found, c = 0, 0
+    while found and c < limit do
+      found = 0
+      local paths = self:findNeighbours(last, dir)
+      if paths then
+        for i=0,2 do
+          local path = paths[i]
+          if type(path) == "table" then
+            if found == 0 then
+              self:protect(path[3])
+              last = path[3]
+              dir = path[1]
+            end
+            found = found + 1
+          end
+        end
+      end
+      if found > 1 then
+        debugDump(self.protectedCount,true)
+        self:deactivate("Junction detected")
+        return false
+      else
+        if found == 0 then
+          return false
+        end
+      end
+      c = c + 1
+    end
+    return true
   end,
 
   prepareMaintenance = function(self, traveldir, lastRail)
@@ -1169,18 +1286,23 @@ FARL = {
       tl = addPos(lastRail.position, tl1)
       br = addPos(lastRail.position, br1)
 
-            local tiles = {}
-            for x = tl.x,br.x do
-              for y = tl.y,br.y do
-                table.insert(tiles, {name="concrete", position={x,y}})
-                --table.insert(tiles, {name="stone-path", position={x,y}})
-              end
-            end
-            self.surface.set_tiles(tiles)
+      --      local tiles = {}
+      --      for x = tl.x,br.x do
+      --        for y = tl.y,br.y do
+      --          table.insert(tiles, {name="concrete", position={x,y}})
+      --          --table.insert(tiles, {name="stone-path", position={x,y}})
+      --        end
+      --      end
+      --      self.surface.set_tiles(tiles)
 
       self:removeTrees({tl,br})
       self:pickupItems({tl,br})
       self:removeStone({tl,br})
+
+      local types = {"rail", "rail-signal", "rail-chain-signal", "electric-pole", "lamp"}
+      for _, t in pairs(types) do
+        self:removeEntitiesFiltered({area={tl,br}, type=t}, self.protected)
+      end
     else
 
     end
@@ -1248,6 +1370,9 @@ FARL = {
           if self:prepareArea(entity) then
             local _, ent = self:genericPlace(entity)
             if ent then
+              if self.maintenance then
+                self:protect(ent)
+              end
               self:removeItemFromCargo(rails[i].name, 1)
               if self.settings.electric then
                 remote.call("dim_trains", "railCreated", entity.position)
@@ -1277,6 +1402,9 @@ FARL = {
           if self:prepareArea(entity) then
             local _, ent = self:genericPlace(entity)
             if ent then
+              if self.maintenance then
+                self:protect(ent)
+              end
               self:removeItemFromCargo(signals[i].name, 1)
             else
               self:deactivate("Trying to place "..signals[i].name.." failed")
@@ -1422,6 +1550,9 @@ FARL = {
           if self:prepareArea(entity) then
             local _, ent = self:genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = game.forces.player}
             if ent then
+              if self.maintenance then
+                self:protect(ent)
+              end
               self:removeItemFromCargo(poleEntities[i].name, 1)
             else
               self:deactivate("Trying to place "..poleEntities[i].name.." failed")
@@ -1541,7 +1672,7 @@ FARL = {
   placePole = function(self, lastrail, nextRail)
     local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = self.settings.medium and 9+1 or 30+1
-    if self.settings.minPoles and not self.settings.ccNet then
+    if self.settings.minPoles and self.lastPole.valid and (not self.settings.ccNet and not self.maintenance) then
       local poles = self.surface.find_entities_filtered{area=expandPos(self.locomotive.position,reach), name=name}
       local checkpos = lastrail and lastrail.position or self.locomotive.position
       local min, pole = math.abs(distance(self.lastPole.position, checkpos)), nil
@@ -1600,7 +1731,9 @@ FARL = {
           self:removeItemFromCargo(name, 1)
           self:connectCCNet(pole)
           self.lastPole = pole
-
+          if self.maintenance then
+            self:protect(pole)
+          end
           bestPole, index = self:getBestPole(pole, self.recheckRails, "O")
           if bestPole then
             self.lastCheckPole = bestPole.p
@@ -1661,6 +1794,9 @@ FARL = {
       self:prepareArea(signal)
       local success, entity = self:genericPlace(signal)
       if entity then
+        if self.maintenance then
+          self:protect(entity)
+        end
         self:removeItemFromCargo(signal.name, 1)
         if self.settings.parallelTracks and self.lastCurve > self.settings.parallelLag and not self.settings.root then
           self:placeParallelSignals(traveldir, entity)
@@ -1727,7 +1863,7 @@ FARL = {
       self:print("Rail@"..pos2Str(rail.position).." dir:"..rail.direction)
       local fixed = self:fixDiagonalPos(rail)
       if rail.direction % 2 == 1 then
-        self:flyingText2("F", GREEN, true, fixed)
+        --self:flyingText2("F", GREEN, true, fixed)
         self:print("Fixed: "..pos2Str(fixed).." dir:"..rail.direction)
       end
     else
