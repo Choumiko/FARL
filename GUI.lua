@@ -128,7 +128,7 @@ GUI = {
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
       GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
-      --GUI.add(rows,{type="checkbox", name="maintenance", caption="Maintenance", state=psettings.maintenance},GUI.toggleMaintenance)
+      GUI.add(rows,{type="checkbox", name="maintenance", caption="Maintenance", state=psettings.maintenance},GUI.toggleMaintenance)
       GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
     end,
 
@@ -372,7 +372,7 @@ GUI = {
         farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
         farl.driver.gui.left.farl.rows.root.state = farl.settings.root
-        --farl.driver.gui.left.farl.rows.maintenance.state = farl.maintenance
+        farl.driver.gui.left.farl.rows.maintenance.state = farl.maintenance
       end
     end,
 }

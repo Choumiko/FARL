@@ -223,8 +223,7 @@ FARL = {
             end
             local behind = self.path[c].rail.name
             local dist = distance(lastWagon, self.path[c].rail.position)
-            while dist > 10 and distance(firstWagon, self.path[c].rail.position) > dist do
-              --self:flyingText("c", RED, true, self.path[c].rail.position)
+            while dist > 10 and distance(firstWagon, self.path[c].rail.position) >= dist do
               if c <= 20 then
                 break
               else
@@ -330,7 +329,7 @@ FARL = {
     if self.surface.count_entities_filtered{area = area, name = "item-on-ground"} > 0 then
       apiCalls.find = apiCalls.find + 1
       for _, entity in ipairs(self.surface.find_entities_filtered{area = area, name="item-on-ground"}) do
-        self:addItemToCargo(entity.stack.name, entity.stack.count)
+        self:addItemToCargo(entity.stack.name, entity.stack.count, entity.stack.prototype.place_result)
         entity.destroy()
       end
     end
@@ -432,6 +431,10 @@ FARL = {
       local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
       if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and distance(self.lastrail.position, firstWagon.position) < 6 then
         --debugDump(#self.path, true)
+        self:flyingText2("L", RED, true, self.lastrail.position)
+        if type(self.path == "table") and self.path[1] then
+          self:flyingText2("B", RED, true, self.path[#self.path].rail.position)
+        end
         self.input = self.driver.riding_state.direction
         if self.driver.name == "farl_player" then
           if self.course and self.course[1] then
@@ -494,32 +497,32 @@ FARL = {
     end
   end,
 
-  replaceMode = function(self)
-    self:cruiseControl()
-    if self.active and self.maintenance and self.train then
-      self.oldDirection = self.direction or self:calcTrainDir()
-      self.direction = self.direction or self:calcTrainDir()
-      self.acc = self.driver.riding_state.acceleration
-      local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
-      local currPosition = firstWagon.position
-      if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and distance(self.lastposition, currPosition) < 6
-      then
-        local railBelow = self:railBelowTrain(true)
-        if railBelow then
-          local neighbours = self:findNeighbours(railBelow, self.direction)
-          if neighbours then
-            for i=0,2 do
-              if neighbours[i] and neighbours[i].position.x == railBelow.position.x and neighbours[i].position.y == railBelow.position.y then
-              --search signal/pole, remove, replace
-              end
-            end
-          end
-        end
-        -- self:placePole(self.direction, lastrail, self.oldDirection)
-        self.lastposition = currPosition
-      end
-    end
-  end,
+  --  replaceMode = function(self)
+  --    self:cruiseControl()
+  --    if self.active and self.maintenance and self.train then
+  --      self.oldDirection = self.direction or self:calcTrainDir()
+  --      self.direction = self.direction or self:calcTrainDir()
+  --      self.acc = self.driver.riding_state.acceleration
+  --      local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
+  --      local currPosition = firstWagon.position
+  --      if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) and distance(self.lastposition, currPosition) < 6
+  --      then
+  --        local railBelow = self:railBelowTrain(true)
+  --        if railBelow then
+  --          local neighbours = self:findNeighbours(railBelow, self.direction)
+  --          if neighbours then
+  --            for i=0,2 do
+  --              if neighbours[i] and neighbours[i].position.x == railBelow.position.x and neighbours[i].position.y == railBelow.position.y then
+  --              --search signal/pole, remove, replace
+  --              end
+  --            end
+  --          end
+  --        end
+  --        -- self:placePole(self.direction, lastrail, self.oldDirection)
+  --        self.lastposition = currPosition
+  --      end
+  --    end
+  --  end,
 
   findNeighbours = function(self, rail, travelDir)
     local paths = {}
@@ -543,7 +546,7 @@ FARL = {
 
   findNeighbour = function(self, rail, travelDir, input)
     local neighbour = false
-    local newTravel, nrail = self:getRail(rail, travelDir, i)
+    local newTravel, nrail = self:getRail(rail, travelDir, input)
     if type(newTravel) == "number" then
       local railEnt = self:findRail(nrail)
       if railEnt then
@@ -582,7 +585,8 @@ FARL = {
           local lastSignal, signalCount, signalDir = false, -1, signalOffset[self.direction].dir
           local limit = 1
           local path = {rail = self.lastrail, traveldir = self.direction}
-          while (check and type(check) == "table" and check[1] and check[1][2]) and limit < carriages*7 do
+          while (check and type(check) == "table" and check[1] and check[1][2])
+            and ((not self.maintenance and limit < carriages*7) or (self.maintenance and limit < math.max(16,carriages*7))) do
             if not lastSignal then
               signalCount = signalCount + 1
               local signalOffset = signalOffset[self.direction]
@@ -626,6 +630,21 @@ FARL = {
           self:flyingText2( {"text-behind"}, RED, true, behind.position)
           self.path = path
           self.lastCurve = #self.path
+          if self.maintenance and type(self.path) == "table" and #self.path > 10 then
+            local lag = 4
+
+            self.maintenanceRail = self.path[1].rail
+            self.maintenanceDir = (self.path[1].traveldir+4)%8
+            self.lastrail = self.path[lag].rail
+            self.direction = (self.path[lag].traveldir +4) % 8
+          else
+            if self.maintenance then
+              self:deactivate("No path for maintenance found")
+              self.maintenanceRail = nil
+              self.maintenanceDir = nil
+              self.active = false
+            end
+          end
           if self.settings.root and not self:rootModeAllowed() then
             self:print({"msg-root-disabled"})
             self:print({"msg-root-error"})
@@ -659,6 +678,8 @@ FARL = {
     self.ccNetPole = nil
     self.previousDirection, self.lastCheckDir = nil, nil
     self.recheckRails = {}
+    self.maintenanceRail = nil
+    self.maintenanceDir = nil
   end,
 
   toggleActive = function(self)
@@ -740,7 +761,7 @@ FARL = {
     return last
   end,
 
-  addItemToCargo = function(self,item, count)
+  addItemToCargo = function(self,item, count, place_result)
     local count = count or 1
     local wagon = self.train.carriages
     for _, entity in ipairs(wagon) do
@@ -751,7 +772,7 @@ FARL = {
         end
       end
     end
-    if self.settings.dropWood or ((item == self.settings.rail.curved or item == self.settings.rail.straight) and not global.godmode) then
+    if self.settings.dropWood or place_result then
       local position = self.surface.find_non_colliding_position("item-on-ground", self.driver.position, 100, 0.5)
       self.surface.create_entity{name = "item-on-ground", position = position, stack = {name = item, count = count}}
     end
@@ -1047,6 +1068,8 @@ FARL = {
         --maintenance mode
       else
         local ent = self:findRail(newRail)
+        local retDir, retEnt
+        local input = 1
         if ent then
           if newRail.name ~= self.settings.rail.curved then
             self.lastCurve = self.lastCurve + 1
@@ -1056,11 +1079,12 @@ FARL = {
           else
             self.lastCurve = 0
           end
-          return true, ent
+          retDir = true
+          retEnt = ent
         else
           local paths = self:findNeighbours(lastRail, self.previousDirection)
-          debugDump(paths,true)
-          saveVar(paths)
+          --debugDump(paths,true)
+          --saveVar(paths)
           if paths then
             for i=0,2 do
               local path = paths[i]
@@ -1073,11 +1097,19 @@ FARL = {
                 else
                   self.lastCurve = 0
                 end
-
-                return path[1], path[3]
+                retDir = path[1]
+                retEnt = path[3]
+                break
               end
             end
           end
+        end
+        if self:findNextMaintenanceRail() then
+          self:prepareMaintenance(self.maintenanceDir, self.maintenanceRail)
+        end
+        if retDir then
+          return retDir, retEnt
+        else
           return false, "Maintenance end"
         end
       end
@@ -1086,6 +1118,72 @@ FARL = {
       return false, "noooo"
     end
     return true, true
+  end,
+
+  findNextMaintenanceRail = function(self)
+    debugDump({self.maintenanceRail.position,self.maintenanceDir},true)
+    local paths = self:findNeighbours(self.maintenanceRail, self.maintenanceDir)
+    local found = false
+    if paths then
+      for i=0,2 do
+        local path = paths[i]
+        if type(path) == "table" then
+          self.maintenanceRail = path[3]
+          self.maintenanceDir = path[1]
+          self:flyingText2("M", RED, true, path[3].position)
+          found = true
+          break
+        end
+      end
+    end
+    return found
+  end,
+
+  prepareMaintenance = function(self, traveldir, lastRail)
+    local rtype = traveldir % 2 == 0 and "straight" or "diagonal"
+    local bp =  self.settings.activeBP[rtype]
+    local rails = bp.rails
+    local mainRail = bp.mainRail
+    local bb = bp.boundingBox
+    local tl, br
+    if bb then
+      tl = addPos(bb.tl)
+      br = addPos(bb.br)
+      local tl1, br1 = {x=tl.x,y=tl.y},{x=br.x,y=br.y}
+      if traveldir == 2 or traveldir == 3 then
+        tl1.x, br1.x = -br.y, -tl.y
+        tl1.y, br1.y = tl.x, br.x
+      elseif traveldir == 4 or traveldir == 5 then
+        tl1, br1 = {x=-br.x,y=-br.y}, {x=-tl.x,y=-tl.y}
+      elseif traveldir == 6 or traveldir == 7 then
+        tl1.x, br1.x = -br.y, -tl.y
+        tl1.y, br1.y = -br.x, -tl.x
+      end
+      if traveldir == 7 then
+        tl1.y = tl1.y-2
+        tl1.x = tl1.x+1
+        br1.y = br1.y - 2
+        br1.x = br1.x + 1
+      end
+      --debugDump({tl=tl1,br=br1},true)
+      tl = addPos(lastRail.position, tl1)
+      br = addPos(lastRail.position, br1)
+
+            local tiles = {}
+            for x = tl.x,br.x do
+              for y = tl.y,br.y do
+                table.insert(tiles, {name="concrete", position={x,y}})
+                --table.insert(tiles, {name="stone-path", position={x,y}})
+              end
+            end
+            self.surface.set_tiles(tiles)
+
+      self:removeTrees({tl,br})
+      self:pickupItems({tl,br})
+      self:removeStone({tl,br})
+    else
+
+    end
   end,
 
   placeParallelTracks = function(self, traveldir, lastRail)
@@ -1131,7 +1229,7 @@ FARL = {
       self:pickupItems({tl,br})
       self:removeStone({tl,br})
     else
-      --self:print("No bounding box found. Reread blueprints")
+    --self:print("No bounding box found. Reread blueprints")
     end
     if rails and type(rails) == "table" then
       local diff = traveldir % 2 == 0 and traveldir or traveldir-1
@@ -1710,7 +1808,7 @@ FARL = {
 
   flyingText2 = function(self, line, color, show, pos)
     if show then
-      local pos = addPos(pos,{x=-0.5,y=-0.5}) or addPos(self.locomotive.position, {x=0,y=-1})
+      local pos = pos and addPos(pos,{x=-0.5,y=-0.5}) or addPos(self.locomotive.position, {x=0,y=-1})
       color = color or RED
       self.surface.create_entity({name="flying-text2", position=pos, text=line, color=color})
     end
