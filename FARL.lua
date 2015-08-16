@@ -656,7 +656,7 @@ FARL = {
             check = self:findNeighbours(check[1][2], check[1][1])
             if check and type(check) == "table" and check[1] and check[1][2] then
               --debugDump(check[1][2],true)
-              table.insert(path, {rail=check[1][3], traveldir=check[1][1]})
+              table.insert(path, {rail=check[1][3], traveldir=(check[1][1]+4)%8})
               self:protect(check[1][3])
 
               behind = check[1][2]
@@ -677,7 +677,8 @@ FARL = {
             self.maintenanceRail = self.path[1].rail
             self.maintenanceDir = self.path[1].traveldir
             self.lastrail = self.path[lag].rail
-            self.direction = (self.path[lag].traveldir +4) % 8
+            --self.direction = (self.path[lag].traveldir +4) % 8
+            self.direction = self.path[lag].traveldir
             self:protect(self.lastPole)
             self:flyingText2( "L", RED, true, self.lastrail.position)
           else

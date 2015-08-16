@@ -249,7 +249,7 @@ clearAreas = {
       end
       global.version = "0.3.4"
     end
-    global.version = "0.3.4"
+    global.version = "0.4.0"
   end
 
   local function oninit() initGlob() end
