@@ -991,6 +991,9 @@ FARL = {
           bp.boundingBox = {tl = subPos(box.tl, mainRail.position),
             br = subPos(box.br, mainRail.position)}
           self.settings.bp[poleType][bpType] = bp
+          if #rails > 0 then
+            self.settings.flipPoles = false
+          end
           saveBlueprint(self.driver, poleType, bpType, bp)
           self:print("Saved blueprint for "..bpType.." rail with "..poleType.. " pole")
         else
