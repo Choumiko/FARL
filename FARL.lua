@@ -876,7 +876,7 @@ FARL = {
     local entity
     if canPlace then
       local direction = arg.direction or 0
-      local force = arg.force or game.forces.player
+      local force = arg.force or self.locomotive.force
       arg.force = force
       entity = self.surface.create_entity(arg)
       apiCalls.create = apiCalls.create + 1
@@ -1092,7 +1092,7 @@ FARL = {
         local canplace = self:prepareArea(newRail)
         local hasRail = self:getCargoCount(newRail.name) > 0
         if canplace and hasRail then
-          newRail.force = game.forces.player
+          newRail.force = self.locomotive.force
           local _, ent = self:genericPlace(newRail)
           if self.settings.electric then
             remote.call("dim_trains", "railCreated", newPos)
@@ -1362,7 +1362,7 @@ FARL = {
       local rad = diff * (math.pi/4)
       for i=1,#rails do
         if self:getCargoCount(rails[i].name) > 1 then
-          local entity = {name = rails[i].name, direction = lastRail.direction, force = game.forces.player}
+          local entity = {name = rails[i].name, direction = lastRail.direction, force = self.locomotive.force}
           local offset = rails[i].position
           offset = rotate(offset, rad)
           local pos = addPos(lastRail.position, offset)
@@ -1401,7 +1401,7 @@ FARL = {
           offset = rotate(offset, rad)
           local pos = addPos(signal.position, offset)
           --debugDump(pos, true)
-          local entity = {name = signals[i].name, position = pos, force = game.forces.player}
+          local entity = {name = signals[i].name, position = pos, force = self.locomotive.force}
           entity.direction = signals[i].reverse and ((signal.direction+4)%8)or signal.direction
           if self:prepareArea(entity) then
             local _, ent = self:genericPlace(entity)
@@ -1552,7 +1552,7 @@ FARL = {
           --debugDump(pos, true)
           local entity = {name = poleEntities[i].name, position = pos}
           if self:prepareArea(entity) then
-            local _, ent = self:genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = game.forces.player}
+            local _, ent = self:genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = self.locomotive.force}
             if ent then
               if self.maintenance then
                 self:protect(ent)
@@ -1724,7 +1724,7 @@ FARL = {
       local canPlace = self:prepareArea(pole)
       local hasPole = self:getCargoCount(name) > 0
       if canPlace and hasPole then
-        local success, pole = self:genericPlace{name = name, position = polePos, force = game.forces.player}
+        local success, pole = self:genericPlace{name = name, position = polePos, force = self.locomotive.force}
         if pole then
           if not pole.neighbours.copper[1] then
             self:flyingText({"msg-unconnected-pole"}, RED, true)
@@ -1793,7 +1793,7 @@ FARL = {
         dir = (dir + 4) % 8
       end
       local pos = addPos(rail.position, offset)
-      local signal = {name = "rail-signal", position = pos, direction = dir, force = game.forces.player}
+      local signal = {name = "rail-signal", position = pos, direction = dir, force = self.locomotive.force}
 
       self:prepareArea(signal)
       local success, entity = self:genericPlace(signal)

@@ -360,7 +360,7 @@ clearAreas = {
   end
 
   function saveVar(var, name)
-    local var = var or glob
+    local var = var or global
     local n = name or ""
     game.makefile("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
   end
