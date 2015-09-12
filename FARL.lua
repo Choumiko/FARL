@@ -238,9 +238,13 @@ FARL = {
                 if self.path[c].rail.valid and (self.path[c].rail.name == self.settings.rail.curved or self.path[c].rail.name == self.settings.rail.straight) then
                   --self:flyingText(#self.path, GREEN,true, self.path[c].rail.position)
                   if self.settings.root then
-
-                    self.path[c].rail.destroy()
-                    self:addItemToCargo(behind,1)
+                    local status, error = pcall(function()
+                      self.path[c].rail.destroy()
+                      self:addItemToCargo(behind,1) end)
+                    if not status then
+                      self:deactivate({"msg-cant-remove"})
+                      return
+                    end
                   end
                   table.remove(self.path, c)
                   c = #self.path
@@ -312,7 +316,11 @@ FARL = {
             end
             self:addItemToCargo(item, 1)
           end
-          entity.destroy()
+          local status, error = pcall(function() entity.destroy() end)
+          if not status then
+            self:deactivate({"msg-cant-remove"})
+            return
+          end
         end
       end
     end
@@ -497,7 +505,11 @@ FARL = {
               self:deactivate({"msg-no-entity"})
               return
             end
-            table.insert(self.path, 1, {rail = last, traveldir = newTravelDir})
+            if self.active then
+              table.insert(self.path, 1, {rail = last, traveldir = newTravelDir})
+            else
+              return
+            end
             self:protect(last)
             if self.settings.poles then
               if self:getCargoCount("big-electric-pole") > 0 or self:getCargoCount("medium-electric-pole") > 0 then
