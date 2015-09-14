@@ -1543,6 +1543,7 @@ FARL = {
     end)
     if not status then
       self:deactivate("Error with calcPole: "..serpent.dump({lr=lastrail, tdir=traveldir}, {name="args", comment=false, sparse=false, sortkeys=true}))
+      return false
     else
       return err
     end
@@ -1858,7 +1859,11 @@ FARL = {
       self.ccNetPole = pole
       self.lastPole = pole
       self:flyingText2("p", GREEN, true, pole.position)
-      local tmp = moveposition(fixPos(self:calcPole(lastrail, trainDir)), trainDir, -1)
+      local calcP = self:calcPole(lastrail,trainDir)
+      if not calcP then
+        return
+      end
+      local tmp = moveposition(fixPos(calcP), trainDir, -1)
       tmp.x, tmp.y = tmp[1], tmp[2]
       self.lastCheckPole = addPos(lastrail.position, tmp)
       self:flyingText2("cp", GREEN, true, self.lastCheckPole)
