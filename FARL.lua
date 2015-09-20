@@ -932,7 +932,7 @@ FARL = {
           if (bpType == "diagonal" and (dir == 3 or dir == 7)) or (bpType == "straight" and (dir == 0 or dir == 4)) then
             table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position})
           else
-            self:print("Invalid blueprint")
+            self:print("Invalid blueprint. Rails must all be either south to north direction, or south-west to north-east.")
             break
           end
         elseif e[i].name == "rail-signal" then
@@ -1012,10 +1012,12 @@ FARL = {
           self:print("Invalid blueprint. Make sure your chain-signals arrows point north or north-east")
         end
       else
-        if rails == 1 then
+        if rails <= 1 then
           self:parseBlueprint(e)
+        elseif not bpType then
+          self:print("Invalid blueprint. Rails must all be either south to north direction, or south-west to north-east.")
         else
-          self:print("Invalid blueprint")
+          self:print("Invalid blueprint. Missing chain-signal on the main rail.")
         end
       end
     end
