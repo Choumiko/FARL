@@ -238,10 +238,9 @@ FARL = {
                 if self.path[c].rail.valid and (self.path[c].rail.name == self.settings.rail.curved or self.path[c].rail.name == self.settings.rail.straight) then
                   --self:flyingText(#self.path, GREEN,true, self.path[c].rail.position)
                   if self.settings.root then
-                    local status, error = pcall(function()
-                      self.path[c].rail.destroy()
-                      self:addItemToCargo(behind,1) end)
-                    if not status then
+                    if self.path[c].rail.destroy() then
+                      self:addItemToCargo(behind,1)
+                    else
                       self:deactivate({"msg-cant-remove"})
                       return
                     end
@@ -316,8 +315,7 @@ FARL = {
             end
             self:addItemToCargo(item, 1)
           end
-          local status, error = pcall(function() entity.destroy() end)
-          if not status then
+          if not entity.destroy() then
             self:deactivate({"msg-cant-remove"})
             return
           end
