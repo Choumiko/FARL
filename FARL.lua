@@ -932,7 +932,7 @@ FARL = {
           if (bpType == "diagonal" and (dir == 3 or dir == 7)) or (bpType == "straight" and (dir == 0 or dir == 4)) then
             table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position})
           else
-            self:print("Invalid blueprint")
+            self:print({"msg-bp-rail-direction"})
             break
           end
         elseif e[i].name == "rail-signal" then
@@ -941,7 +941,7 @@ FARL = {
           table.insert(offsets.poleEntities, {name = e[i].name, direction = dir, position = e[i].position})
         end
       end
-      if offsets.chain and bpType then
+      if offsets.chain and offsets.pole and bpType then
         box.tl = addPos(box.tl, self.settings.boundingBoxOffsets[bpType].tl)
         box.br = addPos(box.br, self.settings.boundingBoxOffsets[bpType].br)
         local mainRail = false
@@ -1007,15 +1007,19 @@ FARL = {
             self.settings.flipPoles = false
           end
           saveBlueprint(self.driver, poleType, bpType, bp)
-          self:print("Saved blueprint for "..bpType.." rail with "..poleType.. " pole")
+          self:print({"msg-bp-saved", bpType, {"entity-name."..poleType.."-electric-pole"}})
         else
-          self:print("Invalid blueprint. Make sure your chain-signals arrows point north or north-east")
+          self:print({"msg-bp-chain-direction"})
         end
       else
-        if rails == 1 then
+        if rails <= 1 then
           self:parseBlueprint(e)
-        else
-          self:print("Invalid blueprint")
+        elseif not bpType then
+          self:print({"msg-bp-rail-direction"})
+        elseif not offsets.chain then
+          self:print({"msg-bp-chain-missing"})
+        else --if not offsets.pole then
+          self:print({"msg-bp-pole-missing"})
         end
       end
     end
