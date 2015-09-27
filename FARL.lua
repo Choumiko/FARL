@@ -631,6 +631,7 @@ FARL = {
           local lastSignal, signalCount, signalDir = false, -1, signalOffset[self.direction].dir
           local limit = 1
           local path = {{rail = self.lastrail, traveldir = self.direction}}
+          local signalRail = false
           self:protect(self.lastrail)
           while (check and type(check) == "table" and check[1] and check[1][2])
             and ((not self.maintenance and limit < carriages*7) or (self.maintenance and limit < math.max(16,carriages*7))) do
@@ -648,6 +649,7 @@ FARL = {
               for _, entity in pairs(self.surface.find_entities_filtered{area = expandPos(signalPos,range), name = "rail-signal"}) do
                 if entity.direction == signalDir then
                   lastSignal = entity
+                  signalRail = check[1][3]
                   break
                 end
               end
@@ -656,6 +658,7 @@ FARL = {
                   self:flyingText2("S", GREEN, true, entity.position)
                   if entity.direction == signalDir then
                     lastSignal = entity
+                    signalRail = check[1][3]
                     break
                   end
                 end
@@ -676,6 +679,16 @@ FARL = {
           if lastSignal and lastSignal.valid then
             self:flyingText2("S", GREEN, true, lastSignal.position)
             if self.maintenance then
+              if signalRail then
+                self:flyingText2("SR", RED, true, signalRail.position)
+                for i=1,#path do
+                  local diff = subPos(path[i].rail.position, signalRail.position)
+                  if diff.x == 0 and diff.y == 0 then
+                    self.signalCount = self.signalCount - i
+                    break
+                  end
+                end
+              end
               self:protect(lastSignal)
             end
           end
