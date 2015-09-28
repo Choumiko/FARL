@@ -518,6 +518,13 @@ FARL = {
             end
             if self.settings.signals and not self.settings.root then
               local signalWeight = nextRail.name == self.settings.rail.curved and self.settings.curvedWeight or 1
+              if nextRail.name ~= self.settings.rail.curved then
+                if nextRail.direction % 2 == 1 then
+                  signalWeight = 0.75
+                elseif nextRail.direction == 0 then
+                  signalWeight = 1.26
+                end
+              end
               self.signalCount = self.signalCount + signalWeight
               --self:print(self.signalCount)
               if self:getCargoCount("rail-signal") > 0 then
@@ -684,7 +691,7 @@ FARL = {
                 for i=1,#path do
                   local diff = subPos(path[i].rail.position, signalRail.position)
                   if diff.x == 0 and diff.y == 0 then
-                    self.signalCount = self.signalCount - i
+                    self.signalCount = self.signalCount - i +1
                     break
                   end
                 end
