@@ -371,6 +371,9 @@ GUI = {
         --GUI.init(farl.driver)
         farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
+        if not farl.settings then
+          farl.settings = Settings.loadByPlayer(farl.driver)
+        end
         farl.driver.gui.left.farl.rows.root.state = farl.settings.root
         if not farl.driver.gui.left.farl.rows.maintenance then
           GUI.destroyGui(farl.driver)
