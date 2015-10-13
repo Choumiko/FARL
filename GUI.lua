@@ -128,7 +128,7 @@ GUI = {
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
       GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
-      GUI.add(rows,{type="checkbox", name="maintenance", caption="Maintenance", state=psettings.maintenance},GUI.toggleMaintenance)
+      GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance},GUI.toggleMaintenance)
       GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
     end,
 

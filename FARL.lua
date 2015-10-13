@@ -212,7 +212,7 @@ FARL = {
         end
       else
         self.frontmover = false
-        for i,l in ipairs(self.train.locomotives.front_movers) do
+        for i,l in pairs(self.train.locomotives.front_movers) do
           if l == self.locomotive then
             self.frontmover = true
             break
@@ -626,6 +626,27 @@ FARL = {
       self.protected = {}
       self.protectedCount = 0
       self.protectedCalls = {}
+      self.frontmover = false
+      for i,l in pairs(self.train.locomotives.front_movers) do
+        if l == self.locomotive then
+          self.frontmover = true
+          break
+        end
+      end
+
+--      self:flyingText2("FR",RED,true, self.train.front_rail.position)
+--      self:flyingText2("BR",RED,true, self.train.back_rail.position)
+--      self:flyingText("FR->"..self.train.rail_direction_from_front_rail,YELLOW,true, self.train.front_rail.position)
+--      self:flyingText("BR->"..self.train.rail_direction_from_back_rail,YELLOW,true, self.train.back_rail.position)
+--      local n = self.train.front_rail.get_connected_rail{rail_direction=0, rail_connection_direction=1}
+--      local p = self.train.front_rail.get_connected_rail{rail_direction=1, rail_connection_direction=1}
+--      if n then
+--        self:flyingText2("NR",RED,true, n.position)
+--      end
+--      if p then
+--        self:flyingText2("PR",RED,true, p.position)
+--      end
+
       local maintenance = self.maintenance and 10 or false
       self.lastrail = self:findLastRail(maintenance)
       self.lastCheckIndex = 1
@@ -802,7 +823,7 @@ FARL = {
 
   toggleMaintenance = function(self)
     if self.active then
-      self:deactivate("Changing modes")
+      self:deactivate({"msg-changing-modes"})
     end
     self.maintenance = not self.maintenance
   end,
@@ -814,6 +835,7 @@ FARL = {
 
   findLastRail = function(self, limit)
     local trainDir = self:calcTrainDir()
+--    local test = self.frontmover and self.train.front_rail or self.train.back_rail
     local test = self:railBelowTrain()
     local last = test
     self.recheckRails = self.recheckRails or {}
@@ -821,9 +843,12 @@ FARL = {
     local limit, count = limit, 1
     if not limit then limit = 5 end
     while test and test.name ~= self.settings.rail.curved do
+      --self:flyingText2(count, RED, true, test.position)
       local protoDir, protoRail = self:getRail(last, trainDir,1)
       protoRail = protoRail[1] or protoRail
+      --local railDir = self.frontmover and 1 or 0
       local rail = self:findRail(protoRail)
+      --local rail = self:findRail(protoRail) --test.get_connected_rail{rail_direction=railDir, rail_connection_direction=1}
       if rail and (not self.maintenance or (self.maintenance and count < limit)) then
         test = rail
         last = rail
@@ -1199,7 +1224,7 @@ FARL = {
         if retDir then
           return retDir, retEnt
         else
-          return false, "Maintenance end"
+          return false, {"msg-maintenance-end"}
         end
       end
     else
@@ -1900,7 +1925,7 @@ FARL = {
     --if not self.active then self:activate() end
     self:print("Train@"..pos2Str(locomotive.position).." dir:"..self:calcTrainDir().." orient:"..locomotive.orientation)
     self:print("calcDir: "..self.locomotive.orientation * 8)
-    local rail = self:railBelowTrain()
+    local rail = self.train.front_rail
     if rail then
       --self:flyingText2("B", GREEN, true, rail.position)
       self:print("Rail@"..pos2Str(rail.position).." dir:"..rail.direction)

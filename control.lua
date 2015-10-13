@@ -179,6 +179,18 @@ clearAreas = {
         if not farl.destroy then
           local status, err = pcall(function()
             farl:update(event)
+--            if game.tick % 30 == 0 and farl.train.valid then
+--              farl:flyingText2("FR->"..farl.train.rail_direction_from_front_rail,RED,true, farl.train.front_rail.position)
+--              farl:flyingText2("BR->"..farl.train.rail_direction_from_back_rail,RED,true, farl.train.back_rail.position)
+--              local n = farl.train.front_rail.get_connected_rail{rail_direction=0, rail_connection_direction=1}
+--              local p = farl.train.front_rail.get_connected_rail{rail_direction=1, rail_connection_direction=1}
+--              if n then
+--                farl:flyingText2("NR",RED,true, n.position)
+--              end
+--              if p then
+--                farl:flyingText2("PR",RED,true, p.position)
+--              end
+--            end
             if farl.driver and farl.driver.name ~= "farl_player" then
               GUI.updateGui(farl)
             end
@@ -445,9 +457,9 @@ clearAreas = {
         end
       end,
       quickstart2 = function()
-        local items = {"basic-modular-armor", "personal-roboport-equipment", "solar-panel-equipment",
-          "blueprint", "deconstruction-planner", "battery-equipment", "construction-robot"}
-        local count = {1,1,7,1,1,7,10}
+        local items = {"power-armor-mk2", "personal-roboport-equipment", "fusion-reactor-equipment",
+          "blueprint", "deconstruction-planner", "construction-robot", "basic-exoskeleton-equipment"}
+        local count = {1,5,3,1,1,50,2}
         for i=1,#items do
           game.player.insert{name=items[i], count=count[i]}
         end
