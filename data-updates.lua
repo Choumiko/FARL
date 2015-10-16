@@ -6,7 +6,7 @@ table.insert(data.raw["technology"]["rail-signals"].effects,
 
 
 --fixes for 5dims
-if data.raw["rail"]["straight-power-rail"] then
+if data.raw["straight-rail"]["straight-power-rail"] then
   data.raw["locomotive"]["farl"] = {
     type = "locomotive",
     name = "farl",

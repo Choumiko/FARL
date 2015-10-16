@@ -10,17 +10,6 @@ godmode = false
 removeStone = true
 
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
-electricInstalled = (game.entity_prototypes["straight-power-rail"] and remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated) and true or false
-
-cargoTypes = { ["straight-rail"] = true, ["curved-rail"] = true,["rail-signal"] = true,
-  ["big-electric-pole"] = true, ["medium-electric-pole"] = true, ["small-lamp"] = true,
-  ["green-wire"] = true, ["red-wire"] = true
-}
-
-if electricInstalled then
-  cargoTypes["straight-power-rail"] = true
-  cargoTypes["curved-power-rail"] = true
-end
 
 rails = {
   basic = {curved = "curved-rail", straight = "straight-rail"},
@@ -179,18 +168,18 @@ clearAreas = {
         if not farl.destroy then
           local status, err = pcall(function()
             farl:update(event)
---            if game.tick % 30 == 0 and farl.train.valid then
---              farl:flyingText2("FR->"..farl.train.rail_direction_from_front_rail,RED,true, farl.train.front_rail.position)
---              farl:flyingText2("BR->"..farl.train.rail_direction_from_back_rail,RED,true, farl.train.back_rail.position)
---              local n = farl.train.front_rail.get_connected_rail{rail_direction=0, rail_connection_direction=1}
---              local p = farl.train.front_rail.get_connected_rail{rail_direction=1, rail_connection_direction=1}
---              if n then
---                farl:flyingText2("NR",RED,true, n.position)
---              end
---              if p then
---                farl:flyingText2("PR",RED,true, p.position)
---              end
---            end
+            --            if game.tick % 30 == 0 and farl.train.valid then
+            --              farl:flyingText2("FR->"..farl.train.rail_direction_from_front_rail,RED,true, farl.train.front_rail.position)
+            --              farl:flyingText2("BR->"..farl.train.rail_direction_from_back_rail,RED,true, farl.train.back_rail.position)
+            --              local n = farl.train.front_rail.get_connected_rail{rail_direction=0, rail_connection_direction=1}
+            --              local p = farl.train.front_rail.get_connected_rail{rail_direction=1, rail_connection_direction=1}
+            --              if n then
+            --                farl:flyingText2("NR",RED,true, n.position)
+            --              end
+            --              if p then
+            --                farl:flyingText2("PR",RED,true, p.position)
+            --              end
+            --            end
             if farl.driver and farl.driver.name ~= "farl_player" then
               GUI.updateGui(farl)
             end
@@ -216,6 +205,7 @@ clearAreas = {
   end
 
   local function initGlob()
+
     if global.version == nil or global.version < "0.3.0" then
       global = {}
       global.version = "0.0.0"
@@ -335,17 +325,17 @@ clearAreas = {
     end
   end
 
-  game.on_init(oninit)
-  game.on_load(onload)
-  game.on_event(defines.events.on_tick, onTick)
-  game.on_event(defines.events.on_gui_click, onGuiClick)
-  --game.on_event(defines.events.on_train_changed_state, ontrainchangedstate)
-  game.on_event(defines.events.on_player_mined_item, onplayermineditem)
-  game.on_event(defines.events.on_preplayer_mined_item, onpreplayermineditem)
+  script.on_init(oninit)
+  script.on_load(onload)
+  script.on_event(defines.events.on_tick, onTick)
+  script.on_event(defines.events.on_gui_click, onGuiClick)
+  --script.on_event(defines.events.on_train_changed_state, ontrainchangedstate)
+  script.on_event(defines.events.on_player_mined_item, onplayermineditem)
+  script.on_event(defines.events.on_preplayer_mined_item, onpreplayermineditem)
   --game.onevent(defines.events.on_built_entity, onbuiltentity)
-  game.on_event(defines.events.on_entity_died, onentitydied)
+  script.on_event(defines.events.on_entity_died, onentitydied)
 
-  game.on_event(defines.events.on_player_driving_changed_state, onPlayerDrivingChangedState)
+  script.on_event(defines.events.on_player_driving_changed_state, onPlayerDrivingChangedState)
 
   local function onplayercreated(event)
     local player = game.get_player(event.player_index)
@@ -355,7 +345,7 @@ clearAreas = {
     end
   end
 
-  game.on_event(defines.events.on_player_created, onplayercreated)
+  script.on_event(defines.events.on_player_created, onplayercreated)
 
   function debugDump(var, force)
     if false or force then
@@ -374,7 +364,7 @@ clearAreas = {
   function saveVar(var, name)
     local var = var or global
     local n = name or ""
-    game.makefile("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
+    game.write_file("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
   end
 
   --  driverNextDir = 1
