@@ -835,8 +835,8 @@ FARL = {
 
   findLastRail = function(self, limit)
     local trainDir = self:calcTrainDir()
---    local test = self.frontmover and self.train.front_rail or self.train.back_rail
-    local test = self:railBelowTrain()
+    local test = self.frontmover and self.train.front_rail or self.train.back_rail
+    --local test = self:railBelowTrain()
     local last = test
     self.recheckRails = self.recheckRails or {}
     table.insert(self.recheckRails, {r=last, dir=trainDir, range={0,1}})
@@ -1362,7 +1362,7 @@ FARL = {
       self:pickupItems({tl,br})
       self:removeStone({tl,br})
 
-      local types = {"rail", "rail-signal", "rail-chain-signal", "electric-pole", "lamp"}
+      local types = {"straight-rail", "curved-rail", "rail-signal", "rail-chain-signal", "electric-pole", "lamp"}
       for _, t in pairs(types) do
         self:removeEntitiesFiltered({area={tl,br}, type=t}, self.protected)
       end
