@@ -236,7 +236,7 @@ clearAreas = {
   end
 
   local function on_configuration_changed(data)
-    debugDump(data,true)
+    --debugDump(data,true)
     if data.mod_changes.FARL and data.mod_changes.FARL.new_version == "0.4.3" then
       global.electricInstalled = false
     end
@@ -244,8 +244,8 @@ clearAreas = {
       --5dims_trains was added/updated
       if data.mod_changes["5dim_trains"].new_version then
         global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
-        --5dims_trains was removed
       else
+        --5dims_trains was removed
         global.electricInstalled = false
       end
     end
