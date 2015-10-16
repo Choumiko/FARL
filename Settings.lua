@@ -58,7 +58,7 @@ Settings = {
   end,
 
   checkMods = function(self)
-    if not electricInstalled then
+    if not global.electricInstalled then
       self.electric = false
     end
   end,

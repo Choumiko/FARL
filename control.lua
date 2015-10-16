@@ -206,7 +206,7 @@ clearAreas = {
 
   local function initGlob()
 
-    if global.version == nil or global.version < "0.3.0" then
+    if global.version == nil or global.version < "0.4.3" then
       global = {}
       global.version = "0.0.0"
     end
@@ -223,41 +223,33 @@ clearAreas = {
     end
     for name, s in pairs(global.players) do
       s = resetMetatable(s,Settings)
-      s:checkMods()
     end
-    if global.version < "0.3.1" then
-      for i,farl in pairs(global.farl) do
-        farl.recheckRails = farl.recheckRails or {}
-      end
-      global.version = "0.3.1"
-    end
-    if global.version < "0.3.2" then
-      for i,player in pairs(global.players) do
-        player.poleEntities = defaultSettings.poleEntities
-      end
-    end
-    if global.version < "0.3.3" then
-      for i,farl in pairs(global.farl) do
-        farl:deactivate("reset")
-      end
-      for i,player in pairs(global.players) do
-        player.parallelTracks = defaultSettings.parallelTracks
-        player.parallelLag = defaultSettings.parallelLag
-      end
-    end
-    if global.version < "0.3.4" then
-      for i,player in pairs(global.players) do
-        player.boundingBoxOffsets = util.table.deepcopy(defaultSettings.boundingBoxOffsets)
-      end
-      global.version = "0.3.4"
-    end
-    global.version = "0.4.0"
+
+    global.version = "0.4.3"
   end
 
   local function oninit() initGlob() end
 
   local function onload()
     initGlob()
+  end
+
+  local function on_configuration_changed(data)
+    if data.mod_changes.FARL and data.mod_changes.FARL.new_version == "0.4.3" then
+      global.electricInstalled = false
+    end
+    if data.mod_changes["5dim_trains"] then
+      --5dims_trains was added/updated
+      if data.mod_changes["5dim_trains"].new_version then
+        global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
+        --5dims_trains was removed
+      else
+        global.electricInstalled = false
+      end
+    end
+    for name,s in pairs(global.players) do
+      s:checkMods()
+    end
   end
 
   local function onGuiClick(event)
@@ -327,6 +319,7 @@ clearAreas = {
 
   script.on_init(oninit)
   script.on_load(onload)
+  script.on_configuration_changed(on_configuration_changed)
   script.on_event(defines.events.on_tick, onTick)
   script.on_event(defines.events.on_gui_click, onGuiClick)
   --script.on_event(defines.events.on_train_changed_state, ontrainchangedstate)

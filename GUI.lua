@@ -162,7 +162,7 @@ GUI = {
       elseif name == "bridge" then
         psettings.bridge = not psettings.bridge
       elseif name == "poweredRails" then
-        if not electricInstalled then
+        if not global.electricInstalled then
           psettings.rail = rails.basic
           return
         end
