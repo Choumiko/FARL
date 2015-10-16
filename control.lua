@@ -236,7 +236,7 @@ clearAreas = {
   end
 
   local function on_configuration_changed(data)
-  debugDump(data,true)
+    debugDump(data,true)
     if data.mod_changes.FARL and data.mod_changes.FARL.new_version == "0.4.3" then
       global.electricInstalled = false
     end
