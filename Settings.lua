@@ -1,38 +1,72 @@
 require "util"
 
-Settings = {
-  new = function(player)
-    local new = {
-      activeBP = {},
-      bp = {},
-      ccNet = false,
-      ccWires = 1,
-      collectWood = true,
-      curvedWeight = 4,
-      cruiseSpeed = 0.4,
-      diagonal = {},
-      dropWood = true,
-      electric = false,
-      flipPoles = false,
-      flipSignals = false,
-      signalDistance = 15,
-      straight = {},
-      medium = false,
-      minPoles = true,
-      poles = true,
-      poleEntities = true,
-      rail = {},
-      signals = true,
-      bridge = false,
-      root = false,
-      boundingBoxOffsets = {
+rails = {
+  basic = {curved = "curved-rail", straight = "straight-rail"},
+  electric = {curved = "curved-power-rail", straight = "straight-power-rail"}}
+
+--poleDistance = 1, side = right
+defaultsDiagonal = {
+  direction = 7,
+  poleEntities = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
+  pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}},
+  rails = {}, signals = {},
+  boundingBox = {br = {x = 2.5, y = 4}, tl = {x = -1, y = 0}}}
+
+defaultsStraight = {
+  direction = 0,
+  poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
+  pole = {name = "big-electric-pole", position = {x = 3, y = -1}},
+  rails = {}, signals = {},
+  boundingBox = {br = {x = 3, y = 0.5}, tl = {x = -0.5, y = -1}}}
+
+defaultsMediumDiagonal = {
+  direction = 7,
+  poleEntities = {{name = "small-lamp", position = {x = -1, y = 1}}},
+  pole = {name = "medium-electric-pole", position = {x = 2, y = 2}},
+  rails = {}, signals = {},
+  boundingBox = {br = {x = 1, y = 4}, tl = {x = -2, y = 0}}}
+
+defaultsMediumStraight = {
+  direction = 0,
+  poleEntities = {{name = "small-lamp", position = {x = 0,y = 1}}},
+  pole = {name = "medium-electric-pole", position = {x = 2.5,y = -0.5}},
+  rails = {}, signals = {},
+  boundingBox = {br = {x = 2.5, y = 0.5}, tl = {x = -1.5, y = -1}}}
+
+defaultSettings =
+  {
+    activeBP = {},
+    bp = {
+      medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight},
+      big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}},
+    ccNet = false,
+    ccWires = 1,
+    collectWood = true,
+    curvedWeight = 4,
+    cruiseSpeed = 0.4,
+    dropWood = true,
+    electric = false,
+    flipPoles = false,
+    flipSignals = false,
+    signalDistance = 15,
+    medium = false,
+    minPoles = true,
+    poles = true,
+    poleEntities = true,
+    rail = rails.basic,
+    signals = true,
+    bridge = false,
+    root = false,
+    parallelTracks = true,
+    parallelLag = 6,
+    boundingBoxOffsets = {
       straight = {tl={x=-0.5,y=0},br={x=0,y=0}},
       diagonal = {tl={x=0,y=0},br={x=0.5,y=0.5}}}
-    }
-    setmetatable(new, {__index=Settings})
-    return new
-  end,
+  }
 
+defaultSettings.activeBP = defaultSettings.bp.big
+
+Settings = {
   loadByPlayer = function(player)
     local name = player.name
     if name and name == "" then

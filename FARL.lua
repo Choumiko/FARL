@@ -634,18 +634,18 @@ FARL = {
         end
       end
 
---      self:flyingText2("FR",RED,true, self.train.front_rail.position)
---      self:flyingText2("BR",RED,true, self.train.back_rail.position)
---      self:flyingText("FR->"..self.train.rail_direction_from_front_rail,YELLOW,true, self.train.front_rail.position)
---      self:flyingText("BR->"..self.train.rail_direction_from_back_rail,YELLOW,true, self.train.back_rail.position)
---      local n = self.train.front_rail.get_connected_rail{rail_direction=0, rail_connection_direction=1}
---      local p = self.train.front_rail.get_connected_rail{rail_direction=1, rail_connection_direction=1}
---      if n then
---        self:flyingText2("NR",RED,true, n.position)
---      end
---      if p then
---        self:flyingText2("PR",RED,true, p.position)
---      end
+      --      self:flyingText2("FR",RED,true, self.train.front_rail.position)
+      --      self:flyingText2("BR",RED,true, self.train.back_rail.position)
+      --      self:flyingText("FR->"..self.train.rail_direction_from_front_rail,YELLOW,true, self.train.front_rail.position)
+      --      self:flyingText("BR->"..self.train.rail_direction_from_back_rail,YELLOW,true, self.train.back_rail.position)
+      --      local n = self.train.front_rail.get_connected_rail{rail_direction=0, rail_connection_direction=1}
+      --      local p = self.train.front_rail.get_connected_rail{rail_direction=1, rail_connection_direction=1}
+      --      if n then
+      --        self:flyingText2("NR",RED,true, n.position)
+      --      end
+      --      if p then
+      --        self:flyingText2("PR",RED,true, p.position)
+      --      end
 
       local maintenance = self.maintenance and 10 or false
       self.lastrail = self:findLastRail(maintenance)
@@ -2018,3 +2018,81 @@ FARL = {
     end
   end,
 }
+
+--local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
+
+input2dir = {[0]=-1,[1]=0,[2]=1}
+-- inputToNewDir[oldDir][input] -> rail to new dir
+--shift[lastCurveDir]
+--connect[].direction[lastCurve]=required diag dir
+--curve[lastCurve] -> pos, diag required -> diagDir
+
+inputToNewDir =
+  {
+    [0] = {
+      [0]={pos={x=-1,y=-5},direction=0,curve={[4]={pos={x=-2,y=-8}},[5]={pos={x=0,y=-8}}}},
+      [1]={pos={x=0,y=-2},direction=0, shift={[4]={x=-1,y=-5},[5]={x=1,y=-5}}},
+      [2]={pos={x=1,y=-5},direction=1,curve={[4]={pos={x=0,y=-8}},[5]={pos={x=2,y=-8}}}}},
+    [1] = {
+      [0]={pos={x=3,y=-3},direction=5,curve={[1]={pos={x=4,y=-6}},[2]={diag=true}}, lastDir=3},
+      [1]={pos={x=0,y= -2},direction=3,connect={pos={x=3,y=-3},direction={[1]=7,[2]=3, [7]=5}}},
+      [2]={pos={x=3,y=-3},direction=6,curve={[1]={diag=true},[2]={pos={x=6,y=-4}}}, lastDir=7}},
+    [2] = {
+      [0]={pos={x=5,y=-1},direction=2,curve={[7]={pos={x=8,y=0}},[6]={pos={x=8,y=-2}}}},
+      [1]={pos={x=2,y=0},direction=2, shift={[6]={x=5,y=-1},[7]={x=5,y=1}}},
+      [2]={pos={x=5,y=1},direction=3,curve={[7]={pos={x=8,y=2}},[6]={pos={x=8,y=0}}}}},
+    [3] = {
+      [0]={pos={x=3,y=3},direction=7,curve={[4]={diag=true},[3]={pos={x=6,y=4}}}, lastDir=5},
+      [1]={pos={x=2,y=0},direction=5,connect={pos={x=3,y=3},direction={[3]=1,[4]=5}}},
+      [2]={pos={x=3,y=3},direction=0,curve={[4]={pos={x=4,y=6}},[3]={diag=true}}, lastDir=1}},
+    [4] = {
+      [0]={pos={x=1,y=5},direction=4,curve={[0]={pos={x=2,y=8}},[1]={pos={x=0,y=8}}}},
+      [1]={pos={x=0,y=2},direction=0, shift={[0]={x=1,y=5}, [1]={x=-1,y=5}}},
+      [2]={pos={x=-1,y=5},direction=5,curve={[0]={pos={x=0,y=8}},[1]={pos={x=-2,y=8}}}}},
+    [5] = {
+      [0]={pos={x=-3,y=3},direction=1,curve={[5]={pos={x=-4,y=6}},[6]={diag=true}}, lastDir=7},
+      [1]={pos={x= 0,y=2},direction=7,connect={pos={x=-3,y=3},direction={[5]=3,[6]=7, [7]=5}}},
+      [2]={pos={x=-3,y=3},direction=2,curve={[5]={diag=true},[6]={pos={x=-6,y=4}}}, lastDir=3}},
+    [6] = {
+      [0]={pos={x=-5,y=1},direction=6,curve={[3]={pos={x=-8,y=0}},[2]={pos={x=-8,y=2}}}},
+      [1]={pos={x=-2,y=0},direction=2, shift={[2]={x=-5,y=1},[3]={x=-5,y=-1}}},
+      [2]={pos={x=-5,y=-1},direction=7,curve={[3]={pos={x=-8,y=-2}},[2]={pos={x=-8,y=0}}}}},
+    [7] = {
+      [0]={pos={x=-3,y=-3},direction=3,curve={[0]={diag=true},[7]={pos={x=-6,y=-4}}}, lastDir=1},
+      [1]={pos={x=0,y=-2},direction=5,connect={pos={x=-3,y=-3},direction={[0]=1, [7]=5}}},
+      [2]={pos={x=-3,y=-3},direction=4,curve={[0]={pos={x=-4,y=-6}},[7]={diag=true}}, lastDir=5}}
+  }--{[]={pos={x=,y=},diag},[]={pos={x=,y=},diag}}
+
+--clearArea[curveDir%4]
+clearAreas =
+  {
+    [0]={
+      {{x=-2.5,y=-3.5},{x=0.5,y=0.5}},
+      {{x=-0.5,y=-0.5},{x=2.5,y=3.5}}
+    },
+    [1]={
+      {{x=-2.5,y=-0.5},{x=0.5,y=3.5}},
+      {{x=-0.5,y=-3.5},{x=2.5,y=0.5}}
+    },
+    [2]={
+      {{x=-3.5,y=-0.5},{x=0.5,y=2.5}},
+      {{x=-0.5,y=-2.5},{x=3.5,y=0.5}}
+    },
+    [3]={
+      {{x=-3.5,y=-2.5},{x=0.5,y=0.5}},
+      {{x=-0.5,y=-0.5},{x=3.5,y=2.5}},
+    }
+  }
+
+  --[traveldir] ={[raildir]
+signalOffset =
+  {
+    [0] = {pos={x=1.5,y=0.5}, dir=4},
+    [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
+    [2] = {pos={x=-0.5,y=1.5}, dir=6},
+    [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
+    [4] = {pos={x=-1.5,y=-0.5}, dir=0},
+    [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
+    [6] = {pos={x=0.5,y=-1.5}, dir=2},
+    [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
+  }
