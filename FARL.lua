@@ -68,24 +68,9 @@ function expandPos(pos, range)
   return {{pos.x - range, pos.y - range}, {pos.x + range, pos.y + range}}
 end
 
+-- defines defines a direction as a number from 0 to 7, with its opposite calculateable by adding for and modulo 8
 function oppositedirection(direction)
-  local opp = util.oppositedirection(direction)
-  if not opp then
-    if direction == defines.direction.northeast then
-      return defines.direction.southwest
-    end
-    if direction == defines.direction.southeast then
-      return defines.direction.northwest
-    end
-    if direction == defines.direction.southwest then
-      return defines.direction.northeast
-    end
-    if direction == defines.direction.northwest then
-      return defines.direction.southeast
-    end
-  else
-    return opp
-  end
+  return direction + 4 % 8;
 end
 
 function moveposition(pos, direction, distance)
@@ -279,21 +264,34 @@ FARL = {
 
   removeTrees = function(self, area)
     apiCalls.count = apiCalls.count + 1
-    if self.surface.count_entities_filtered{area = area, type = "tree"} > 0 then
-      apiCalls.find = apiCalls.find + 1
-      for _, entity in pairs(self.surface.find_entities_filtered{area = area, type = "tree"}) do
-        entity.die()
-        if not godmode and self.settings.collectWood then self:addItemToCargo("raw-wood", 1) end
+    local found = false
+    local
+    for _, entity in pairs(self.surface.find_entities_filtered{area = area, type = "tree"}) do
+      found = true
+      entity.die()
+      if not godmode and self.settings.collectWood then
+        self:addItemToCargo("raw-wood", 1)
       end
+    end
+
+    if found then
+      apiCalls.find = apiCalls.find + 1
     end
   end,
 
   removeStone = function(self, area)
     apiCalls.count = apiCalls.count + 1
-    if removeStone and self.surface.count_entities_filtered{area = area, name = "stone-rock"} > 0 then
-      apiCalls.find = apiCalls.find + 1
+
+    if removeStone then
+      local found = false
+
       for _, entity in pairs(self.surface.find_entities_filtered{area = area, name = "stone-rock"}) do
+        found = true
         entity.die()
+      end
+
+      if found then
+        apiCalls.find = apiCalls.find + 1
       end
     end
   end,
@@ -303,24 +301,28 @@ FARL = {
   removeEntitiesFiltered = function(self, args, exclude)
     apiCalls.count = apiCalls.count + 1
     local exclude = exclude or {}
-    if self.surface.count_entities_filtered(args) > 0 then
-      apiCalls.find = apiCalls.find + 1
-      for _, entity in pairs(self.surface.find_entities_filtered(args)) do
-        if not self:isProtected(entity) then
-          if entity.prototype.items_to_place_this then
-            local item
-            for k, v in pairs(entity.prototype.items_to_place_this) do
-              item = k
-              break
-            end
-            self:addItemToCargo(item, 1)
+    local found = false
+      
+    for _, entity in pairs(self.surface.find_entities_filtered(args)) do
+      found = true
+      if not self:isProtected(entity) then
+        if entity.prototype.items_to_place_this then
+          local item
+          for k, v in pairs(entity.prototype.items_to_place_this) do
+            item = k
+            break
           end
-          if not entity.destroy() then
-            self:deactivate({"msg-cant-remove"})
-            return
-          end
+          self:addItemToCargo(item, 1)
+        end
+        if not entity.destroy() then
+          self:deactivate({"msg-cant-remove"})
+          return
         end
       end
+    end
+
+    if found then
+      apiCalls.find = apiCalls.find + 1
     end
   end,
 
@@ -363,12 +365,16 @@ FARL = {
 
   pickupItems = function(self, area)
     apiCalls.count = apiCalls.count + 1
-    if self.surface.count_entities_filtered{area = area, name = "item-on-ground"} > 0 then
+    local found = false
+
+    for _, entity in ipairs(self.surface.find_entities_filtered{area = area, name="item-on-ground"}) do
+      found = true
+      self:addItemToCargo(entity.stack.name, entity.stack.count, entity.stack.prototype.place_result)
+      entity.destroy()
+    end
+
+    if found then
       apiCalls.find = apiCalls.find + 1
-      for _, entity in ipairs(self.surface.find_entities_filtered{area = area, name="item-on-ground"}) do
-        self:addItemToCargo(entity.stack.name, entity.stack.count, entity.stack.prototype.place_result)
-        entity.destroy()
-      end
     end
   end,
 
