@@ -265,7 +265,6 @@ FARL = {
   removeTrees = function(self, area)
     apiCalls.count = apiCalls.count + 1
     local found = false
-    local
     for _, entity in pairs(self.surface.find_entities_filtered{area = area, type = "tree"}) do
       found = true
       entity.die()
