@@ -70,7 +70,7 @@ end
 
 -- defines defines a direction as a number from 0 to 7, with its opposite calculateable by adding for and modulo 8
 function oppositedirection(direction)
-  return direction + 4 % 8;
+  return (direction + 4) % 8
 end
 
 function moveposition(pos, direction, distance)
