@@ -13,6 +13,15 @@ function resetMetatable(o, mt)
   return o
 end
 
+function setMetatables()
+  for i,farl in pairs(global.farl) do
+    farl = resetMetatable(farl, FARL)
+  end
+  for name, s in pairs(global.players) do
+    s = resetMetatable(s,Settings)
+  end
+end
+
 local function on_tick(event)
   local status, err = pcall(function()
     if global.destroyNextTick[event.tick] then
@@ -52,23 +61,16 @@ local function on_tick(event)
 end
 
 local function init_global()
-  global.players = {}
-  global.savedBlueprints = {}
-  global.farl = {}
-  global.railInfoLast = {}
-  global.electricInstalled = false
+  global.players =  global.players or {}
+  global.savedBlueprints = global.savedBlueprints or {}
+  global.farl = global.farl or {}
+  global.railInfoLast = global.railInfoLast or {}
+  global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
   global.godmode = false
   godmode = global.godmode
-  global.destroyNextTick = {}
+  global.destroyNextTick = global.destroyNextTick or {}
 
-  for i,farl in pairs(global.farl) do
-    farl = resetMetatable(farl, FARL)
-  end
-  for name, s in pairs(global.players) do
-    s = resetMetatable(s,Settings)
-  end
-
-  global.version = "0.4.3"
+  setMetatables()
 end
 
 local function init_player(player)
@@ -86,16 +88,14 @@ local function on_init()
 end
 
 local function on_load()
-  for i,farl in pairs(global.farl) do
-    farl = resetMetatable(farl, FARL)
-  end
-  for name, s in pairs(global.players) do
-    s = resetMetatable(s,Settings)
-  end
+  setMetatables()
   godmode = global.godmode
 end
 
 local function on_configuration_changed(data)
+  if not data or not data.mod_changes then
+    return
+  end
   if data.mod_changes[MOD_NAME] then
     local newVersion = data.mod_changes[MOD_NAME].new_version
     local oldVersion = data.mod_changes[MOD_NAME].old_version
@@ -109,7 +109,6 @@ local function on_configuration_changed(data)
         global.electricInstalled = false
       end
     end
-    global.version = newVersion
   end
   if data.mod_changes["5dim_trains"] then
     --5dims_trains was added/updated
@@ -120,6 +119,7 @@ local function on_configuration_changed(data)
       global.electricInstalled = false
     end
   end
+  setMetatables()
   for name,s in pairs(global.players) do
     s:checkMods()
   end
