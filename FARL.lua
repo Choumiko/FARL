@@ -143,12 +143,18 @@ FARL = {
 
   onPlayerEnter = function(player)
     local i = FARL.findByLocomotive(player.vehicle)
+    local farl
     if i then
       global.farl[i].driver = player
       global.farl[i].settings = Settings.loadByPlayer(player)
       global.farl[i].destroy = false
+      farl = global.farl[i]
     else
-      table.insert(global.farl, FARL.new(player))
+      farl = FARL.new(player)
+      table.insert(global.farl, farl)
+    end
+    if remote.interfaces.YARM then
+      farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", {player_index=player.index})
     end
     apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
   end,
@@ -160,6 +166,9 @@ FARL = {
         f:deactivate()
         f.driver = false
         f.destroy = tick
+        if remote.interfaces.YARM and f.settings.YARM_old_expando then
+          remote.call("YARM", "show_expando", {player_index=player.index})
+        end
         --f.settings = false
         break
       end
