@@ -68,7 +68,7 @@ function expandPos(pos, range)
   return {{pos.x - range, pos.y - range}, {pos.x + range, pos.y + range}}
 end
 
--- defines defines a direction as a number from 0 to 7, with its opposite calculateable by adding for and modulo 8
+-- defines a direction as a number from 0 to 7, with its opposite calculateable by adding 4 and modulo 8
 function oppositedirection(direction)
   return (direction + 4) % 8
 end
@@ -105,11 +105,10 @@ function protectedKey(ent)
   end
   return false
 end
-
+apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
 local RED = {r = 0.9}
 local GREEN = {g = 0.7}
 local YELLOW = {r = 0.8, g = 0.8}
-apiCalls = {find=0,canplace=0,create=0,count=0}
 FARL = {
   curvePositions = {
     [0] = {straight={dir=0, off={x=1,y=3}}, diagonal = {dir=5, off={x=-1,y=-3}}},
@@ -151,10 +150,11 @@ FARL = {
     else
       table.insert(global.farl, FARL.new(player))
     end
+    apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
   end,
 
   onPlayerLeave = function(player, tick)
-    for i,f in ipairs(global.farl) do
+    for i,f in pairs(global.farl) do
       if f.driver and f.driver.name == player.name then
         --debugDump(f.protectedCount,true)
         f:deactivate()
@@ -164,12 +164,12 @@ FARL = {
         break
       end
     end
-    --debugDump(apiCalls,true)
-    apiCalls = {find=0,canplace=0,create=0,count=0}
+    debugDump(apiCalls,true)
+    apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
   end,
 
   findByLocomotive = function(loco)
-    for i,f in ipairs(global.farl) do
+    for i,f in pairs(global.farl) do
       if f.locomotive == loco then
         return i
       end
@@ -178,7 +178,7 @@ FARL = {
   end,
 
   findByPlayer = function(player)
-    for i,f in ipairs(global.farl) do
+    for i,f in pairs(global.farl) do
       if f.locomotive == player.vehicle then
         f.driver = player
         return f
@@ -263,7 +263,7 @@ FARL = {
   end,
 
   removeTrees = function(self, area)
-    apiCalls.count = apiCalls.count + 1
+    apiCalls.count.tree = apiCalls.count.tree + 1
     local found = false
     for _, entity in pairs(self.surface.find_entities_filtered{area = area, type = "tree"}) do
       found = true
@@ -274,12 +274,12 @@ FARL = {
     end
 
     if found then
-      apiCalls.find = apiCalls.find + 1
+      apiCalls.find.tree = apiCalls.find.tree + 1
     end
   end,
 
   removeStone = function(self, area)
-    apiCalls.count = apiCalls.count + 1
+    apiCalls.count.stone = apiCalls.count.stone + 1
 
     if removeStone then
       local found = false
@@ -290,7 +290,7 @@ FARL = {
       end
 
       if found then
-        apiCalls.find = apiCalls.find + 1
+        apiCalls.find.stone = apiCalls.find.stone + 1
       end
     end
   end,
@@ -298,10 +298,10 @@ FARL = {
   -- args = {area=area, name="name"} or {area=area,type="type"}
   -- exclude: table with entities as keys
   removeEntitiesFiltered = function(self, args, exclude)
-    apiCalls.count = apiCalls.count + 1
+    apiCalls.count.other = apiCalls.count.other + 1
     local exclude = exclude or {}
     local found = false
-      
+
     for _, entity in pairs(self.surface.find_entities_filtered(args)) do
       found = true
       if not self:isProtected(entity) then
@@ -321,7 +321,7 @@ FARL = {
     end
 
     if found then
-      apiCalls.find = apiCalls.find + 1
+      apiCalls.find.other = apiCalls.find.other + 1
     end
   end,
 
@@ -363,17 +363,13 @@ FARL = {
   end,
 
   pickupItems = function(self, area)
-    apiCalls.count = apiCalls.count + 1
-    local found = false
-
-    for _, entity in ipairs(self.surface.find_entities_filtered{area = area, name="item-on-ground"}) do
-      found = true
-      self:addItemToCargo(entity.stack.name, entity.stack.count, entity.stack.prototype.place_result)
-      entity.destroy()
-    end
-
-    if found then
-      apiCalls.find = apiCalls.find + 1
+    apiCalls.count.item = apiCalls.count.item + 1
+    if self.surface.count_entities_filtered{area = area, name = "item-on-ground"} > 0 then
+      apiCalls.find.item = apiCalls.find.item + 1
+      for _, entity in pairs(self.surface.find_entities_filtered{area = area, name="item-on-ground"}) do
+        self:addItemToCargo(entity.stack.name, entity.stack.count, entity.stack.prototype.place_result)
+        entity.destroy()
+      end
     end
   end,
 
@@ -2090,14 +2086,14 @@ clearAreas =
   }
 
   --[traveldir] ={[raildir]
-signalOffset =
-  {
-    [0] = {pos={x=1.5,y=0.5}, dir=4},
-    [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
-    [2] = {pos={x=-0.5,y=1.5}, dir=6},
-    [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
-    [4] = {pos={x=-1.5,y=-0.5}, dir=0},
-    [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
-    [6] = {pos={x=0.5,y=-1.5}, dir=2},
-    [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
-  }
+  signalOffset =
+    {
+      [0] = {pos={x=1.5,y=0.5}, dir=4},
+      [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
+      [2] = {pos={x=-0.5,y=1.5}, dir=6},
+      [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
+      [4] = {pos={x=-1.5,y=-0.5}, dir=0},
+      [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
+      [6] = {pos={x=0.5,y=-1.5}, dir=2},
+      [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
+    }

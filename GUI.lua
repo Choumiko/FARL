@@ -22,8 +22,6 @@ GUI = {
 
     bindings = {},
 
-    callbacks = {},
-
     new = function(index, player)
       local new = {}
       setmetatable(new, {__index=GUI})
@@ -138,7 +136,7 @@ GUI = {
         player.gui.left.farl.destroy()
       end
     end,
-    
+
     onGuiClick = function(event, farl, player)
       local name = event.element.name
       if GUI.callbacks[name] then
@@ -271,13 +269,13 @@ GUI = {
 
         GUI.add(settings, {type="checkbox", name="minPoles", caption={"stg-minPoles"}}, "minPoles")
         GUI.addPlaceHolder(settings)
-        
+
         GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}},"poleEntities")
         GUI.addPlaceHolder(settings)
-        
+
         GUI.add(settings,{type="checkbox", name="parallelTracks", caption={"stg-parallel-tracks"}}, "parallelTracks")
         GUI.addPlaceHolder(settings)
-        
+
         GUI.add(settings, {type="label", caption={"stg-parallel-lag"}})
         GUI.add(settings,{type="textfield", name="parallelLag", style="farl_textfield_small"}, psettings.parallelLag)
 
@@ -382,4 +380,17 @@ GUI = {
         farl.driver.gui.left.farl.rows.maintenance.state = farl.maintenance
       end
     end,
+}
+
+GUI.callbacks = {
+  start = GUI.toggleStart,
+  cc = GUI.toggleCC,
+  settings = GUI.toggleSettingsWindow,
+  debug = GUI.debugInfo,
+  root = GUI.toggleRootMode,
+  maintenance = GUI.toggleMaintenance,
+  poleType = GUI.togglePole,
+  ccNetWires = GUI.toggleWires,
+  blueprint = GUI.readBlueprint,
+  bpClear = GUI.clearBlueprints
 }
