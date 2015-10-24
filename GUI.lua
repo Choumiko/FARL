@@ -144,7 +144,7 @@ GUI = {
       end
       local psettings = Settings.loadByPlayer(player)
       if name == "debug" then
-        saveVar(glob,"debug")
+        saveVar(global,"debug")
         farl:debugInfo()
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
         or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"

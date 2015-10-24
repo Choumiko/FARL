@@ -105,7 +105,7 @@ function protectedKey(ent)
   end
   return false
 end
-apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
+--apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
 local RED = {r = 0.9}
 local GREEN = {g = 0.7}
 local YELLOW = {r = 0.8, g = 0.8}
@@ -156,7 +156,7 @@ FARL = {
     if remote.interfaces.YARM then
       farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", {player_index=player.index})
     end
-    apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
+    --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
   end,
 
   onPlayerLeave = function(player, tick)
@@ -173,8 +173,8 @@ FARL = {
         break
       end
     end
-    debugDump(apiCalls,true)
-    apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
+    --debugDump(apiCalls,true)
+    --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
   end,
 
   findByLocomotive = function(loco)
@@ -272,7 +272,7 @@ FARL = {
   end,
 
   removeTrees = function(self, area)
-    apiCalls.count.tree = apiCalls.count.tree + 1
+    --apiCalls.count.tree = apiCalls.count.tree + 1
     local found = false
     for _, entity in pairs(self.surface.find_entities_filtered{area = area, type = "tree"}) do
       found = true
@@ -283,12 +283,12 @@ FARL = {
     end
 
     if found then
-      apiCalls.find.tree = apiCalls.find.tree + 1
+      --apiCalls.find.tree = apiCalls.find.tree + 1
     end
   end,
 
   removeStone = function(self, area)
-    apiCalls.count.stone = apiCalls.count.stone + 1
+    --apiCalls.count.stone = apiCalls.count.stone + 1
 
     if removeStone then
       local found = false
@@ -299,7 +299,7 @@ FARL = {
       end
 
       if found then
-        apiCalls.find.stone = apiCalls.find.stone + 1
+        --apiCalls.find.stone = apiCalls.find.stone + 1
       end
     end
   end,
@@ -307,7 +307,7 @@ FARL = {
   -- args = {area=area, name="name"} or {area=area,type="type"}
   -- exclude: table with entities as keys
   removeEntitiesFiltered = function(self, args, exclude)
-    apiCalls.count.other = apiCalls.count.other + 1
+    --apiCalls.count.other = apiCalls.count.other + 1
     local exclude = exclude or {}
     local found = false
 
@@ -330,7 +330,7 @@ FARL = {
     end
 
     if found then
-      apiCalls.find.other = apiCalls.find.other + 1
+      --apiCalls.find.other = apiCalls.find.other + 1
     end
   end,
 
@@ -372,9 +372,9 @@ FARL = {
   end,
 
   pickupItems = function(self, area)
-    apiCalls.count.item = apiCalls.count.item + 1
+    --apiCalls.count.item = apiCalls.count.item + 1
     if self.surface.count_entities_filtered{area = area, name = "item-on-ground"} > 0 then
-      apiCalls.find.item = apiCalls.find.item + 1
+      --apiCalls.find.item = apiCalls.find.item + 1
       for _, entity in pairs(self.surface.find_entities_filtered{area = area, name="item-on-ground"}) do
         self:addItemToCargo(entity.stack.name, entity.stack.count, entity.stack.prototype.place_result)
         entity.destroy()
@@ -923,7 +923,7 @@ FARL = {
       error("no name", 2)
     end
     local name = arg.innername or arg.name
-    apiCalls.canplace = apiCalls.canplace + 1
+    --apiCalls.canplace = apiCalls.canplace + 1
     if not arg.direction then
       return self.surface.can_place_entity{name = name, position = arg.position}
     else
@@ -944,7 +944,7 @@ FARL = {
       local force = arg.force or self.locomotive.force
       arg.force = force
       entity = self.surface.create_entity(arg)
-      apiCalls.create = apiCalls.create + 1
+      --apiCalls.create = apiCalls.create + 1
     end
     return canPlace, entity
   end,
@@ -1266,7 +1266,7 @@ FARL = {
       return self:protectRails(self.maintenanceRail, self.maintenanceDir, 10)
     else
       if found > 0 then
-        debugDump(self.protectedCount,true)
+        --debugDump(self.protectedCount,true)
         self:deactivate("Junction detected")
       end
       return false
@@ -1316,7 +1316,7 @@ FARL = {
         end
       end
       if found > 1 then
-        debugDump(self.protectedCount,true)
+        --debugDump(self.protectedCount,true)
         self:deactivate("Junction detected")
         return false
       else
@@ -1671,7 +1671,7 @@ FARL = {
     local reach = self.settings.medium and 9 or 30
     for i,p in pairs(self.surface.find_entities_filtered{area=expandPos(tmp, reach), name=name}) do
       local dist = distance(p.position, tmp)
-      debugDump({dist=dist, minPos=minPos, p=p.position},true)
+      --debugDump({dist=dist, minPos=minPos, p=p.position},true)
       local diff = subPos(p.position,self.lastPole.position)
       if dist < minDist and (p.position.x ~= minPos.x and p.position.y ~= minPos.y) then
         minDist = dist
@@ -1885,6 +1885,9 @@ FARL = {
   end,
 
   findLastPole = function(self)
+    if not self.active then
+      return
+    end
     local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = self.settings.medium and 9 or 30
     local poles = self.surface.find_entities_filtered{area=expandPos(self.locomotive.position, reach), name=name}
@@ -2094,15 +2097,15 @@ clearAreas =
     }
   }
 
-  --[traveldir] ={[raildir]
-  signalOffset =
-    {
-      [0] = {pos={x=1.5,y=0.5}, dir=4},
-      [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
-      [2] = {pos={x=-0.5,y=1.5}, dir=6},
-      [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
-      [4] = {pos={x=-1.5,y=-0.5}, dir=0},
-      [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
-      [6] = {pos={x=0.5,y=-1.5}, dir=2},
-      [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
-    }
+--[traveldir] ={[raildir]
+signalOffset =
+  {
+    [0] = {pos={x=1.5,y=0.5}, dir=4},
+    [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
+    [2] = {pos={x=-0.5,y=1.5}, dir=6},
+    [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
+    [4] = {pos={x=-1.5,y=-0.5}, dir=0},
+    [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
+    [6] = {pos={x=0.5,y=-1.5}, dir=2},
+    [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
+  }

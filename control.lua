@@ -130,6 +130,7 @@ local function on_player_created(event)
 end
 
 local function on_gui_click(event)
+  local status, err = pcall(function()
   local index = event.player_index
   local player = game.players[index]
   if player.gui.left.farl ~= nil then --and player.gui.left.farlAI == nil then
@@ -140,6 +141,11 @@ local function on_gui_click(event)
       player.print("Gui without train, wrooong!")
       GUI.destroyGui(player)
     end
+  end
+  end)
+  if not status then
+    debugDump("Unexpected error:",true)
+    debugDump(err,true)
   end
 end
 
@@ -262,6 +268,7 @@ remote.add_interface("farl",
         global.railInfoLast = rail
       end
     end,
+    --/c remote.call("farl", "debugInfo")
     debugInfo = function()
       saveVar(global, "console")
       --saveVar(global.debug, "RailDebug")
