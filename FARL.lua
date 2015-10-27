@@ -876,44 +876,25 @@ FARL = {
 
   addItemToCargo = function(self,item, count, place_result)
     local count = count or 1
-    local wagon = self.train.carriages
-    for _, entity in ipairs(wagon) do
-      if entity.type == "cargo-wagon" and entity.name ~= "rail-tanker" then
-        if entity.get_inventory(1).can_insert({name = item, count = count}) then
-          entity.get_inventory(1).insert({name = item, count = count})
-          return
-        end
-      end
-    end
-    if self.settings.dropWood or place_result then
+    local remaining = count - self.train.insert({name=item, count=count})
+
+    if remaining > 0 and (self.settings.dropWood or place_result) then
       local position = self.surface.find_non_colliding_position("item-on-ground", self.driver.position, 100, 0.5)
-      self.surface.create_entity{name = "item-on-ground", position = position, stack = {name = item, count = count}}
+      self.surface.create_entity{name = "item-on-ground", position = position, stack = {name = item, count = remaining}}
     end
   end,
 
   removeItemFromCargo = function(self,item, count)
-    if godmode then return end
     local count = count or 1
-    local wagons = self.train.carriages
-    for _,entity in ipairs(wagons) do
-      if entity.type == "cargo-wagon" and entity.name ~= "rail-tanker" then
-        local inv = entity.get_inventory(1).get_contents()
-        if inv[item] then
-          entity.get_inventory(1).remove({name=item, count=count})
-        end
-      end
+    if godmode then
+      return count
     end
+    return self.train.remove_item({name=item, count=count})
   end,
 
   getCargoCount = function(self, item)
     if godmode then return 9001 end
-    local c = 0
-    for i, wagon in ipairs(self.train.carriages) do
-      if wagon.type == "cargo-wagon"  and wagon.name ~= "rail-tanker" then
-        c = c + wagon.get_inventory(1).get_item_count(item)
-      end
-    end
-    return c
+    return self.train.get_item_count(item)
   end,
 
   genericCanPlace = function(self, arg)
