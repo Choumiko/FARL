@@ -154,7 +154,9 @@ GUI = {
           if not psettings[name] then
             farl:resetPoleData()
           else
-            farl:findLastPole()
+            if farl.active then
+              farl:findLastPole()
+            end
           end
         end
       elseif name == "bridge" then

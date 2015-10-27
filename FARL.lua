@@ -154,7 +154,7 @@ FARL = {
       table.insert(global.farl, farl)
     end
     if remote.interfaces.YARM then
-      farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", {player_index=player.index})
+      farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", player.index)
     end
     --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
   end,
@@ -167,7 +167,7 @@ FARL = {
         f.driver = false
         f.destroy = tick
         if remote.interfaces.YARM and f.settings.YARM_old_expando then
-          remote.call("YARM", "show_expando", {player_index=player.index})
+          remote.call("YARM", "show_expando", player.index)
         end
         --f.settings = false
         break
@@ -283,7 +283,7 @@ FARL = {
     end
 
     if found then
-      --apiCalls.find.tree = apiCalls.find.tree + 1
+    --apiCalls.find.tree = apiCalls.find.tree + 1
     end
   end,
 
@@ -299,7 +299,7 @@ FARL = {
       end
 
       if found then
-        --apiCalls.find.stone = apiCalls.find.stone + 1
+      --apiCalls.find.stone = apiCalls.find.stone + 1
       end
     end
   end,
@@ -330,7 +330,7 @@ FARL = {
     end
 
     if found then
-      --apiCalls.find.other = apiCalls.find.other + 1
+    --apiCalls.find.other = apiCalls.find.other + 1
     end
   end,
 
@@ -1885,9 +1885,6 @@ FARL = {
   end,
 
   findLastPole = function(self)
-    if not self.active then
-      return
-    end
     local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local reach = self.settings.medium and 9 or 30
     local poles = self.surface.find_entities_filtered{area=expandPos(self.locomotive.position, reach), name=name}
@@ -1977,7 +1974,7 @@ FARL = {
     local trainDir = self:calcTrainDir()
     --debugDump({dir=trainDir,pos=pos},true)
     --self:flyingText("|", RED, true, pos)
-    local rails = self.surface.find_entities_filtered{area=expandPos(self.locomotive.position, 0.4), type="rail"}
+    local rails = self.surface.find_entities_filtered{area=expandPos(self.locomotive.position, 0.4), type="straight-rail"}
     local curves ={}
     --debugDump(#rails,true)
     for i=1, #rails do
@@ -2097,15 +2094,15 @@ clearAreas =
     }
   }
 
---[traveldir] ={[raildir]
-signalOffset =
-  {
-    [0] = {pos={x=1.5,y=0.5}, dir=4},
-    [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
-    [2] = {pos={x=-0.5,y=1.5}, dir=6},
-    [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
-    [4] = {pos={x=-1.5,y=-0.5}, dir=0},
-    [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
-    [6] = {pos={x=0.5,y=-1.5}, dir=2},
-    [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
-  }
+  --[traveldir] ={[raildir]
+  signalOffset =
+    {
+      [0] = {pos={x=1.5,y=0.5}, dir=4},
+      [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
+      [2] = {pos={x=-0.5,y=1.5}, dir=6},
+      [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
+      [4] = {pos={x=-1.5,y=-0.5}, dir=0},
+      [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
+      [6] = {pos={x=0.5,y=-1.5}, dir=2},
+      [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
+    }
