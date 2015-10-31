@@ -106,7 +106,7 @@ local function on_configuration_changed(data)
       global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
     else
       if oldVersion < "0.4.4" then
-        global.electricInstalled = false
+        global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
       end
     end
   end
