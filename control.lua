@@ -69,7 +69,7 @@ local function init_global()
   global.godmode = false
   godmode = global.godmode
   global.destroyNextTick = global.destroyNextTick or {}
-
+  global.version = global.version or "0.4.41"
   setMetatables()
 end
 
@@ -100,15 +100,10 @@ local function on_configuration_changed(data)
     local newVersion = data.mod_changes[MOD_NAME].new_version
     local oldVersion = data.mod_changes[MOD_NAME].old_version
     -- mod was added to existing save
-    if not oldVersion then
-      init_global()
-      init_players()
-      global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
-    else
-      if oldVersion < "0.4.4" then
-        global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
-      end
-    end
+    init_global()
+    init_players()
+    global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
+    global.version = "0.4.41"
   end
   if data.mod_changes["5dim_trains"] then
     --5dims_trains was added/updated
@@ -131,17 +126,17 @@ end
 
 local function on_gui_click(event)
   local status, err = pcall(function()
-  local index = event.player_index
-  local player = game.players[index]
-  if player.gui.left.farl ~= nil then --and player.gui.left.farlAI == nil then
-    local farl = FARL.findByPlayer(player)
-    if farl then
-      GUI.onGuiClick(event, farl, player)
-    else
-      player.print("Gui without train, wrooong!")
-      GUI.destroyGui(player)
+    local index = event.player_index
+    local player = game.players[index]
+    if player.gui.left.farl ~= nil then --and player.gui.left.farlAI == nil then
+      local farl = FARL.findByPlayer(player)
+      if farl then
+        GUI.onGuiClick(event, farl, player)
+      else
+        player.print("Gui without train, wrooong!")
+        GUI.destroyGui(player)
+      end
     end
-  end
   end)
   if not status then
     debugDump("Unexpected error:",true)

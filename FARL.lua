@@ -153,7 +153,7 @@ FARL = {
       farl = FARL.new(player)
       table.insert(global.farl, farl)
     end
-    if remote.interfaces.YARM then
+    if remote.interfaces.YARM  and remote.interfaces.YARM.hide_expando then
       farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", player.index)
     end
     --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
@@ -166,7 +166,7 @@ FARL = {
         f:deactivate()
         f.driver = false
         f.destroy = tick
-        if remote.interfaces.YARM and f.settings.YARM_old_expando then
+        if remote.interfaces.YARM and remote.interfaces.YARM.show_expando and f.settings.YARM_old_expando then
           remote.call("YARM", "show_expando", player.index)
         end
         --f.settings = false
@@ -659,6 +659,10 @@ FARL = {
 
       local maintenance = self.maintenance and 10 or false
       self.lastrail = self:findLastRail(maintenance)
+      if self.lastrail.name == self.settings.rail.curved then
+        self:deactivate({"msg-error-curves"}, true)
+        return
+      end
       self.lastCheckIndex = 1
       if self.lastrail then
         self:findLastPole()
@@ -938,6 +942,9 @@ FARL = {
       local vertSignal = signalOffset[0]
       local diagSignal = signalOffset[1]
       local e = bp[j].get_blueprint_entities()
+      if not e then -- blueprint with only tiles in it
+        break
+      end
       local offsets = {pole=false, chain=false, poleEntities={}, rails={}, signals={}}
       local bpType = false
       local rails = 0
