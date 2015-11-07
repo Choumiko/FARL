@@ -77,6 +77,9 @@ Settings = {
       global.players[name] = settings
     end
     global.players[name].player = player
+    if not global.players[name].boundingBoxOffsets then
+      global.players[name].boundingBoxOffsets = util.table.deepcopy(settings.boundingBoxOffsets)
+    end
     setmetatable(global.players[name], Settings)
     return global.players[name]
   end,

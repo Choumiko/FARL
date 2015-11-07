@@ -99,7 +99,6 @@ local function on_configuration_changed(data)
   if data.mod_changes[MOD_NAME] then
     local newVersion = data.mod_changes[MOD_NAME].new_version
     local oldVersion = data.mod_changes[MOD_NAME].old_version
-    -- mod was added to existing save
     init_global()
     init_players()
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
@@ -269,7 +268,7 @@ remote.add_interface("farl",
       --saveVar(global.debug, "RailDebug")
     end,
     reset = function()
-      global.farl = {}
+      global = {}
       if game.forces.player.technologies["rail-signals"].researched then
         game.forces.player.recipes["farl"].enabled = true
       end
@@ -278,6 +277,7 @@ remote.add_interface("farl",
         if p.gui.top.farl then p.gui.top.farl.destroy() end
       end
       init_global()
+      init_players()
     end,
 
     setCurvedWeight = function(weight, player)
