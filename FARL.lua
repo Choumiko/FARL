@@ -2,6 +2,50 @@ require "util"
 
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 input2dir = {[0]=-1,[1]=0,[2]=1}
+--[traveldir] ={[raildir]
+signalOffset =
+  {
+    [0] = {
+      [0] = {pos={x=1.5,y=0.5}, dir=4}
+    },
+    [1] = {
+      [3] = {pos={x=1.5,y=1.5}, dir=5},
+      [7] = {pos={x=0.5,y=0.5}, dir=5}
+    },
+    [2] = {
+      [2] = {pos={x=-0.5,y=1.5}, dir=6}
+    },
+    [3] = {
+      [1]={pos={x=-0.5,y=0.5}, dir=7},
+      [5]={pos={x=-1.5,y=1.5}, dir=7}
+    },
+    [4] = {
+      [0] = {pos={x=-1.5,y=-0.5}, dir=0}
+    },
+    [5] = {
+      [3]={pos={x=-0.5,y=-0.5}, dir=1},
+      [7]={pos={x=-1.5,y=-1.5}, dir=1}
+    },
+    [6] = {
+      [2] = {pos={x=0.5,y=-1.5}, dir=2}
+    },
+    [7] = {
+      [1]={pos={x=1.5,y=-1.5}, dir=3},
+      [5]={pos={x=0.5,y=-0.5}, dir=3}
+    },
+  }
+
+function get_signal_weight(rail, settings)
+  local weight = rail.name == settings.rail.curved and settings.curvedWeight or 1
+  if rail.name ~= settings.rail.curved then
+    if rail.direction % 2 == 1 then
+      weight = 0.75
+    elseif rail.direction == 0 then
+      weight = 1.26
+    end
+  end
+  return weight
+end
 
 function addPos(p1,p2)
   if not p1.x then
@@ -156,6 +200,7 @@ FARL = {
       farl = FARL.new(player)
       table.insert(global.farl, farl)
     end
+    farl.train = player.vehicle.train
     farl.frontmover = false
     for i,l in pairs(farl.train.locomotives.front_movers) do
       if l == farl.locomotive then
@@ -226,42 +271,34 @@ FARL = {
     self:cruiseControl()
     if self.active then
       local below = self:rail_below_train()
-      local next_rail = self:get_connected_rail(below)
+      self.input = self.driver.riding_state.direction
+      local next_rail = self:get_connected_rail(below, false, self.direction)
       if not next_rail then
         --if not self.last_moved then self.last_moved = game.tick end
         --local diff = game.tick - self.last_moved
         --self:print(diff.."@"..game.tick)
-        self.input = self.driver.riding_state.direction
+        --self.last_moved = game.tick
         self.acc = self.driver.riding_state.acceleration
         if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) then
           local newTravelDir, nextRail = self:getRail(below,self.direction, self.input)
           if not nextRail then
             --debugDump({t=self.direction,type=below.type,dir=below.direction,i=self.input},true)
             --self:print("Need extra rail")
-            if self.input ~=1 then
-              local tmpDir, tmpRail = self:getRail(below, self.direction, 1)
-              if not tmpRail then
-                error("No next rail for input = 1", 2)
-              end
-              local dir, last = self:placeRails(tmpRail, tmpDir)
-              if not dir then
-                self:deactivate(last)
-                return
-              end
-              if not last.position and not last.name then
-                self:deactivate({"msg-no-entity"})
-                return
-              end
-              self.direction = tmpDir
-              newTravelDir, nextRail = self:getRail(last,self.direction, self.input)
-              below = last
-            end
+            return
           end
           local dir, last = self:placeRails(nextRail, newTravelDir)
           if dir then
             if not last.position and not last.name then
               self:deactivate({"msg-no-entity"})
               return
+            end
+            if self.settings.signals and not self.settings.root then
+              self.signalCount = self.signalCount + get_signal_weight(last,self.settings)
+              if self.getCargoCount("rail-signal") > 0 then
+                if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
+              else
+                self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
+              end
             end
             self.direction = newTravelDir
             return last
@@ -270,7 +307,6 @@ FARL = {
             return
           end
         end
-        --self.last_moved = game.tick
       else
 
       end
@@ -422,9 +458,13 @@ FARL = {
     end
     local data = input_to_next_rail[travelDir][lastRail.type]
     if not data[lastRail.direction] or not data[lastRail.direction][input] then
-      return travelDir, false
+      if not data[lastRail.direction] then
+        return travelDir, false
+      end
+      input = 1
     end
     data = data[lastRail.direction][input]
+
     local name = data.type == "straight-rail" and self.settings.rail.straight or self.settings.rail.curved
     local newTravelDir = (travelDir + input2dir[input]) % 8
     return newTravelDir, {name = name, position = addPos(lastRail.position, data.offset), direction=data.direction}
@@ -512,6 +552,7 @@ FARL = {
         end
       end
       local maintenance = self.maintenance and 10 or false
+      self.direction = self:calcTrainDir()
       self.lastrail = self:findLastRail(maintenance)
       if self.lastrail.name == self.settings.rail.curved then
         self:deactivate({"msg-error-curves"}, true)
@@ -522,30 +563,70 @@ FARL = {
       end
       --self:findLastPole()
       self.path = self:get_rails_below_train()
-      self.direction = self:calcTrainDir()
-      self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
+      local last_signal, signal_rail = false, false
+      local signalWeight = 1
+      for i=#self.path,1,-1 do
+        local rail = self.path[i].rail
+        local dir = self.path[i].travel_dir
+        last_signal, signal_rail = self:find_signal_rail(rail, dir)
+        if last_signal then
+          break
+        end
+        self.signalCount = self.signalCount + get_signal_weight(rail,self.settings)
+      end
+      if last_signal and signal_rail then
+        self:flyingText2( "S", GREEN, true, last_signal.position)
+        self:flyingText2( "SR", GREEN, true, signal_rail.position)
+        self:print(self.signalCount)
+      end
+      --self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
       self.active = true
     end)
     if not status then
       self:deactivate({"", {"msg-error-activating"}, err})
     end
   end,
-  
+
+  find_signal_rail = function(self, rail, travel_dir)
+    local data = signalOffset[travel_dir][rail.direction]
+    debugDump(data,true)
+    local signal_dir = data.dir
+    local signal_pos = addPos(data.pos, rail.position)
+    local range = (travel_dir % 2 == 0) and 1 or 0.5
+    for _1, name in pairs({"rail-signal", "rail-chain-signal"}) do
+      for _, entity in pairs(self.surface.find_entities_filtered{area = expandPos(signal_pos,range), name = name}) do
+        if entity.direction == signal_dir then
+          return entity, rail
+        end
+      end
+    end
+  end,
+
   get_rails_below_train = function(self)
     local behind = self:rail_behind_train()
     local front = self:rail_below_train()
-    local next = self:get_connected_rail(behind)
-    local path = {behind.position}
+    local next, dir = behind, self.direction
+    local path = {}
+    --self:flyingText2("b", RED, true, path[1].position)
     local count = 0
-    while next and count < 20 and front ~= next do
+    repeat
       self:flyingText2("n", RED, true, next.position)
-      table.insert(path, next.position)
-      debugDump(next.position,true)
-      next = self:get_connected_rail(next)
+      table.insert(path, {rail = next, travel_dir = dir})
+      debugDump({next.position, dir},true)
+      next, dir = self:get_connected_rail(next, false, dir)
       count = count + 1
-    end
-    self:flyingText2("n", RED, true, next.position)
-    table.insert(path, next.position)
+    until not next or count > 20 or next == front
+    self:flyingText2("l", RED, true, next.position)
+    table.insert(path, {rail = next, travel_dir = dir})
+    --    while next and count < 20 and front ~= next do
+    --      self:flyingText2("n", RED, true, next.position)
+    --      table.insert(path, next)
+    --      debugDump(next.position,true)
+    --      next, dir = self:get_connected_rail(next, false, dir)
+    --      count = count + 1
+    --    end
+    --table.insert(path, next)
+    --self:flyingText2("f", RED, true, path[#path].position)
     return path
   end,
 
@@ -629,7 +710,7 @@ FARL = {
     local limit, count = limit, 1
     limit = limit or 10
     while test and test.name ~= self.settings.rail.curved do
-      local rail = self:get_connected_rail(test, true)
+      local rail = self:get_connected_rail(test, true, self.direction)
       if rail and count < limit then
         test = rail
         last = rail
@@ -639,7 +720,7 @@ FARL = {
       count = count + 1
     end
     if last then
-      self:flyingText2({"text-front"}, RED, true, last.position)
+    --self:flyingText2({"text-front"}, RED, true, last.position)
     end
     return last
   end,
@@ -1531,8 +1612,8 @@ FARL = {
     if self.signalCount > self.settings.signalDistance and rail.name ~= self.settings.rail.curved then
       local rail = rail
       local data = signalOffset[traveldir]
-      local offset = data[rail.direction] or data.pos
-      local dir = data.dir
+      local offset = data[rail.direction].pos
+      local dir = data[rail.direction].dir
       if self.settings.flipSignals then
         local off = offset
         if traveldir % 2 == 1 then
@@ -1649,7 +1730,7 @@ FARL = {
     return self.frontmover and self.train.back_rail or self.train.front_rail
   end,
 
-  get_connected_rail = function(self, rail, straight_only)
+  get_connected_rail = function(self, rail, straight_only, travelDir)
     local dir = self.frontmover and self.train.rail_direction_from_front_rail or self.train.rail_direction_from_back_rail
     local dirs = {1,0,2}
     local ret = false
@@ -1657,10 +1738,17 @@ FARL = {
       dirs = {1}
     end
     for _, i in pairs(dirs) do
-      ret =  rail.get_connected_rail{rail_direction=dir, rail_connection_direction=i}
-      if ret then
-        return ret
+      local newTravel, nrail = self:getRail(rail, travelDir, i)
+      if nrail and newTravel then
+        ret = self:findRail(nrail)
+        if ret then
+          return ret, newTravel
+        end
       end
+      --ret =  rail.get_connected_rail{rail_direction=dir, rail_connection_direction=i}
+      --if ret then
+      --return ret
+      --end
     end
     return ret
   end,
@@ -1883,17 +1971,4 @@ clearAreas =
       {{x=-3.5,y=-2.5},{x=0.5,y=0.5}},
       {{x=-0.5,y=-0.5},{x=3.5,y=2.5}},
     }
-  }
-
---[traveldir] ={[raildir]
-signalOffset =
-  {
-    [0] = {pos={x=1.5,y=0.5}, dir=4},
-    [1] = {[3]={x=1.5,y=1.5}, [7]={x=0.5,y=0.5}, dir=5},
-    [2] = {pos={x=-0.5,y=1.5}, dir=6},
-    [3] = {[1]={x=-0.5,y=0.5},[5]={x=-1.5,y=1.5}, dir=7},
-    [4] = {pos={x=-1.5,y=-0.5}, dir=0},
-    [5] = {[3]={x=-0.5,y=-0.5},[7]={x=-1.5,y=-1.5}, dir=1},
-    [6] = {pos={x=0.5,y=-1.5}, dir=2},
-    [7] = {[1]={x=1.5,y=-1.5},[5]={x=0.5,y=-0.5}, dir=3},
   }
