@@ -4,7 +4,7 @@ require "FARL"
 require "GUI"
 
 MOD_NAME = "FARL"
-debugButton = false
+debugButton = true
 godmode = false
 removeStone = true
 
@@ -33,7 +33,7 @@ local function on_tick(event)
       global.destroyNextTick[event.tick] = nil
     end
     for i, farl in pairs(global.farl) do
-      if not farl.destroy then
+      if not farl.destroy and farl.driver and farl.driver.valid then
         local status, err = pcall(function()
           farl:update(event)
           if farl.driver and farl.driver.name ~= "farl_player" then
@@ -324,12 +324,6 @@ remote.add_interface("farl",
       local count = {5,50,50,50,50,50,50,50,10,2,50,50}
       for i=1,#items do
         game.player.insert{name=items[i], count=count[i]}
-      end
-    end,
-
-    wagons = function()
-      for i,w in ipairs(game.player.selected.train.carriages) do
-        debugDump({i=i,type=w.type},true)
       end
     end,
 
