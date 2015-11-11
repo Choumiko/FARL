@@ -270,10 +270,13 @@ FARL = {
     self.cruiseInterrupt = self.driver.riding_state.acceleration
     self:cruiseControl()
     if self.active then
-      local below = self:rail_below_train()
+      local below = self.lastrail --self:rail_below_train()
       self.input = self.driver.riding_state.direction
-      local next_rail = self:get_connected_rail(below, false, self.direction)
-      if not next_rail then
+      --local next_rail = self:findNeighbour(below, self.direction, self.input) or self:get_connected_rail(below, false, self.direction)
+      --if not next_rail then
+      local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
+      if distance(self.lastrail.position, firstWagon.position) < 6 then
+        --debugDump(#self.path, true)
         --if not self.last_moved then self.last_moved = game.tick end
         --local diff = game.tick - self.last_moved
         --self:print(diff.."@"..game.tick)
@@ -284,7 +287,11 @@ FARL = {
           if not nextRail then
             --debugDump({t=self.direction,type=below.type,dir=below.direction,i=self.input},true)
             --self:print("Need extra rail")
-            return
+            newTravelDir, nextRail = self:getRail(below, self.direction, 1)
+            if not nextRail then
+              --self:print("What happened?")
+              return
+            end
           end
           local dir, last = self:placeRails(nextRail, newTravelDir)
           if dir then
@@ -301,7 +308,8 @@ FARL = {
               end
             end
             self.direction = newTravelDir
-            return last
+            self.lastrail = last
+            return 
           else
             self:deactivate(last)
             return
@@ -515,10 +523,10 @@ FARL = {
   findNeighbour = function(self, rail, travelDir, input)
     local neighbour = false
     local newTravel, nrail = self:getRail(rail, travelDir, input)
-    if type(newTravel) == "number" then
+    if nrail then
       local railEnt = self:findRail(nrail)
       if railEnt then
-        neighbour = {newTravel, nrail, railEnt}
+        neighbour = railEnt
       end
     end
     return neighbour
@@ -579,7 +587,7 @@ FARL = {
         self:flyingText2( "SR", GREEN, true, signal_rail.position)
         self:print(self.signalCount)
       end
-      --self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
+      self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
       self.active = true
     end)
     if not status then
@@ -589,6 +597,7 @@ FARL = {
 
   find_signal_rail = function(self, rail, travel_dir)
     local data = signalOffset[travel_dir][rail.direction]
+    if not data then return end
     debugDump(data,true)
     local signal_dir = data.dir
     local signal_pos = addPos(data.pos, rail.position)
@@ -609,24 +618,24 @@ FARL = {
     local path = {}
     --self:flyingText2("b", RED, true, path[1].position)
     local count = 0
-    repeat
-      self:flyingText2("n", RED, true, next.position)
+    while next and count < 20 and next ~= front do
+      --self:flyingText2("n", RED, true, next.position)
       table.insert(path, {rail = next, travel_dir = dir})
-      debugDump({next.position, dir},true)
-      next, dir = self:get_connected_rail(next, false, dir)
+      next, dir = self:get_connected_rail(next, true, dir)
       count = count + 1
-    until not next or count > 20 or next == front
-    self:flyingText2("l", RED, true, next.position)
-    table.insert(path, {rail = next, travel_dir = dir})
-    --    while next and count < 20 and front ~= next do
-    --      self:flyingText2("n", RED, true, next.position)
-    --      table.insert(path, next)
-    --      debugDump(next.position,true)
-    --      next, dir = self:get_connected_rail(next, false, dir)
-    --      count = count + 1
-    --    end
-    --table.insert(path, next)
-    --self:flyingText2("f", RED, true, path[#path].position)
+    end
+    count = 0
+    while next and count < 20 do
+      --self:flyingText2("p", RED, true, next.position)
+      table.insert(path, {rail = next, travel_dir = dir})
+      next, dir = self:get_connected_rail(next, true, dir)
+      count = count + 1
+    end
+    
+    for i=1, #path do
+      self:flyingText("n", RED, true, path[i].rail.position)
+      debugDump(path[i].rail.position,true)
+    end    
     return path
   end,
 
@@ -720,7 +729,7 @@ FARL = {
       count = count + 1
     end
     if last then
-    --self:flyingText2({"text-front"}, RED, true, last.position)
+      self:flyingText2({"text-front"}, RED, true, last.position)
     end
     return last
   end,
@@ -1856,7 +1865,7 @@ input_to_next_rail =
         [3] = {
           [0] = {offset={x=-8,y=0}, direction=6, type="curved-rail"},
           [1] = {offset={x=-5,y=-1}, direction=2, type="straight-rail"},
-          [2] = {offset={x=-8,y=2}, direction=7, type="curved-rail"}
+          [2] = {offset={x=-8,y=-2}, direction=7, type="curved-rail"}
         }
       }
     },
