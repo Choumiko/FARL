@@ -365,7 +365,7 @@ FARL = {
       end
     end
   end,
-  
+
   show_path = function(self)
     for i=1, #self.path do
       self:flyingText(i..":"..self.path[i].travel_dir, RED, true, self.path[i].rail.position)
@@ -762,7 +762,11 @@ FARL = {
 
   toggleRootMode = function(self)
     if self:rootModeAllowed() then
+      if self.active then
+        self:deactivate({"msg-changing-modes"})
+      end
       self.settings.root = not self.settings.root
+      self.maintenance = false
     else
       self:print({"msg-root-error"})
       self.settings.root = false
@@ -774,6 +778,7 @@ FARL = {
       self:deactivate({"msg-changing-modes"})
     end
     self.maintenance = not self.maintenance
+    self.settings.root = false
   end,
 
   resetPoleData = function(self)
