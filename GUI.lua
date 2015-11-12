@@ -202,8 +202,9 @@ GUI = {
         psettings.activeBP = psettings.bp.big
         event.element.caption = {"stg-poleBig"}
       end
-      farl:resetPoleData()
-      farl:findLastPole()
+      if farl.active then
+        farl:findLastPole()
+      end
     end,
 
     toggleSide = function(event, farl, player)
