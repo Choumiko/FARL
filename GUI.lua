@@ -112,9 +112,9 @@ GUI = {
       --GUI.init(player)
       local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farl"})
       local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
-      local span = 3
+      local span = 4
       if debugButton then
-        span = 4
+        span = 5
       end
       local buttons = GUI.add(rows, {type="table", name="buttons", colspan=span})
       GUI.addButton(buttons, {name="start"}, GUI.toggleStart)
@@ -123,6 +123,7 @@ GUI = {
       if debugButton then
         GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
       end
+      GUI.addButton(buttons,{name="mirror_bp", caption="M"},GUI.mirror_bp)
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
       GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
@@ -358,6 +359,18 @@ GUI = {
       GUI.createGui(player)
     end,
 
+    mirror_bp = function(event, farl, player)
+      local status, err = pcall(function()
+        local bp = GUI.findSetupBlueprintsInHotbar(player)
+        if bp then
+          farl:mirror_bp(bp)
+        end
+      end)
+      if not status then
+        debugDump("Error: "..err,true)
+      end
+    end,
+
     saveSettings = function(s, player)
       local psettings = Settings.loadByPlayer(player)
       for i,p in pairs(s) do
@@ -395,5 +408,6 @@ GUI.callbacks = {
   poleType = GUI.togglePole,
   ccNetWires = GUI.toggleWires,
   blueprint = GUI.readBlueprint,
-  bpClear = GUI.clearBlueprints
+  bpClear = GUI.clearBlueprints,
+  mirror_bp = GUI.mirror_bp
 }

@@ -34,6 +34,13 @@ signalOffset =
       [5]={pos={x=0.5,y=-0.5}, dir=3}
     },
   }
+signalOffsetCurves =
+  {
+    [0] = {
+      [0] = {pos={x=2.5,y=3.5}, dir=4},
+      [1] = {pos={x=0.5,y=3.5}, dir=4}
+    },
+  }
 
 function get_signal_weight(rail, settings)
   local weight = rail.name == settings.rail.curved and settings.curvedWeight or 1
@@ -385,7 +392,7 @@ FARL = {
     else
       return true
     end
-    if not self:genericCanPlace(entity) then
+    if entity and not self:genericCanPlace(entity) then
       self:fillWater(area)
     end
     return self:genericCanPlace(entity)
@@ -864,6 +871,41 @@ FARL = {
     return canPlace, entity
   end,
 
+  mirror_bp = function(self, bp)
+    local curve_bp = false
+    local offsets = {pole=false, chain=false, rails={}, signals={}}
+    for j=1,#bp do
+      local e = bp[j].get_blueprint_entities()
+      for i=1,#e do
+        local name = e[i].name
+        local pos = e[i].position
+        local dir = e[i].direction or 0
+        local ent = {name=name, position=pos, direction=dir}
+        if name == "curved-rail" and not curve_bp then
+          curve_bp = bp[j]
+        end
+        if name == "rail-chain-signal" and not offsets.chain then
+          offsets.chain = ent
+        elseif name == "rail-signal" then
+          table.insert(offsets.signals, ent)
+        elseif name == "curved-rail" then
+          table.insert(offsets.rails, ent)
+        end
+      end
+    end
+    if curve_bp then
+      --find rail belonging to chainsignal
+      for i, r in pairs(offsets.rails) do
+        local signalpos = addPos(r.position, signalOffsetCurves[0][r.direction].pos)
+        local diff = subPos(signalpos, offsets.chain.position)
+        if diff.x == 0 and diff.y == 0 then
+          offsets.main = r
+        end
+      end
+      saveVar(offsets, "BPcurve")
+    end
+  end,
+
   --parese blueprints
   -- chain signal: needs direction == 4, defines track that FARL drives on
   --normal signals: define signal position for other tracks
@@ -878,11 +920,6 @@ FARL = {
       local offsets = {pole=false, chain=false, poleEntities={}, rails={}, signals={}}
       local bpType = false
       local rails = 0
-      for i=1,#e do
-        if e[i].name == "straight-rail" then
-          rails = rails + 1
-        end
-      end
       local box = {tl={x=0,y=0}, br={x=0,y=0}}
       for i=1,#e do
         if box.tl.x > e[i].position.x then box.tl.x = e[i].position.x end
@@ -897,6 +934,7 @@ FARL = {
         elseif e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
           offsets.pole = {name = e[i].name, direction = dir, position = e[i].position}
         elseif e[i].name == "straight-rail" then
+          rails = rails + 1
           if not bpType then
             bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
           end
@@ -918,9 +956,9 @@ FARL = {
         local mainRail = false
         for i,rail in pairs(offsets.rails) do
           local traveldir = (bpType == "straight") and 0 or 1
-          local signalOff = signalOffset[traveldir]
+          local signalOff = signalOffset[traveldir][rail.direction]
           local signalDir = signalOff.dir
-          signalOff = (traveldir == 0) and signalOff.pos or signalOff[rail.direction]
+          signalOff = signalOff.pos
           --local relChain = subPos(offsets.chain.position,rail.position)
           --local mainPos = subPos(relChain, signalOff)
           local pos = addPos(rail.position, signalOff)
@@ -1057,6 +1095,13 @@ FARL = {
         end
       end
     end
+    local rtype = newDir % 2 == 0 and "straight" or "diagonal"
+    local bp =  self.settings.activeBP[rtype]
+    local rails = bp.rails
+    local mainRail = bp.mainRail
+    local bb = bp.boundingBox
+
+    self:prepareArea(newRail, {addPos(bb.tl,newRail.position), addPos(bb.br, newRail.position)})
     local canplace = self:prepareArea(newRail)
     local hasRail = self:getCargoCount(newRail.name) > 0
     if canplace and hasRail then
