@@ -325,7 +325,7 @@ FARL = {
             end
             self.path = tmp
             --self:show_path()
-
+            self:placeConcrete(newTravelDir, last)
             if self.settings.poles and #self.path > 2 then
               local c = #self.path
               local rail = self.path[c-1].rail
@@ -344,8 +344,11 @@ FARL = {
               else
                 self:print("should place pole")
                 self:flyingText2("sp", RED, true, self.lastCheckPole)
-                if self.lastCheckPole then
-                  self:placePole(self.lastCheckPole, self.lastCheckDir)
+                if self.lastCheckPole.x then
+                  local status, err = pcall(function() self:placePole(self.lastCheckPole, self.lastCheckDir) end)
+                  if not status then
+                    error(err, 2)
+                  end
                 end
               end
             end
@@ -462,38 +465,121 @@ FARL = {
   end,
 
   fillWater = function(self, area)
-    -- check if bridging is turned on in settings
-    if self.settings.bridge then
-      -- following code mostly pulled from landfill mod itself and adjusted to fit
-      local tiles = {}
-      local st, ft = area[1],area[2]
-      local dw, w = 0, 0
-      for x = st[1], ft[1], 1 do
-        for y = st[2], ft[2], 1 do
-          local tileName = self.surface.get_tile(x, y).name
-          -- check that tile is water, if it is add it to a list of tiles to be changed to grass
-          if tileName == "water" or tileName == "deepwater" then
+    local status, err = pcall(function()
+      -- check if bridging is turned on in settings
+      if self.settings.bridge then
+        -- following code mostly pulled from landfill mod itself and adjusted to fit
+        local tiles = {}
+        local st, ft = area[1],area[2]
+        local dw, w = 0, 0
+        if not st[1] then
+          st = fixPos(st)
+          ft = fixPos(ft)
+        end
+        for x = st[1], ft[1], 1 do
+          for y = st[2], ft[2], 1 do
+            local tileName = self.surface.get_tile(x, y).name
+            -- check that tile is water, if it is add it to a list of tiles to be changed to grass
+            if tileName == "water" or tileName == "deepwater" then
+              if tileName == "water" then
+                w = w+1
+              else
+                dw = dw+1
+              end
+              table.insert(tiles,{name="grass", position={x, y}})
+            end
+          end
+        end
+        self:replaceWater(tiles, w, dw)
+      end
+    end)
+    if not status then
+      debugDump(area,true)
+      error(err, 3)
+    end
+  end,
+
+  replaceWater = function(self, tiles, w, dw)
+    -- check to make sure water tiles were found
+    if #tiles ~= 0 then
+      -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
+      local lfills = math.ceil(w/2 + dw*1.5)
+      local lfills = lfills > 20 and 20 or lfills
+      -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
+      if self:getCargoCount("concrete") >= lfills then
+        self.surface.set_tiles(tiles)
+        self:removeItemFromCargo("concrete", lfills)
+      else
+        self:print({"msg-not-enough-concrete"})
+      end
+    end
+  end,
+
+  placeConcrete = function(self, dir, rail)
+    if rail.type == "curved-rail" then
+      return
+    end
+    local diff = dir % 2 == 0 and dir or dir-1
+    local rad = diff * (math.pi/4)
+
+    local type = rail.direction % 2 == 1 and "diagonal" or "straight"
+    local concrete = self.settings.activeBP[type].concrete
+    local tiles = {}
+    local pave = {}
+    local w,dw = 0,0
+    local counts = {}
+    local data = {}
+    local railpos = rail.position
+    data[1] = {[3] = {x=1,y=1}}
+    data[3] = {[5] = {x=-1,y=1}}
+    data[5] = {[7] = {x=-1,y=-1}}
+    data[7] = {[1] = {x=1,y=-1}}
+    local off = {x=0,y=0}
+    if rail.direction % 2 == 1 then
+      off = data[dir][rail.direction] or off
+    end
+    railpos = addPos(railpos, off)
+    if concrete then
+      for _, c in pairs(concrete) do
+        local entity = {name = c.name}
+        local offset = c.position
+        counts[c.name] = counts[c.name] or 0
+        offset = rotate(offset, rad)
+        local pos = addPos(railpos, offset)
+        entity.position = pos
+        --self:flyingText2(".", GREEN,true,entity.position)
+        local tileName = self.surface.get_tile(pos.x, pos.y).name
+        -- check that tile is water, if it is add it to a list of tiles to be changed to grass
+        if tileName == "water" or tileName == "deepwater" then
+          if self.settings.bridge then
             if tileName == "water" then
               w = w+1
             else
               dw = dw+1
             end
-            table.insert(tiles,{name="grass", position={x, y}})
+            table.insert(tiles,{name="grass", position={pos.x, pos.y}})
+            table.insert(pave, entity)
+            counts[c.name] = counts[c.name] + 1
           end
+        elseif tileName ~= c.name then
+          table.insert(pave, entity)
+          counts[c.name] = counts[c.name] + 1
         end
       end
-      -- check to make sure water tiles were found
-      if #tiles ~= 0 then
-        -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
-        local lfills = math.ceil(w/2 + dw*1.5)
-        local lfills = lfills > 20 and 20 or lfills
-        -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
-        if self:getCargoCount("concrete") >= lfills then
-          self.surface.set_tiles(tiles)
-          self:removeItemFromCargo("concrete", lfills)
-        else
-          self:print({"msg-not-enough-concrete"})
+      self:replaceWater(tiles, w, dw)
+      local enough  = true
+      for name, c in pairs(counts) do
+        if self:getCargoCount(name) < c then
+          enough = false
         end
+      end
+      if enough then
+        self.surface.set_tiles(pave)
+        for name, c in pairs(counts) do
+          self:removeItemFromCargo(name, c)
+        end
+      else
+        self:print({"msg-not-enough-concrete"})
       end
     end
   end,
@@ -914,129 +1000,140 @@ FARL = {
       local vertSignal = signalOffset[0]
       local diagSignal = signalOffset[1]
       local e = bp[j].get_blueprint_entities()
-      if not e then -- blueprint with only tiles in it
-        break
-      end
-      local offsets = {pole=false, chain=false, poleEntities={}, rails={}, signals={}}
-      local bpType = false
-      local rails = 0
-      local box = {tl={x=0,y=0}, br={x=0,y=0}}
-      for i=1,#e do
-        if box.tl.x > e[i].position.x then box.tl.x = e[i].position.x end
-        if box.tl.y > e[i].position.y then box.tl.y = e[i].position.y end
+      local concrete = bp[j].get_blueprint_tiles()
+      if e then
+        local offsets = {pole=false, chain=false, poleEntities={}, rails={}, signals={}, concrete={}}
+        local bpType = false
+        local rails = 0
+        local box = {tl={x=0,y=0}, br={x=0,y=0}}
+        for i=1,#e do
+          if box.tl.x > e[i].position.x then box.tl.x = e[i].position.x end
+          if box.tl.y > e[i].position.y then box.tl.y = e[i].position.y end
 
-        if box.br.x < e[i].position.x then box.br.x = e[i].position.x end
-        if box.br.y < e[i].position.y then box.br.y = e[i].position.y end
+          if box.br.x < e[i].position.x then box.br.x = e[i].position.x end
+          if box.br.y < e[i].position.y then box.br.y = e[i].position.y end
 
-        local dir = e[i].direction or 0
-        if e[i].name == "rail-chain-signal" and not offsets.chain then
-          offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
-        elseif e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
-          offsets.pole = {name = e[i].name, direction = dir, position = e[i].position}
-        elseif e[i].name == "straight-rail" then
-          rails = rails + 1
-          if not bpType then
-            bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
-          end
-          if (bpType == "diagonal" and (dir == 3 or dir == 7)) or (bpType == "straight" and (dir == 0 or dir == 4)) then
-            table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position})
+          local dir = e[i].direction or 0
+          if e[i].name == "rail-chain-signal" and not offsets.chain then
+            offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
+          elseif e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
+            offsets.pole = {name = e[i].name, direction = dir, position = e[i].position}
+          elseif e[i].name == "straight-rail" then
+            rails = rails + 1
+            if not bpType then
+              bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
+            end
+            if (bpType == "diagonal" and (dir == 3 or dir == 7)) or (bpType == "straight" and (dir == 0 or dir == 4)) then
+              table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position})
+            else
+              self:print({"msg-bp-rail-direction"})
+              break
+            end
+          elseif e[i].name == "rail-signal" then
+            table.insert(offsets.signals, {name = e[i].name, direction = dir, position = e[i].position})
           else
-            self:print({"msg-bp-rail-direction"})
-            break
-          end
-        elseif e[i].name == "rail-signal" then
-          table.insert(offsets.signals, {name = e[i].name, direction = dir, position = e[i].position})
-        else
-          table.insert(offsets.poleEntities, {name = e[i].name, direction = dir, position = e[i].position})
-        end
-      end
-      if offsets.chain and offsets.pole and bpType then
-        box.tl = addPos(box.tl, self.settings.boundingBoxOffsets[bpType].tl)
-        box.br = addPos(box.br, self.settings.boundingBoxOffsets[bpType].br)
-        local mainRail = false
-        for i,rail in pairs(offsets.rails) do
-          local traveldir = (bpType == "straight") and 0 or 1
-          local signalOff = signalOffset[traveldir][rail.direction]
-          local signalDir = signalOff.dir
-          signalOff = signalOff.pos
-          --local relChain = subPos(offsets.chain.position,rail.position)
-          --local mainPos = subPos(relChain, signalOff)
-          local pos = addPos(rail.position, signalOff)
-          if not mainRail and pos.x == offsets.chain.position.x and pos.y == offsets.chain.position.y and signalDir == offsets.chain.direction then
-            --if not mainRail and mainPos.x == 0 and mainPos.y == 0 and signalDir == offsets.chain.direction then
-            rail.main = true
-            mainRail = rail
-            if rail.direction == 3 then
-              rail.position.x = rail.position.x + 2
-              rail.direction = 7
-            end
-            offsets.mainRail = rail
+            table.insert(offsets.poleEntities, {name = e[i].name, direction = dir, position = e[i].position})
           end
         end
-        if mainRail then
-          local lamps = {}
-          for _, l in ipairs(offsets.poleEntities) do
-            if l.name ~= "wooden-chest" then
-              table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position), direction = l.direction})
-            end
-          end
-          local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
-          local railPos = mainRail.position
-          if bpType == "diagonal" then
-            railPos = self:fixDiagonalPos(mainRail)
-          end
-          offsets.pole.position = subPos(offsets.pole.position,railPos)
-
-          local rails = {}
-          for _, l in pairs(offsets.rails) do
-            if not l.main then
-              local tmp =
-                {name=l.name, position=subPos(l.position, mainRail.position),
-                  direction = l.direction}
-              local altRail, dir
-              if l.direction % 2 == 1 and mainRail.direction == l.direction then
-                dir, altRail = self:getRail(tmp, 5, 1)
-                tmp = altRail
+        if offsets.chain and offsets.pole and bpType then
+          box.tl = addPos(box.tl, self.settings.boundingBoxOffsets[bpType].tl)
+          box.br = addPos(box.br, self.settings.boundingBoxOffsets[bpType].br)
+          local mainRail = false
+          local moved_main_rail = false
+          for i,rail in pairs(offsets.rails) do
+            local traveldir = (bpType == "straight") and 0 or 1
+            local signalOff = signalOffset[traveldir][rail.direction]
+            local signalDir = signalOff.dir
+            signalOff = signalOff.pos
+            --local relChain = subPos(offsets.chain.position,rail.position)
+            --local mainPos = subPos(relChain, signalOff)
+            local pos = addPos(rail.position, signalOff)
+            if not mainRail and pos.x == offsets.chain.position.x and pos.y == offsets.chain.position.y and signalDir == offsets.chain.direction then
+              --if not mainRail and mainPos.x == 0 and mainPos.y == 0 and signalDir == offsets.chain.direction then
+              rail.main = true
+              mainRail = rail
+              if rail.direction == 3 then
+                rail.position.x = rail.position.x + 2
+                rail.direction = 7
+                moved_main_rail = true
               end
-              table.insert(rails, tmp)
+              offsets.mainRail = rail
             end
           end
-          local signals = {}
-          for _, l in pairs(offsets.signals) do
-            table.insert(signals,
-              {name=l.name, position=subPos(l.position, offsets.chain.position),
-                direction = l.direction, reverse = (l.direction ~= offsets.chain.direction)})
-          end
+          if mainRail then
+            if concrete then
+              local off = {x=0.5,y=0.5}
+              off.x = moved_main_rail and -1.5 or off.x
+              for _, c in pairs(concrete) do
+                table.insert(offsets.concrete, {name=c.name, position=subPos(addPos(c.position, off), mainRail.position)})
+              end
+            end
+            local lamps = {}
+            for _, l in ipairs(offsets.poleEntities) do
+              if l.name ~= "wooden-chest" then
+                table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position), direction = l.direction})
+              end
+            end
+            local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
+            local railPos = mainRail.position
+            if bpType == "diagonal" then
+              railPos = self:fixDiagonalPos(mainRail)
+            end
+            offsets.pole.position = subPos(offsets.pole.position,railPos)
 
-          local bp = {mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps, rails = rails, signals = signals}
-          bp.boundingBox = {tl = subPos(box.tl, mainRail.position),
-            br = subPos(box.br, mainRail.position)}
-          self.settings.bp[poleType][bpType] = bp
-          if #rails > 0 then
-            self.settings.flipPoles = false
+            local rails = {}
+            for _, l in pairs(offsets.rails) do
+              if not l.main then
+                local tmp =
+                  {name=l.name, position=subPos(l.position, mainRail.position),
+                    direction = l.direction}
+                local altRail, dir
+                if l.direction % 2 == 1 and mainRail.direction == l.direction then
+                  dir, altRail = self:getRail(tmp, 5, 1)
+                  tmp = altRail
+                end
+                table.insert(rails, tmp)
+              end
+            end
+            local signals = {}
+            for _, l in pairs(offsets.signals) do
+              table.insert(signals,
+                {name=l.name, position=subPos(l.position, offsets.chain.position),
+                  direction = l.direction, reverse = (l.direction ~= offsets.chain.direction)})
+            end
+
+            local bp = {
+              mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps,
+              rails = rails, signals = signals, concrete = offsets.concrete}
+            bp.boundingBox = {tl = subPos(box.tl, mainRail.position),
+              br = subPos(box.br, mainRail.position)}
+            self.settings.bp[poleType][bpType] = bp
+            if #rails > 0 then
+              self.settings.flipPoles = false
+            end
+            saveBlueprint(self.driver, poleType, bpType, bp)
+            self:print({"msg-bp-saved", bpType, {"entity-name."..poleType.."-electric-pole"}})
+          else
+            self:print({"msg-bp-chain-direction"})
           end
-          saveBlueprint(self.driver, poleType, bpType, bp)
-          self:print({"msg-bp-saved", bpType, {"entity-name."..poleType.."-electric-pole"}})
         else
-          self:print({"msg-bp-chain-direction"})
-        end
-      else
-        if rails <= 1 then
-          self:parseBlueprint(e)
-        elseif not bpType then
-          self:print({"msg-bp-rail-direction"})
-        elseif not offsets.chain then
-          self:print({"msg-bp-chain-missing"})
-        else --if not offsets.pole then
-          self:print({"msg-bp-pole-missing"})
+          if rails <= 1 then
+            self:parseBlueprint(e, concrete)
+          elseif not bpType then
+            self:print({"msg-bp-rail-direction"})
+          elseif not offsets.chain then
+            self:print({"msg-bp-chain-missing"})
+          else --if not offsets.pole then
+            self:print({"msg-bp-pole-missing"})
+          end
         end
       end
     end
   end,
 
-  parseBlueprint = function(self, bpEntities)
+  parseBlueprint = function(self, bpEntities, concrete)
     local e = bpEntities
-    local offsets = {pole=false, poleEntities={}}
+    local offsets = {pole=false, poleEntities={}, concrete={}}
     local rail
 
     for i=1,#e do
@@ -1057,6 +1154,12 @@ FARL = {
       if type == "diagonal" and not (rail.direction == 3 or rail.direction == 7) then
         self:print({"msg-invalid-rail"})
         return
+      end
+      if concrete then
+        local off = {x=0.5,y=0.5}
+        for _, c in pairs(concrete) do
+          table.insert(offsets.concrete, {name=c.name, position=subPos(subPos(c.position, off), mainRail.position)})
+        end
       end
       local lamps = {}
       for _, l in ipairs(offsets.poleEntities) do
