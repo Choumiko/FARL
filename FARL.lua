@@ -96,6 +96,10 @@ function pos2Str(pos)
   return util.positiontostr(pos)
 end
 
+function pos12toXY(pos)
+  return {x=pos[1],y=pos[2]}
+end
+
 function fixPos(pos)
   local ret = {}
   if not pos then
@@ -141,6 +145,16 @@ function moveposition(pos, direction, distance)
       [7] = {0,6}}
     return util.moveposition(util.moveposition(pos, dirs[direction][1], distance), dirs[direction][2], distance)
   end
+end
+
+function moveRight(pos, direction, distance)
+  local dir = (direction + 2) % 8
+  return pos12toXY(moveposition(fixPos(pos), dir, distance))
+end
+
+function moveLeft(pos, direction, distance)
+  local dir = (direction + 6) % 8
+  return pos12toXY(moveposition(fixPos(pos), dir, distance))
 end
 
 function saveBlueprint(player, poleType, type, bp)
@@ -401,6 +415,21 @@ FARL = {
     return self:genericCanPlace(entity)
   end,
 
+  prepareAreaForCurve = function(self, newRail)
+    local areas = clearAreas[newRail.direction%4]
+    for i=1,2 do
+      local area = areas[i]
+      local tl, lr = fixPos(addPos(newRail.position,area[1])), fixPos(addPos(newRail.position,area[2]))
+      area = {{tl[1]-1,tl[2]-1},{lr[1]+1,lr[2]+1}}
+      self:removeTrees(area)
+      self:pickupItems(area)
+      self:removeStone(area)
+      if not self:genericCanPlace(newRail) then
+        self:fillWater(area)
+      end
+    end
+  end,
+
   removeTrees = function(self, area)
     --apiCalls.count.tree = apiCalls.count.tree + 1
     local found = false
@@ -516,14 +545,13 @@ FARL = {
   end,
 
   placeConcrete = function(self, dir, rail)
-    if rail.type == "curved-rail" then
-      return
-    end
+    if rail.name == self.settings.rail.curved then return end
+    local type = rail.direction % 2 == 1 and "diagonal" or "straight"
+    local concrete = self.settings.activeBP[type].concrete
+    if not concrete then return end
     local diff = dir % 2 == 0 and dir or dir-1
     local rad = diff * (math.pi/4)
 
-    local type = rail.direction % 2 == 1 and "diagonal" or "straight"
-    local concrete = self.settings.activeBP[type].concrete
     local tiles = {}
     local pave = {}
     local w,dw = 0,0
@@ -539,48 +567,46 @@ FARL = {
       off = data[dir][rail.direction] or off
     end
     railpos = addPos(railpos, off)
-    if concrete then
-      for _, c in pairs(concrete) do
-        local entity = {name = c.name}
-        local offset = c.position
-        counts[c.name] = counts[c.name] or 0
-        offset = rotate(offset, rad)
-        local pos = addPos(railpos, offset)
-        entity.position = pos
-        --self:flyingText2(".", GREEN,true,entity.position)
-        local tileName = self.surface.get_tile(pos.x, pos.y).name
-        -- check that tile is water, if it is add it to a list of tiles to be changed to grass
-        if tileName == "water" or tileName == "deepwater" then
-          if self.settings.bridge then
-            if tileName == "water" then
-              w = w+1
-            else
-              dw = dw+1
-            end
-            table.insert(tiles,{name="grass", position={pos.x, pos.y}})
-            table.insert(pave, entity)
-            counts[c.name] = counts[c.name] + 1
+    for _, c in pairs(concrete) do
+      local entity = {name = c.name}
+      local offset = c.position
+      counts[c.name] = counts[c.name] or 0
+      offset = rotate(offset, rad)
+      local pos = addPos(railpos, offset)
+      entity.position = pos
+      --self:flyingText2(".", GREEN,true,entity.position)
+      local tileName = self.surface.get_tile(pos.x, pos.y).name
+      -- check that tile is water, if it is add it to a list of tiles to be changed to grass
+      if tileName == "water" or tileName == "deepwater" then
+        if self.settings.bridge then
+          if tileName == "water" then
+            w = w+1
+          else
+            dw = dw+1
           end
-        elseif tileName ~= c.name then
+          table.insert(tiles,{name="grass", position={pos.x, pos.y}})
           table.insert(pave, entity)
           counts[c.name] = counts[c.name] + 1
         end
+      elseif tileName ~= c.name then
+        table.insert(pave, entity)
+        counts[c.name] = counts[c.name] + 1
       end
-      self:replaceWater(tiles, w, dw)
-      local enough  = true
+    end
+    self:replaceWater(tiles, w, dw)
+    local enough  = true
+    for name, c in pairs(counts) do
+      if self:getCargoCount(name) < c then
+        enough = false
+      end
+    end
+    if enough then
+      self.surface.set_tiles(pave)
       for name, c in pairs(counts) do
-        if self:getCargoCount(name) < c then
-          enough = false
-        end
+        self:removeItemFromCargo(name, c)
       end
-      if enough then
-        self.surface.set_tiles(pave)
-        for name, c in pairs(counts) do
-          self:removeItemFromCargo(name, c)
-        end
-      else
-        self:print({"msg-not-enough-concrete"})
-      end
+    else
+      self:print({"msg-not-enough-concrete"})
     end
   end,
 
@@ -594,6 +620,9 @@ FARL = {
       end
     end
   end,
+  --583,5 -380,5
+  --dir 3: 583 -381 : -0.5 -0.5
+  --dir 7: +0.5 +0.5
 
   getRail = function(self, lastRail, travelDir, input)
     -- [traveldir][rail_type][rail_dir][input] = offset, new rail dir, new rail type
@@ -609,6 +638,7 @@ FARL = {
       return travelDir, false
     end
     local data = input_to_next_rail[travelDir][lastRail.type]
+    if not data then error("no data", 2) end
     if not data[lastRail.direction] or not data[lastRail.direction][input] then
       if not data[lastRail.direction] then
         return travelDir, false
@@ -619,7 +649,7 @@ FARL = {
 
     local name = data.type == "straight-rail" and self.settings.rail.straight or self.settings.rail.curved
     local newTravelDir = (travelDir + input2dir[input]) % 8
-    return newTravelDir, {name = name, position = addPos(lastRail.position, data.offset), direction=data.direction}
+    return newTravelDir, {name = name, position = addPos(lastRail.position, data.offset), direction=data.direction, type=data.type}
   end,
 
   cruiseControl = function(self)
@@ -697,6 +727,7 @@ FARL = {
       self.protectedCount = 0
       self.protectedCalls = {}
       self.frontmover = false
+      self.lastCurve = 0
       for i,l in pairs(self.train.locomotives.front_movers) do
         if l == self.locomotive then
           self.frontmover = true
@@ -710,7 +741,6 @@ FARL = {
         self:deactivate({"msg-error-2"}, true)
         return
       end
-
       self.path = self:get_rails_below_train()
       if self.lastrail.name == self.settings.rail.curved then
         self:deactivate({"msg-error-curves"}, true)
@@ -1002,7 +1032,7 @@ FARL = {
       local e = bp[j].get_blueprint_entities()
       local concrete = bp[j].get_blueprint_tiles()
       if e then
-        local offsets = {pole=false, chain=false, poleEntities={}, rails={}, signals={}, concrete={}}
+        local offsets = {pole=false, chain=false, poleEntities={}, rails={}, signals={}, concrete={}, lanes={}}
         local bpType = false
         local rails = 0
         local box = {tl={x=0,y=0}, br={x=0,y=0}}
@@ -1024,7 +1054,7 @@ FARL = {
               bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
             end
             if (bpType == "diagonal" and (dir == 3 or dir == 7)) or (bpType == "straight" and (dir == 0 or dir == 4)) then
-              table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position})
+              table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position, type=e[i].name})
             else
               self:print({"msg-bp-rail-direction"})
               break
@@ -1061,13 +1091,6 @@ FARL = {
             end
           end
           if mainRail then
-            if concrete then
-              local off = {x=0.5,y=0.5}
-              off.x = moved_main_rail and -1.5 or off.x
-              for _, c in pairs(concrete) do
-                table.insert(offsets.concrete, {name=c.name, position=subPos(addPos(c.position, off), mainRail.position)})
-              end
-            end
             local lamps = {}
             for _, l in ipairs(offsets.poleEntities) do
               if l.name ~= "wooden-chest" then
@@ -1080,19 +1103,43 @@ FARL = {
               railPos = self:fixDiagonalPos(mainRail)
             end
             offsets.pole.position = subPos(offsets.pole.position,railPos)
-
+            if concrete then
+              local off = {x=0.5,y=0.5}
+              off.x = moved_main_rail and -1.5 or off.x
+              local pos = subPos(mainRail.position, off)
+              for _, c in pairs(concrete) do
+                table.insert(offsets.concrete, {name=c.name, position=subPos(c.position, pos)})
+              end
+            end
             local rails = {}
+            local lanes = {}
             for _, l in pairs(offsets.rails) do
               if not l.main then
+                local lane_distance = false
                 local tmp =
                   {name=l.name, position=subPos(l.position, mainRail.position),
-                    direction = l.direction}
+                    direction = l.direction, type=l.name}
                 local altRail, dir
                 if l.direction % 2 == 1 and mainRail.direction == l.direction then
                   dir, altRail = self:getRail(tmp, 5, 1)
                   tmp = altRail
                 end
+                if bpType == "diagonal" then
+                  local move_dir = tmp.position.y < 0 and 5 or 1
+                  local rails = math.abs(tmp.position.y / 1) +1
+                  debugDump({d=move_dir, rails=rails},true)
+                  local _, tmp2 = false, l
+                  for i=1,rails do
+                    debugDump(tmp2,true)
+                    _, tmp2 = self:getRail(tmp2, move_dir, 1)
+                  end
+                  lane_distance = subPos(tmp2.position, mainRail.position).x
+                  debugDump(lane_distance, true)
+                else
+                  lane_distance = tmp.position.x
+                end
                 table.insert(rails, tmp)
+                table.insert(lanes, lane_distance)
               end
             end
             local signals = {}
@@ -1104,7 +1151,7 @@ FARL = {
 
             local bp = {
               mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps,
-              rails = rails, signals = signals, concrete = offsets.concrete}
+              rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes}
             bp.boundingBox = {tl = subPos(box.tl, mainRail.position),
               br = subPos(box.br, mainRail.position)}
             self.settings.bp[poleType][bpType] = bp
@@ -1185,18 +1232,7 @@ FARL = {
     local newPos = nextRail.position
     local newRail = {name = nextRail.name, position = newPos, direction = newDir}
     if newRail.name == self.settings.rail.curved then
-      local areas = clearAreas[newRail.direction%4]
-      for i=1,2 do
-        local area = areas[i]
-        local tl, lr = fixPos(addPos(newRail.position,area[1])), fixPos(addPos(newRail.position,area[2]))
-        area = {{tl[1]-1,tl[2]-1},{lr[1]+1,lr[2]+1}}
-        self:removeTrees(area)
-        self:pickupItems(area)
-        self:removeStone(area)
-        if not self:genericCanPlace(newRail) then
-          self:fillWater(area)
-        end
-      end
+      self:prepareAreaForCurve(newRail)
     end
     local rtype = newDir % 2 == 0 and "straight" or "diagonal"
     local bp =  self.settings.activeBP[rtype]
@@ -1222,6 +1258,7 @@ FARL = {
           end
         else
           self.lastCurve = 0
+          self:placeParallelCurves(newTravelDir, newRail)
         end
       else
         self:deactivate({"msg-no-entity"})
@@ -1369,6 +1406,43 @@ FARL = {
       end
     else
 
+    end
+  end,
+
+  placeParallelCurves = function(self, traveldir, ent)
+    local diag_lane = self.settings.activeBP.diagonal.lanes
+    local straight_lane = self.settings.activeBP.straight.lanes
+    local null = {x=0,y=0}
+    for i, lane in pairs(straight_lane) do
+      local pos = {x=0,y=0}
+      debugDump(self.direction,true)
+      if self.direction % 2 == 0 then
+        if lane < 0 then
+          pos = moveLeft(null, self.direction, math.abs(lane))
+        else
+          pos = moveRight(null, self.direction, math.abs(lane))
+        end
+        local mul = diag_lane[i] > 0 and 1 or -1
+        local dir = self.input == 2 and oppositedirection(self.direction) or self.direction
+        pos = pos12toXY(moveposition(fixPos(pos),dir, mul * math.abs(lane - diag_lane[i])))
+      end
+      if self.direction % 2 == 1 then
+        local mul = diag_lane[i] < 0 and 1 or -1
+        pos = moveLeft(null, traveldir, mul * math.abs(diag_lane[i]))
+        debugDump(pos,true)
+        mul = lane > 0 and -1 or 1
+        local dir = self.input == 2 and oppositedirection(self.direction) or self.direction
+        pos = pos12toXY(moveposition(fixPos(pos),dir, mul * math.abs(lane - diag_lane[i])))
+      end
+      pos = addPos(ent.position, pos)
+      local curve = {name = ent.name, type=ent.type, direction=ent.direction, position=pos}
+      self:prepareAreaForCurve(curve)
+      local success, ent = self:genericPlace(curve)
+      if not ent then
+        self:print("Failed to create curve @"..pos2Str(curve.position))
+      else
+        self:removeItemFromCargo(ent.name, 1)
+      end
     end
   end,
 
@@ -1741,7 +1815,7 @@ FARL = {
     local pole = {name = name, position = polePos}
     --debugDump(util.distance(pole.position, self.lastPole.position),true)
     local canPlace = self:prepareArea(pole)
-    if not canPlace and self.surface.count_entities_filtered{area=expandPos(pos,0.4),name=name} > 1 then
+    if not canPlace and self.surface.count_entities_filtered{area=expandPos(polePos,0.4),name=name} > 1 then
       canPlace = true
     end
     local hasPole = self:getCargoCount(name) > 0
