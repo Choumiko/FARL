@@ -785,6 +785,17 @@ FARL = {
         self:print(self.signalCount)
       end
       self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
+      
+      --calculate lane lag (number of tracks the lanes have to stay behind for curves to fit)
+      local bps = self.settings.activeBP
+      local diag_lanes = bps.diagonal.lanes
+      local straight_lanes = bps.straight.lanes
+      self.lanes = {lag={}}
+      for i, l in pairs(straight_lanes) do
+        --self.lanes.lag[self.direction%2] = lag for curves coming from self.direction
+        self.lanes.lag[0][i] = (l - diag_lanes[i]) / 2
+      end
+      
       self.active = true
     end)
     if not status then
@@ -1410,30 +1421,23 @@ FARL = {
   end,
 
   placeParallelCurves = function(self, traveldir, ent)
-    local diag_lane = self.settings.activeBP.diagonal.lanes
-    local straight_lane = self.settings.activeBP.straight.lanes
+    local diag_lanes = self.settings.activeBP.diagonal.lanes
+    local straight_lanes = self.settings.activeBP.straight.lanes
     local null = {x=0,y=0}
-    for i, lane in pairs(straight_lane) do
+    local move_dir = self.direction % 2 == 0 and self.direction or traveldir
+    local dir = self.input == 2 and oppositedirection(self.direction) or self.direction
+    local mul = 1
+    local math = math
+    for i, s_lane in pairs(straight_lanes) do
+      local d_lane = diag_lanes[i]
+      local move_lane = self.direction % 2 == 0 and s_lane or d_lane
+      local lane = self.direction % 2 == 0 and d_lane or s_lane
       local pos = {x=0,y=0}
-      debugDump(self.direction,true)
-      if self.direction % 2 == 0 then
-        if lane < 0 then
-          pos = moveLeft(null, self.direction, math.abs(lane))
-        else
-          pos = moveRight(null, self.direction, math.abs(lane))
-        end
-        local mul = diag_lane[i] > 0 and 1 or -1
-        local dir = self.input == 2 and oppositedirection(self.direction) or self.direction
-        pos = pos12toXY(moveposition(fixPos(pos),dir, mul * math.abs(lane - diag_lane[i])))
-      end
-      if self.direction % 2 == 1 then
-        local mul = diag_lane[i] < 0 and 1 or -1
-        pos = moveLeft(null, traveldir, mul * math.abs(diag_lane[i]))
-        debugDump(pos,true)
-        mul = lane > 0 and -1 or 1
-        local dir = self.input == 2 and oppositedirection(self.direction) or self.direction
-        pos = pos12toXY(moveposition(fixPos(pos),dir, mul * math.abs(lane - diag_lane[i])))
-      end
+      mul = move_lane < 0 and 1 or -1
+      pos = moveLeft(null, move_dir, mul * math.abs(move_lane))
+      mul = lane > 0 and 1 or -1
+      mul = self.direction % 2 == 0 and mul or -1*mul
+      pos = pos12toXY(moveposition(fixPos(pos),dir, mul * math.abs(s_lane - d_lane)))
       pos = addPos(ent.position, pos)
       local curve = {name = ent.name, type=ent.type, direction=ent.direction, position=pos}
       self:prepareAreaForCurve(curve)
