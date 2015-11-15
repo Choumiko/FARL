@@ -1134,18 +1134,13 @@ FARL = {
                 local tmp =
                   {name=l.name, position=subPos(l.position, mainRail.position),
                     direction = l.direction, type=l.name}
-                local altRail, dir
-                if l.direction % 2 == 1 and mainRail.direction == l.direction then
-                  dir, altRail = self:getRail(tmp, 5, 1)
-                  tmp = altRail
-                end
+                local move_dir = tmp.position.y < 0 and 5 or 1
                 if bpType == "diagonal" then
-                  local move_dir = tmp.position.y < 0 and 5 or 1
                   local rails = math.abs(tmp.position.y / 1) +1
                   debugDump({d=move_dir, rails=rails},true)
                   local _, tmp2 = false, l
                   for i=1,rails do
-                    debugDump(tmp2,true)
+                    --debugDump(tmp2,true)
                     _, tmp2 = self:getRail(tmp2, move_dir, 1)
                   end
                   lane_distance = subPos(tmp2.position, mainRail.position).x
@@ -1153,10 +1148,16 @@ FARL = {
                 else
                   lane_distance = tmp.position.x
                 end
-                table.insert(rails, tmp)
                 table.insert(lanes, lane_distance)
+                local altRail, dir
+                if l.direction % 2 == 1 and mainRail.direction == l.direction then
+                  dir, altRail = self:getRail(tmp, move_dir, 1)
+                  tmp = altRail
+                end
+                table.insert(rails, tmp)
               end
             end
+            table.sort(lanes)
             local signals = {}
             for _, l in pairs(offsets.signals) do
               table.insert(signals,
@@ -1473,8 +1474,9 @@ FARL = {
       for i, lane in pairs(lanes) do
         local move_dir = lane < 0 and (traveldir-1) % 8 or (traveldir + 3) % 8
         local mul = lane < 0 and -1 or 1
-        track.position = pos12toXY(moveposition(fixPos(lastRail.position), move_dir, mul * lane))
-        track.directon = lane % 4 == 0 and lastRail.direction or (lastRail.direction + 4) % 8 
+        track.position = moveRight(lastRail.position, traveldir, lane/2)
+        --track.position = pos12toXY(moveposition(fixPos(lastRail.position), move_dir, mul * lane))
+        track.directon = lane % 4 == 0 and lastRail.direction or (lastRail.direction + 4) % 8
         self:prepareArea(track)
         local success, ent = self:genericPlace(track)
         if not ent then
