@@ -341,6 +341,9 @@ FARL = {
               end
             end
             self.path = tmp
+            if self.settings.parallelTracks then--and self.lastCurve > self.settings.parallelLag then
+              self:placeParallelTracks(newTravelDir, last)
+            end
             --self:show_path()
             self:placeConcrete(newTravelDir, last)
             if self.settings.poles and #self.path > 2 then
@@ -798,6 +801,7 @@ FARL = {
         --self.lanes.lag[self.direction%2] = lag for curves coming from self.direction
         -- lag is for right turns, -1 * lag for left turns/to catch up
         self.lanes.lag[0][i] = (l - diag_lanes[i])
+        self.lanes.lag[1][i] = diag_lanes[i]
       end
 
       self.active = true
@@ -1267,9 +1271,6 @@ FARL = {
       end
       if ent then
         self:removeItemFromCargo(nextRail.name, 1)
-        if self.settings.parallelTracks then--and self.lastCurve > self.settings.parallelLag then
-          self:placeParallelTracks(newTravelDir, ent)
-        end
       else
         self:deactivate({"msg-no-entity"})
         return false
@@ -1431,12 +1432,30 @@ FARL = {
       local lane = self.direction % 2 == 0 and d_lane or s_lane
       local pos = {x=0,y=0}
       mul = move_lane < 0 and 1 or -1
+      debugDump("l/r: "..mul * math.abs(move_lane),true)
       pos = moveLeft(pos, move_dir, mul * math.abs(move_lane))
       mul = lane > 0 and 1 or -1
       mul = self.direction % 2 == 0 and mul or -1*mul
-      pos = pos12toXY(moveposition(fixPos(pos),dir, mul * math.abs(s_lane - d_lane)))
+      local lag = s_lane - d_lane
+      pos = pos12toXY(moveposition(fixPos(pos),dir, mul * math.abs(lag)))
+      debugDump("f/b: "..mul * math.abs(s_lane - d_lane),true)
       pos = addPos(ent.position, pos)
       local curve = {name = ent.name, type=ent.type, direction=ent.direction, position=pos}
+      local d, track = oppositedirection(self.direction), util.table.deepcopy(curve)
+      --debugDump({t=traveldir,direction=self.direction},true)
+      if lag < 0 and self.direction%2==0 and self.input == 0 then
+        self:print("Catching up: "..lag)
+        for i=lag,-1 do
+          d, track = self:getRail(track, d,1)
+          self:prepareArea(track)
+          local success, ent = self:genericPlace(track)
+          if not ent then
+            self:print("Failed to create track @"..pos2Str(track.position))
+          else
+            self:removeItemFromCargo(ent.name, 1)
+          end
+        end
+      end
       self:prepareAreaForCurve(curve)
       local success, ent = self:genericPlace(curve)
       if not ent then
@@ -1474,93 +1493,21 @@ FARL = {
       for i, lane in pairs(lanes) do
         local move_dir = lane < 0 and (traveldir-1) % 8 or (traveldir + 3) % 8
         local mul = lane < 0 and -1 or 1
-        track.position = moveRight(lastRail.position, traveldir, lane/2)
-        --track.position = pos12toXY(moveposition(fixPos(lastRail.position), move_dir, mul * lane))
-        track.directon = lane % 4 == 0 and lastRail.direction or (lastRail.direction + 4) % 8
+        --track.position = moveRight(lastRail.position, traveldir, lane/2)
+        local lag= self.lanes.lag[traveldir%2][i]
+        local track = lastRail
+        local dir = oppositedirection(traveldir)
+        for d=1,math.abs(lag/2) do
+          _, track = self:getRail(track, dir, 1)
+        end
+        track.position = pos12toXY(moveposition(fixPos(track.position), move_dir, mul * lane))
+        --track.directon = lane % 4 == 0 and lastRail.direction or (lastRail.direction + 4) % 8
         self:prepareArea(track)
         local success, ent = self:genericPlace(track)
         if not ent then
           self:print("Failed to create track @"..pos2Str(track.position))
         else
           self:removeItemFromCargo(ent.name, 1)
-        end
-      end
-    end
-  end,
-
-  placeParallelTracks_old = function(self, traveldir, lastRail)
-    local rtype = traveldir % 2 == 0 and "straight" or "diagonal"
-    local bp =  self.settings.activeBP[rtype]
-    local rails = bp.rails
-    local mainRail = bp.mainRail
-    local bb = bp.boundingBox
-    local tl, br
-    if bb then
-      tl = addPos(bb.tl)
-      br = addPos(bb.br)
-      local tl1, br1 = {x=tl.x,y=tl.y},{x=br.x,y=br.y}
-      if traveldir == 2 or traveldir == 3 then
-        tl1.x, br1.x = -br.y, -tl.y
-        tl1.y, br1.y = tl.x, br.x
-      elseif traveldir == 4 or traveldir == 5 then
-        tl1, br1 = {x=-br.x,y=-br.y}, {x=-tl.x,y=-tl.y}
-      elseif traveldir == 6 or traveldir == 7 then
-        tl1.x, br1.x = -br.y, -tl.y
-        tl1.y, br1.y = -br.x, -tl.x
-      end
-      if traveldir == 7 then
-        tl1.y = tl1.y-2
-        tl1.x = tl1.x+1
-        br1.y = br1.y - 2
-        br1.x = br1.x + 1
-      end
-      --debugDump({tl=tl1,br=br1},true)
-      tl = addPos(lastRail.position, tl1)
-      br = addPos(lastRail.position, br1)
-
-      --      local tiles = {}
-      --      for x = tl.x,br.x do
-      --        for y = tl.y,br.y do
-      --          table.insert(tiles, {name="concrete", position={x,y}})
-      --          --table.insert(tiles, {name="stone-path", position={x,y}})
-      --        end
-      --      end
-      --      self.surface.set_tiles(tiles)
-
-      self:removeTrees({tl,br})
-      self:pickupItems({tl,br})
-      self:removeStone({tl,br})
-    else
-    --self:print("No bounding box found. Reread blueprints")
-    end
-    if rails and type(rails) == "table" then
-      local diff = traveldir % 2 == 0 and traveldir or traveldir-1
-      local rad = diff * (math.pi/4)
-      for i=1,#rails do
-        if self:getCargoCount(rails[i].name) > 1 then
-          local entity = {name = rails[i].name, direction = lastRail.direction, force = self.locomotive.force}
-          local offset = rails[i].position
-          offset = rotate(offset, rad)
-          local pos = addPos(lastRail.position, offset)
-          entity.position = pos
-          if traveldir % 2 == 1 then
-            entity = self:fixDiagonalParallelTracks(entity, traveldir, mainRail.direction)
-          end
-          local area = bb and {bb.tl, bb.br} or false
-          if self:prepareArea(entity) then
-            local _, ent = self:genericPlace(entity)
-            if ent then
-              if self.maintenance then
-                self:protect(ent)
-              end
-              self:removeItemFromCargo(rails[i].name, 1)
-              if self.settings.electric then
-                remote.call("dim_trains", "railCreated", entity.position)
-              end
-            else
-              self:deactivate("Trying to place "..rails[i].name.." failed")
-            end
-          end
         end
       end
     end
@@ -1857,8 +1804,9 @@ FARL = {
     local pole = {name = name, position = polePos}
     --debugDump(util.distance(pole.position, self.lastPole.position),true)
     local canPlace = self:prepareArea(pole)
-    if not canPlace and self.surface.count_entities_filtered{area=expandPos(polePos,0.4),name=name} > 1 then
+    if not canPlace and self.surface.count_entities_filtered{area=expandPos(polePos,0.6),name=name} > 1 then
       canPlace = true
+      debugDump("found pole@"..pos2Str(polePos),true)
     end
     local hasPole = self:getCargoCount(name) > 0
     if canPlace and hasPole then
