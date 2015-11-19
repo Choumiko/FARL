@@ -160,6 +160,28 @@ function moveLeft(pos, direction, distance)
   return pos12toXY(moveposition(fixPos(pos), dir, distance))
 end
 
+function moveRail(rail, direction,distance)
+  local pos = rail.position
+  local data = {
+    [1] = {x=0.5,y=-0.5},
+    [3] = {x=0.5,y=0.5},
+    [5] = {x=-0.5,y=0.5},
+    [7] = {x=-0.5,y=-0.5}
+  }
+  local distance = rail.direction % 2 == 1 and distance or distance*2
+  local off = data[rail.direction] and data[rail.direction] or {x=0,y=0}
+  pos =  addPos(off, rail.position)
+  pos = pos12toXY(moveposition(fixPos(pos), direction, distance))
+  local newRail = {name=rail.name, type=rail.type, direction=rail.direction, position=pos, force=game.players[1].force}
+  if rail.direction%2 == 1 and distance % 2 == 1 then
+    newRail.direction = (rail.direction+4)%8
+  end
+  off = data[newRail.direction] or {x=0,y=0}
+  pos = subPos(pos, off)
+  newRail.position = pos
+  return newRail
+end
+
 function saveBlueprint(player, poleType, type, bp)
   if not global.savedBlueprints[player.name] then
     global.savedBlueprints[player.name] = {}
@@ -326,7 +348,7 @@ FARL = {
               return
             end
             -- add created rail to path
-            table.insert(self.path, {rail=last, travel_dir=newTravelDir})
+            table.insert(self.path, {rail=last, travel_dir=newTravelDir, input = self.input})
             -- remove rails behind train from path
             local behind = self:rail_behind_train()
             local tmp = {}
@@ -340,8 +362,46 @@ FARL = {
               end
             end
             self.path = tmp
+            if last.type == "curved-rail" then
+              self.lastCurve = {dist=0, input=self.input, direction=self.direction}
+            else
+              self.lastCurve.dist = self.lastCurve.dist + 1
+            end
             if self.settings.parallelTracks then--and self.lastCurve > self.settings.parallelLag then
-              self:placeParallelTracks(newTravelDir, last)
+              if last.type == "curved-rail" then
+                for i, l in pairs(self.settings.activeBP.straight.lanes) do
+                  local rail, c = self:placeParallelCurve(newTravelDir, last, i)
+                end
+            end
+            if last.type ~= "curved-rail" then
+              for lane_index, lane in pairs(self.settings.activeBP.straight.lanes) do
+                local rail = last
+                local s_lane = self.settings.activeBP.straight.lanes[lane_index]
+                local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
+                local move_lane = newTravelDir % 2 == 0 and s_lane or d_lane
+                local move_dir = (newTravelDir + 2) % 8
+                local new_rail = moveRail(rail,move_dir,move_lane/2)
+
+                local lag = rail.direction % 2 == 1 and self.lanes[lane_index].d_lag or self.lanes[lane_index].s_lag
+                local blocked = false
+                blocked = self.lastCurve.dist < math.abs(lag)
+                if not blocked then
+                  new_rail = moveRail(new_rail,oppositedirection(self.direction),math.abs(lag))
+                  self:flyingText2(math.abs(lag),RED,true,new_rail.position)
+                  --debugDump("f/b: "..mul * math.abs(s_lane - d_lane),true)
+
+                  self:prepareArea(new_rail)
+                  local success, ent = self:genericPlace(new_rail)
+                  if not ent then
+                    self:print("Failed to create track @"..pos2Str(new_rail.position))
+                    self:flyingText2("E",RED,true, new_rail.position)
+                  else
+                    self:removeItemFromCargo(ent.name, 1)
+                    --return ent
+                  end
+                end
+              end
+            end
             end
             --self:show_path()
             self:placeConcrete(newTravelDir, last)
@@ -642,6 +702,7 @@ FARL = {
       self:deactivate("Input wrong: "..input)
       return travelDir, false
     end
+    if not lastRail then error("no lastRail", 2) end
     local data = input_to_next_rail[travelDir][lastRail.type]
     if not data then error("no data", 2) end
     if not data[lastRail.direction] or not data[lastRail.direction][input] then
@@ -756,7 +817,7 @@ FARL = {
       local count = 0
       local path = {}
       while prev and count < 20 do
-        table.insert(path, {rail=prev, travel_dir=oppositedirection(prev_dir)})
+        table.insert(path, {rail=prev, travel_dir=oppositedirection(prev_dir), input = 1})
         prev, prev_dir = self:get_connected_rail(prev, true, prev_dir)
         count = count + 1
       end
@@ -795,17 +856,15 @@ FARL = {
       local bps = self.settings.activeBP
       local diag_lanes = bps.diagonal.lanes
       local straight_lanes = bps.straight.lanes
-      self.lanes = {
-        [0] = { lag={},
-          lastrail={}},
-        [1] = { lag={},
-          lastrail={}},
-      }
+      self.lanes = {}
       for i, l in pairs(straight_lanes) do
-        --self.lanes.lag[self.direction%2] = lag for curves coming from self.direction
         -- lag is for right turns, -1 * lag for left turns/to catch up
-        self.lanes[0].lag[i] = (l - diag_lanes[i])
-        self.lanes[1].lag[i] = (l - diag_lanes[i])
+        local d = {
+          s_lag = (l - diag_lanes[i])/2,
+          d_lag = -1*math.abs(diag_lanes[i]/2),
+          lastrail = false}
+        d.d_lag = math.abs(d.d_lag) < 2 and -2 or d.d_lag
+        self.lanes[i] = d
       end
 
       self.active = true
@@ -1007,6 +1066,13 @@ FARL = {
       entity = self.surface.create_entity(arg)
       --apiCalls.create = apiCalls.create + 1
     end
+    if entity then
+      local diff = subPos(arg.position, entity.position)
+      if diff.x ~= 0 or diff.y~= 0 then
+        self:flyingText2("x", RED,true,entity.position)
+        self:print("arg:"..pos2Str(arg.position).." ent:"..pos2Str(entity.position))
+      end
+    end
     return canPlace, entity
   end,
 
@@ -1152,6 +1218,10 @@ FARL = {
                     _, tmp2 = self:getRail(tmp2, move_dir, 1)
                   end
                   lane_distance = subPos(tmp2.position, mainRail.position).x
+
+                  if lane_distance == 0 then
+                  --lane_distance = 1
+                  end
                   debugDump(lane_distance, true)
                 else
                   lane_distance = tmp.position.x
@@ -1428,8 +1498,9 @@ FARL = {
 
     for i, s_lane in pairs(self.settings.activeBP.straight.lanes) do
       local straight_lanes = self.settings.activeBP.straight.lanes
-      local curve = self:placeParallelCurve(ent, i, traveldir)
-      local lag = self.lanes[traveldir%2].lag[i]
+      local d_lanes = self.settings.activeBP.diagonal.lanes
+      local curve = self:placeParallelCurve(traveldir, ent, i)
+      local lag = self.lanes[i].lag
       if lag < 0 and self.direction%2 == 0 and self.input == 0 then
         --curve = {name = ent.name, type=ent.type, direction=ent.direction, position=curve.position}
         local d, track = oppositedirection(self.direction), curve
@@ -1448,11 +1519,12 @@ FARL = {
         end
       end
       if self.direction%2 == 1 then
+        --local lag = d_lanes[i]
         if self.input == 2 then
           local d, track = oppositedirection(self.direction), curve
           --debugDump({t=traveldir,direction=self.direction},true)
 
-          
+
           lag = lag == 0 and -2 or lag
           self:print("Catching up: "..lag)
           for i=lag,-1 do
@@ -1467,7 +1539,7 @@ FARL = {
           end
         elseif self.input == 0 then
           local d, track = oppositedirection(self.direction), curve
-          for i=1,s_lane do
+          for i=1,d_lanes[i] do
             d, track = self:getRail(track, d,1)
             self:prepareArea(track)
             local success, ent = self:genericPlace(track)
@@ -1483,7 +1555,7 @@ FARL = {
     end
   end,
 
-  placeParallelCurve = function(self, rail, lane_index, traveldir)
+  placeParallelCurve = function(self, traveldir, rail, lane_index)
     local diag_lanes = self.settings.activeBP.diagonal.lanes
     local straight_lanes = self.settings.activeBP.straight.lanes
     local s_lane = straight_lanes[lane_index]
@@ -1496,15 +1568,16 @@ FARL = {
     local lane = self.direction % 2 == 0 and d_lane or s_lane
     local pos = {x=0,y=0}
     mul = move_lane < 0 and 1 or -1
-    debugDump("l/r: "..mul * math.abs(move_lane),true)
+    --debugDump("l/r: "..mul * math.abs(move_lane),true)
     pos = moveLeft(pos, move_dir, mul * math.abs(move_lane))
+    --self:flyingText2(mul * math.abs(move_lane), YELLOW,true, addPos(rail.position, pos))
     mul = lane > 0 and 1 or -1
     mul = self.direction % 2 == 0 and mul or -1*mul
     local lag = s_lane - d_lane
     pos = pos12toXY(moveposition(fixPos(pos),dir, mul * math.abs(lag)))
-    debugDump("f/b: "..mul * math.abs(s_lane - d_lane),true)
+    --debugDump("f/b: "..mul * math.abs(s_lane - d_lane),true)
     pos = addPos(rail.position, pos)
-
+    self:flyingText2(mul * math.abs(lag), GREEN,true,pos)
     local curve = {name = rail.name, type=rail.type, direction=rail.direction, position=pos}
     self:prepareAreaForCurve(curve)
     local success, ent = self:genericPlace(curve)
@@ -1512,88 +1585,16 @@ FARL = {
       self:print("Failed to create curve @"..pos2Str(curve.position))
     else
       self:removeItemFromCargo(ent.name, 1)
-      return ent
+      return ent, mul * math.abs(lag)
     end
   end,
 
   placeParallelTracks = function(self, traveldir, lastRail)
-    if lastRail.type == "curved-rail" then
-      self:placeParallelCurves(traveldir, lastRail)
-      self.lastCurve = {dist=0, input=self.input, direction=self.direction}
-      return
-    end
-    local diag_lanes = self.settings.activeBP.diagonal.lanes
-    local straight_lanes = self.settings.activeBP.straight.lanes
-    local lanes = traveldir % 2 == 0 and straight_lanes or diag_lanes
-    local pos = {x=0,y=0}
 
-    if traveldir % 2 == 0 then
-      for i, lane in pairs(lanes) do
-        local blocked = false
-        local lag = self.lanes[self.lastCurve.direction%2].lag[i]
-        blocked = self.lastCurve.input == 2 and self.lastCurve.dist < math.abs(lag)
+  end,
 
-        if not blocked then
-          local track = {name = lastRail.name, type=lastRail.type, direction=lastRail.direction, position={x=0,y=0}}
-          track.position = moveRight(lastRail.position, traveldir, lane)
-          track.position = pos12toXY(moveposition(fixPos(track.position),traveldir, self.lanes[traveldir%2].lag[i]))
-          self:prepareArea(track)
-          local success, ent = self:genericPlace(track)
-          if not ent then
-            self:print("Failed to create track @"..pos2Str(track.position))
-          else
-            self:removeItemFromCargo(ent.name, 1)
-          end
-        end
-      end
-    end
-    if traveldir % 2 == 1 then
-      for i, lane in pairs(lanes) do
-        local mul = lane < 0 and -1 or 1
-        mul = traveldir % 6 == 1 and mul or -1*mul
-        local blocked = false
-        local lag = self.lanes[self.lastCurve.direction%2].lag[i]
+  placeParallelTrack = function(self, traveldir, lastRail, lane_index)
 
-        if self.lastCurve.input == 0 then
-          lag = lag == 0 and 2 or lag
-          blocked = self.lastCurve.dist < math.abs(lag)
-        elseif self.lastCurve.input == 2 then
-          lag = lag ~= 0 and lag-1 or lag
-          blocked = self.lastCurve.dist < math.abs(lag*2)
-        end
-        if not blocked then
-          local track = {name = lastRail.name, type=lastRail.type, direction=lastRail.direction, position={x=0,y=0}}
-
-          local lag= self.lanes[traveldir%2].lag[i]
-          track.position.x = lastRail.position.x + mul * math.abs(lane)
-          track.position.y = lastRail.position.y
-          local dir = traveldir%4 == 3 and traveldir or oppositedirection(traveldir)
-          lag = lag == 0 and 0.5 or lag
-          dir = (lag == 0.5 and traveldir % 4 == 3) and oppositedirection(traveldir) or dir
-          dir = (lag == 0.5 and traveldir % 4 == 1) and traveldir or dir
-          for c=1,math.abs(lag*2) do
-            _, track = self:getRail(track, dir,1)
-          end
-
-          --lag = lag == 0 and 1 or lag
-          for c=1,math.abs(lag*2) do
-            _, track = self:getRail(track, oppositedirection(traveldir),1)
-          end
-          self:prepareArea(track)
-          local success, ent = self:genericPlace(track)
-          if not ent then
-            self:print("Failed to create track @"..pos2Str(track.position))
-          else
-            local diff = subPos(track.position, ent.position)
-            if diff.x ~= 0 or diff.y ~= 0 then
-              self:print(ent.direction.."@"..pos2Str(diff))
-            end
-            self:removeItemFromCargo(ent.name, 1)
-          end
-        end
-      end
-    end
-    self.lastCurve.dist = self.lastCurve.dist + 1
   end,
 
   placeParallelSignals = function(self,traveldir, signal)
