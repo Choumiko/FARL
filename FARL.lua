@@ -160,6 +160,18 @@ function moveLeft(pos, direction, distance)
   return pos12toXY(moveposition(fixPos(pos), dir, distance))
 end
 
+function diagonal_to_real_pos(rail)
+  local pos = rail.position
+  local data = {
+    [1] = {x=0.5,y=-0.5},
+    [3] = {x=0.5,y=0.5},
+    [5] = {x=-0.5,y=0.5},
+    [7] = {x=-0.5,y=-0.5}
+  }
+  local off = data[rail.direction] and data[rail.direction] or {x=0,y=0}
+  return addPos(off, rail.position)
+end
+
 function moveRail(rail, direction,distance)
   local pos = rail.position
   local data = {
@@ -376,7 +388,7 @@ FARL = {
             if last.type ~= "curved-rail" then
               for lane_index, lane in pairs(self.settings.activeBP.straight.lanes) do
                 local rail = last
-                local s_lane = self.settings.activeBP.straight.lanes[lane_index]
+                local s_lane = lane
                 local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
                 local move_lane = newTravelDir % 2 == 0 and s_lane or d_lane
                 local move_dir = (newTravelDir + 2) % 8
@@ -384,7 +396,8 @@ FARL = {
 
                 local lag = rail.direction % 2 == 1 and self.lanes[lane_index].d_lag or self.lanes[lane_index].s_lag
                 local blocked = false
-                blocked = self.lastCurve.dist < math.abs(lag)
+                local block_check = move_lane > 0 and (s_lane-d_lane)/2-lag or (s_lane-d_lane)/2+lag
+                blocked = self.lastCurve.dist < math.abs(block_check)
                 if not blocked then
                   new_rail = moveRail(new_rail,oppositedirection(self.direction),math.abs(lag))
                   self:flyingText2(math.abs(lag),RED,true,new_rail.position)
@@ -694,6 +707,7 @@ FARL = {
     --input_to_next_rail =
 
     local lastRail, travelDir, input = lastRail, travelDir, input
+    if not travelDir or not input then error("no traveldir or input", 2) end
     if travelDir > 7 or travelDir < 0 then
       self:deactivate("Traveldir wrong: "..travelDir)
       return false,false
@@ -1171,9 +1185,9 @@ FARL = {
               --if not mainRail and mainPos.x == 0 and mainPos.y == 0 and signalDir == offsets.chain.direction then
               rail.main = true
               mainRail = rail
+              local d
               if rail.direction == 3 then
-                rail.position.x = rail.position.x + 2
-                rail.direction = 7
+                rail = self:getRail(mainRail, 1, 1)
                 moved_main_rail = true
               end
               offsets.mainRail = rail
@@ -1208,20 +1222,10 @@ FARL = {
                 local tmp =
                   {name=l.name, position=subPos(l.position, mainRail.position),
                     direction = l.direction, type=l.name}
-                local move_dir = tmp.position.y < 0 and 5 or 1
+                local move_dir = tmp.position.y < 0 and 1 or 5
                 if bpType == "diagonal" then
-                  local rails = math.abs(tmp.position.y / 1) +1
-                  debugDump({d=move_dir, rails=rails},true)
-                  local _, tmp2 = false, l
-                  for i=1,rails do
-                    --debugDump(tmp2,true)
-                    _, tmp2 = self:getRail(tmp2, move_dir, 1)
-                  end
-                  lane_distance = subPos(tmp2.position, mainRail.position).x
-
-                  if lane_distance == 0 then
-                  --lane_distance = 1
-                  end
+                  lane_distance = subPos(diagonal_to_real_pos(l),diagonal_to_real_pos(mainRail))
+                  lane_distance = lane_distance.x + lane_distance.y
                   debugDump(lane_distance, true)
                 else
                   lane_distance = tmp.position.x
