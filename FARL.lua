@@ -870,6 +870,10 @@ FARL = {
       local bps = self.settings.activeBP
       local diag_lanes = bps.diagonal.lanes
       local straight_lanes = bps.straight.lanes
+      if #diag_lanes ~= #straight_lanes then
+        self:deactivate({"msg-error-track-mismatch"})
+        return
+      end
       self.lanes = {}
       for i, l in pairs(straight_lanes) do
         -- lag is for right turns, -1 * lag for left turns/to catch up
@@ -1560,6 +1564,13 @@ FARL = {
   end,
 
   placeParallelCurve = function(self, traveldir, rail, lane_index)
+    local diag_lanes = self.settings.activeBP.diagonal.lanes
+    local straight_lanes = self.settings.activeBP.straight.lanes
+    local s_lane = straight_lanes[lane_index]
+    local d_lane = diag_lanes[lane_index]
+  end,
+
+  placeParallelCurve2 = function(self, traveldir, rail, lane_index)
     local diag_lanes = self.settings.activeBP.diagonal.lanes
     local straight_lanes = self.settings.activeBP.straight.lanes
     local s_lane = straight_lanes[lane_index]
