@@ -250,9 +250,11 @@ remote.add_interface("farl",
       debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
       if type(global.railInfoLast) == "table" and global.railInfoLast.valid then
         local pos = global.railInfoLast.position
-        local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
+        local diff=subPos(rail.position,pos)
         debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
         debugDump("Distance (util): "..util.distance(pos, rail.position),true)
+        --debugDump("lag for diag: "..(diff.x-diff.y),true)
+        --debugDump("lag for straight: "..(diff.y+diff.x),true)
         if AStar then
           local max = AStar.heuristic(global.railInfoLast, rail)
           debugDump("Distance (heuristic): "..max, true)
@@ -338,4 +340,37 @@ remote.add_interface("farl",
         psettings.boundingBoxOffsets[type][corner] = {x=x,y=y}
       end
     end,
+    
+    createCurve = function(direction, input, curve, s_lane, d_lane)
+      local player = game.players[1]
+      local surface = player.surface
+
+      local original_dir = direction
+      -- invert direction, input, distances for diagonal rails
+      if direction%2 == 1 then
+        local input2dir = {[0]=-1,[1]=0,[2]=1}
+        direction = oppositedirection((direction+input2dir[input]) % 8)
+        input = input == 2 and 0 or 2
+        s_lane = -1*s_lane
+        d_lane = -1*d_lane
+      end
+      
+      local new_curve = {name=curve.name, type=curve.type, direction=curve.direction, force=curve.force}
+      local right = s_lane*2
+      
+      --left hand turns need to go back, moving right already moves the diagonal rail part
+      local forward = input == 2 and (s_lane-d_lane)*2 or (d_lane-s_lane)*2
+      debugDump("r:"..right.."f:"..forward,true)
+      new_curve.position = move_right_forward(curve.position, direction, right, forward)
+      local s_lag = forward/2
+      local d_lag = original_dir % 2 == 0 and forward+right or (forward+right)/2 
+      local data = {s_lag=s_lag, d_lag=d_lag}
+      debugDump(data,true)
+      local ent = surface.create_entity(new_curve)
+      local diff = subPos(ent.position,new_curve.position)
+      if diff.x~=0 or diff.y~=0 then
+        debugDump("Placement mismatch:",true)
+        debugDump(diff,true)
+      end
+    end
   })
