@@ -58,10 +58,6 @@ defaultSettings =
     bridge = false,
     root = false,
     parallelTracks = true,
-    parallelLag = 6,
-    boundingBoxOffsets = {
-      straight = {tl={x=-0.5,y=0},br={x=0,y=0}},
-      diagonal = {tl={x=0,y=0},br={x=0.5,y=0.5}}}
   }
 
 defaultSettings.activeBP = defaultSettings.bp.big
@@ -77,9 +73,6 @@ Settings = {
       global.players[name] = settings
     end
     global.players[name].player = player
-    if not global.players[name].boundingBoxOffsets then
-      global.players[name].boundingBoxOffsets = util.table.deepcopy(settings.boundingBoxOffsets)
-    end
     setmetatable(global.players[name], Settings)
     return global.players[name]
   end,

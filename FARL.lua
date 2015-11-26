@@ -380,8 +380,12 @@ FARL = {
                 if self.settings.root then
                   self:flyingText("b", RED,true,r.rail.position)
                   local name = r.rail.name
-                  r.rail.destroy()
-                  self:addItemToCargo(name, 1, true)
+                  if r.rail.destroy() then
+                    self:addItemToCargo(name, 1, true)
+                  else
+                    self:deactivate({"msg-cant-remove"})
+                    return
+                  end
                 end
               end
             end
@@ -621,15 +625,9 @@ FARL = {
     local counts = {}
     local data = {}
     local railpos = rail.position
-    data[1] = {[3] = {x=1,y=1}}
-    data[3] = {[5] = {x=-1,y=1}}
-    data[5] = {[7] = {x=-1,y=-1}}
-    data[7] = {[1] = {x=1,y=-1}}
     local off = {x=0,y=0}
-    if rail.direction % 2 == 1 then
-      off = data[dir][rail.direction] or off
-    end
-    railpos = addPos(railpos, off)
+
+    railpos = diagonal_to_real_pos(rail)
     for _, c in pairs(concrete) do
       local entity = {name = c.name}
       local offset = c.position
@@ -805,6 +803,11 @@ FARL = {
         self:deactivate({"msg-error-2"}, true)
         return
       end
+
+      local bps = self.settings.activeBP
+      local bb = self.lastrail.direction%2==0 and bps.straight.boundingBox or bps.diagonal.boundingBox
+      debugDump(bb,true)
+      self:showArea(self.lastrail, self.direction, {bb.tl,bb.br}, 4)
       self.path = self:get_rails_below_train()
       if self.lastrail.name == self.settings.rail.curved then
         self:deactivate({"msg-error-curves"}, true)
@@ -1211,8 +1214,6 @@ FARL = {
           end
         end
         if offsets.chain and offsets.pole and bpType then
-          box.tl = addPos(box.tl, self.settings.boundingBoxOffsets[bpType].tl)
-          box.br = addPos(box.br, self.settings.boundingBoxOffsets[bpType].br)
           local mainRail = false
           local moved_main_rail = false
           for i,rail in pairs(offsets.rails) do
@@ -1236,6 +1237,8 @@ FARL = {
             end
           end
           if mainRail then
+            local min_x,min_y = math.huge,math.huge
+            local max_x, max_y = -1*math.huge,-1*math.huge
             local lamps = {}
             for _, l in ipairs(offsets.poleEntities) do
               if l.name ~= "wooden-chest" then
@@ -1250,14 +1253,14 @@ FARL = {
             offsets.pole.position = subPos(offsets.pole.position,railPos)
             if concrete then
               local off = {x=0.5,y=0.5}
-              off.x = moved_main_rail and -1.5 or off.x
-              local pos = subPos(mainRail.position, off)
+              local pos = subPos(railPos, off)
               for _, c in pairs(concrete) do
                 table.insert(offsets.concrete, {name=c.name, position=subPos(c.position, pos)})
               end
             end
             local rails = {}
             local lanes = {}
+            local known_rails = {}
             for _, l in pairs(offsets.rails) do
               if not l.main then
                 local lane_distance = false
@@ -1268,11 +1271,14 @@ FARL = {
                 if bpType == "diagonal" then
                   lane_distance = subPos(diagonal_to_real_pos(l),diagonal_to_real_pos(mainRail))
                   lane_distance = lane_distance.x + lane_distance.y
-                  debugDump(lane_distance, true)
                 else
                   lane_distance = tmp.position.x
                 end
-                table.insert(lanes, lane_distance/2)
+                lane_distance= lane_distance/2
+                if not known_rails[lane_distance] and lane_distance ~= 0 then
+                  table.insert(lanes, lane_distance)
+                  known_rails[lane_distance] = true
+                end
                 local altRail, dir
                 if l.direction % 2 == 1 and mainRail.direction == l.direction then
                   dir, altRail = self:getRail(tmp, move_dir, 1)
@@ -1288,12 +1294,15 @@ FARL = {
                 {name=l.name, position=subPos(l.position, offsets.chain.position),
                   direction = l.direction, reverse = (l.direction ~= offsets.chain.direction)})
             end
-
+            local tl = subPos(box.tl, diagonal_to_real_pos(mainRail))
+            local br = subPos(box.br, diagonal_to_real_pos(mainRail))
+            tl.y = tl.y > 1 and tl.y or 1
+            br.y = br.y < -0.5 and tl.y or -0.5
             local bp = {
               mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps,
               rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes}
-            bp.boundingBox = {tl = subPos(box.tl, mainRail.position),
-              br = subPos(box.br, mainRail.position)}
+            bp.boundingBox = {tl = tl,
+              br = br}
             self.settings.bp[poleType][bpType] = bp
             if #rails > 0 then
               self.settings.flipPoles = false
@@ -1376,7 +1385,6 @@ FARL = {
     end
     local rtype = newDir % 2 == 0 and "straight" or "diagonal"
     local bp =  self.settings.activeBP[rtype]
-    local rails = bp.rails
     local mainRail = bp.mainRail
     local bb = bp.boundingBox
 
@@ -1491,7 +1499,6 @@ FARL = {
   prepareMaintenance = function(self, traveldir, lastRail)
     local rtype = traveldir % 2 == 0 and "straight" or "diagonal"
     local bp =  self.settings.activeBP[rtype]
-    local rails = bp.rails
     local mainRail = bp.mainRail
     local bb = bp.boundingBox
     local tl, br
@@ -2106,6 +2113,25 @@ FARL = {
       self.surface.create_entity({name="flying-text2", position=pos, text=line, color=color})
     end
   end,
+
+  create_overlay = function(self, position, duration)
+    local tick = game.tick + 60*duration
+    global.overlayStack[tick] = global.overlayStack[tick] or {}
+    local overlay = self.surface.create_entity{name="rm_overlay", position = position}
+    overlay.minable = false
+    overlay.destructible = false
+    table.insert(global.overlayStack[tick], overlay)
+  end,
+
+  showArea = function(self, rail, direction, area, duration)
+    local bb = {tl=area[1],br=area[2]}
+    for right=bb.tl.x,bb.br.x do
+      for forward=bb.br.y,bb.tl.y do
+        local pos = move_right_forward(diagonal_to_real_pos(rail),direction,right,forward)
+        self:create_overlay(pos,duration)
+      end
+    end
+  end
 }
 
 -- [traveldir][rail_type][rail_dir][input] = offset, new rail dir, new rail type

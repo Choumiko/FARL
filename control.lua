@@ -24,6 +24,15 @@ end
 
 local function on_tick(event)
   local status, err = pcall(function()
+    if global.overlayStack and global.overlayStack[event.tick] then
+      local tick = event.tick
+      for _, overlay in pairs(global.overlayStack[tick]) do
+        if overlay.valid then
+          overlay.destroy()
+        end
+      end
+      global.overlayStack[event.tick] = nil
+    end
     if global.destroyNextTick[event.tick] then
       local pis = global.destroyNextTick[event.tick]
       for _, pi in pairs(pis) do
@@ -69,6 +78,7 @@ local function init_global()
   global.godmode = false
   godmode = global.godmode
   global.destroyNextTick = global.destroyNextTick or {}
+  global.overlayStack = global.overlayStack or {}
   global.version = global.version or "0.4.41"
   setMetatables()
 end
@@ -90,6 +100,7 @@ end
 local function on_load()
   setMetatables()
   godmode = global.godmode
+  global.overlayStack = global.overlayStack or {}
 end
 
 local function on_configuration_changed(data)
@@ -329,18 +340,6 @@ remote.add_interface("farl",
       end
     end,
 
-    setBoundingBox = function(type, corner, x,y, player)
-      local player = player
-      if not player then player = game.players[1] end
-      local psettings = Settings.loadByPlayer(player)
-      if psettings then
-        local bb = psettings.boundingBoxOffsets[type][corner]
-        local x = x and x or bb.x
-        local y = y and y or bb.y
-        psettings.boundingBoxOffsets[type][corner] = {x=x,y=y}
-      end
-    end,
-    
     createCurve = function(direction, input, curve, s_lane, d_lane)
       local player = game.players[1]
       local surface = player.surface
@@ -354,16 +353,16 @@ remote.add_interface("farl",
         s_lane = -1*s_lane
         d_lane = -1*d_lane
       end
-      
+
       local new_curve = {name=curve.name, type=curve.type, direction=curve.direction, force=curve.force}
       local right = s_lane*2
-      
+
       --left hand turns need to go back, moving right already moves the diagonal rail part
       local forward = input == 2 and (s_lane-d_lane)*2 or (d_lane-s_lane)*2
       debugDump("r:"..right.."f:"..forward,true)
       new_curve.position = move_right_forward(curve.position, direction, right, forward)
       local s_lag = forward/2
-      local d_lag = original_dir % 2 == 0 and forward+right or (forward+right)/2 
+      local d_lag = original_dir % 2 == 0 and forward+right or (forward+right)/2
       local data = {s_lag=s_lag, d_lag=d_lag}
       debugDump(data,true)
       local ent = surface.create_entity(new_curve)
