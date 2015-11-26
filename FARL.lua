@@ -244,7 +244,7 @@ FARL = {
       direction = false, input = 1, name = vehicle.backer_name,
       signalCount = 0, cruise = false, cruiseInterrupt = 0,
       lastposition = false, maintenance = false, surface = vehicle.surface,
-      recheckRails = {}, destroy = false
+      destroy = false
     }
     new.settings = Settings.loadByPlayer(player)
     setmetatable(new, {__index=FARL})
@@ -376,6 +376,13 @@ FARL = {
               end
               if found then
                 table.insert(tmp, r)
+              else
+                if self.settings.root then
+                  self:flyingText("b", RED,true,r.rail.position)
+                  local name = r.rail.name
+                  r.rail.destroy()
+                  self:addItemToCargo(name, 1, true)
+                end
               end
             end
             self.path = tmp
@@ -780,7 +787,6 @@ FARL = {
     local status, err = pcall(function()
       self.lastrail = false
       self.signalCount = 0
-      self.recheckRails = {}
       self.protected = {}
       self.protectedCount = 0
       self.protectedCalls = {}
@@ -816,7 +822,7 @@ FARL = {
       for i=2,#path do
         table.insert(self.path, 1, path[i])
       end
-      self:show_path()
+      --self:show_path()
       local last_signal, signal_rail = false, false
       local signalWeight = 1
       local has_signal = self.getCargoCount("rail-signal") > 0
@@ -826,19 +832,19 @@ FARL = {
         last_signal, signal_rail = self:find_signal_rail(rail, dir)
         if last_signal then
           self.signalCount = 0
+          self:flyingText2( "S", GREEN, true, last_signal.position)
         end
         if self.settings.signals and not self.settings.root then
+          self.signalCount = self.signalCount + get_signal_weight(rail,self.settings)
           if has_signal then
             if self:placeSignal(dir,rail) then self.signalCount = 0 end
           else
             self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
           end
         end
-        self.signalCount = self.signalCount + get_signal_weight(rail,self.settings)
       end
       self:findLastPole(self.lastrail)
       if last_signal and signal_rail then
-        self:flyingText2( "S", GREEN, true, last_signal.position)
         self:flyingText2( "SR", GREEN, true, signal_rail.position)
         self:print(self.signalCount)
       end
@@ -848,83 +854,77 @@ FARL = {
       local bps = self.settings.activeBP
       local diag_lanes = bps.diagonal.lanes
       local straight_lanes = bps.straight.lanes
-      if #diag_lanes ~= #straight_lanes then
+
+      self.lanes = {}
+      if diag_lanes and straight_lanes and #diag_lanes ~= #straight_lanes then
         self:deactivate({"msg-error-track-mismatch"})
         return
       end
-      self.lanes = {}
-      local curves = {
-        [0]={ [0]={name="curved-rail",type="curved-rail", direction=0,position={x=0,y=0}},
-          [2]={name="curved-rail",type="curved-rail", direction=1,position={x=2,y=2}}},
-        [1]={ [0]={name="curved-rail",type="curved-rail", direction=3,position={x=1,y=1}},
-          [2]={name="curved-rail",type="curved-rail", direction=3,position={x=1,y=1}}}}
-      for _, direction_self in pairs({0,1}) do
-        self.lanes["d"..direction_self] = {}
-        for _1, input_self in pairs({0,2}) do
-          self.lanes["d"..direction_self]["i"..input_self] = {}
-          local rail = curves[direction_self][input_self]
-          for lane_index, lane in pairs(straight_lanes) do
-            local direction = direction_self
-            local original_dir = direction
-            local s_lane = self.settings.activeBP.straight.lanes[lane_index]
-            local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
-            local input = input_self
-            -- invert direction, input, distances for diagonal rails
-            if direction%2 == 1 then
-              local input2dir = {[0]=-1,[1]=0,[2]=1}
-              direction = oppositedirection((direction+input2dir[input]) % 8)
-              input = input == 2 and 0 or 2
-              s_lane = -1*s_lane
-              d_lane = -1*d_lane
-            end
-
-            local new_curve = {name=rail.name, type=rail.type, direction=rail.direction, force=rail.force}
-            local right = original_dir % 2 == 0 and s_lane*2 or s_lane
-            --left hand turns need to go back, moving right already moves the diagonal rail part
-            local forward = input == 2 and (s_lane-d_lane)*2 or (d_lane-s_lane)*2
-
-            debugDump("r:"..right.."f:"..forward,true)
-            new_curve.position = move_right_forward(rail.position, direction, right, forward)
-            local lag = forward/2
-            local catchup = 0
-            local block2 = false
-            local l,f,r = lag, forward, right
-
-            --local lag = self.input == 0 and forward+right or -1*(forward+right)
-            if original_dir == 1 then
-              right = -1*right
-              lag = 2*right+d_lane
-              lag = input == 2 and lag or -1*lag
-              forward = -1*forward
-              --lag = (math.abs(forward)+math.abs(right))
-              --lag = forward < 0 and -1*lag or lag
-
-              forward = forward/2
-              l,f,r = lag,-1*s_lane,forward
-              if input_self == 2 then --input == 0 ????
-                f=-1*f
+      if diag_lanes and straight_lanes then
+        local curves = {
+          [0]={ [0]={name="curved-rail",type="curved-rail", direction=0,position={x=0,y=0}},
+            [2]={name="curved-rail",type="curved-rail", direction=1,position={x=2,y=2}}},
+          [1]={ [0]={name="curved-rail",type="curved-rail", direction=3,position={x=1,y=1}},
+            [2]={name="curved-rail",type="curved-rail", direction=3,position={x=1,y=1}}}}
+        for _, direction_self in pairs({0,1}) do
+          self.lanes["d"..direction_self] = {}
+          for _1, input_self in pairs({0,2}) do
+            self.lanes["d"..direction_self]["i"..input_self] = {}
+            local rail = curves[direction_self][input_self]
+            for lane_index, lane in pairs(straight_lanes) do
+              local direction = direction_self
+              local original_dir = direction
+              local s_lane = self.settings.activeBP.straight.lanes[lane_index]
+              local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
+              local input = input_self
+              -- invert direction, input, distances for diagonal rails
+              if direction%2 == 1 then
+                local input2dir = {[0]=-1,[1]=0,[2]=1}
+                direction = oppositedirection((direction+input2dir[input]) % 8)
+                input = input == 2 and 0 or 2
+                s_lane = -1*s_lane
+                d_lane = -1*d_lane
               end
-              catchup = l+f+r
-              block2 = f+r
-            else
-              catchup = l < 0 and l or f
-              block2 = catchup
-              f = f/-2
-              r= r/2
+
+              local new_curve = {name=rail.name, type=rail.type, direction=rail.direction, force=rail.force}
+              local right = original_dir % 2 == 0 and s_lane*2 or s_lane
+              --left hand turns need to go back, moving right already moves the diagonal rail part
+              local forward = input == 2 and (s_lane-d_lane)*2 or (d_lane-s_lane)*2
+
+              new_curve.position = move_right_forward(rail.position, direction, right, forward)
+              local lag = forward/2
+              local catchup = 0
+              local l,f,r = lag, forward, right
+
+              if original_dir == 1 then
+                right = -1*right
+                lag = 2*right+d_lane
+                lag = input == 2 and lag or -1*lag
+                forward = -1*forward
+
+                forward = forward/2
+                l,f,r = lag,-1*s_lane,forward
+                if input_self == 2 then
+                  f=-1*f
+                end
+                catchup = l+f+r
+              else
+                catchup = l < 0 and l or f
+                f = f/-2
+                r= r/2
+              end
+              catchup = catchup > 0 and catchup or 0
+
+              local block = 0
+              if original_dir == 0 then
+                block = forward/2
+              else
+                block = -1*forward/2
+              end
+
+              local data = {forward=f,right=r, lag=lag,catchup=catchup, block=block}
+              self.lanes["d"..direction_self]["i"..input_self]["l"..lane_index] = data
             end
-            catchup = catchup > 0 and catchup or 0
-            
-            local block = 0
-            if original_dir == 0 then
-              block = forward/2
-            else
-              block = -1*forward/2
-            end
-            
-            --local data = {s_lag = s_lag, d_lag=d_lag, forward=forward,right=right, lag=lag}
-            --local data = {forward=forward,right=s_lane, lag=lag,catchup=catchup}
-            local data = {forward=f,right=r, lag=lag,catchup=catchup, block=block,block2=block2}
-            self.lanes["d"..direction_self]["i"..input_self]["l"..lane_index] = data
           end
         end
       end
@@ -988,7 +988,6 @@ FARL = {
     self.lastPole, self.lastCheckPole = nil,nil
     self.lastCheckRail = nil
     self.ccNetPole = nil
-    self.recheckRails = {}
     self.maintenanceRail = nil
     self.maintenanceDir = nil
     self.protected = nil
@@ -1046,11 +1045,6 @@ FARL = {
     end
     self.maintenance = not self.maintenance
     self.settings.root = false
-  end,
-
-  resetPoleData = function(self)
-    self.recheckRails = {}
-    self.lastPole, self.lastCheckPole = nil,nil
   end,
 
   findLastRail = function(self, limit)
@@ -1364,7 +1358,7 @@ FARL = {
         railPos = self:fixDiagonalPos(rail)
       end
       offsets.pole.position = subPos(offsets.pole.position,railPos)
-      local bp = {direction=rail.direction, pole = offsets.pole, poleEntities = lamps}
+      local bp = {direction=rail.direction, pole = offsets.pole, poleEntities = lamps, lanes = {}}
       self.settings.bp[poleType][type] = bp
       saveBlueprint(self.driver, poleType, type, bp)
       self:print("Saved blueprint for "..type.." rail with "..poleType.. " pole")
@@ -1553,7 +1547,8 @@ FARL = {
     local s_lane = self.settings.activeBP.straight.lanes[lane_index]
     local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
     local catchup = self.lanes["d"..direction%2]["i"..input]["l"..lane_index].catchup
-    local block = self.lanes["d"..direction%2]["i"..input]["l"..lane_index].block
+    local bi = self.input == 0 and 2 or 0
+    local block = self.lanes["d"..traveldir%2]["i"..bi]["l"..lane_index].lag
     if catchup > 0 then
       local dir, last = direction, self.lanerails[lane_index]
       for i=1,catchup do
@@ -1582,32 +1577,11 @@ FARL = {
     local right = s_lane*2
     --left hand turns need to go back, moving right already moves the diagonal rail part
     local forward = input == 2 and (s_lane-d_lane)*2 or (d_lane-s_lane)*2
-    local bi = self.input == 0 and 2 or 0
-    
-    
-    block = 0
-    if traveldir % 2 == 1 then
-      block = forward-right/2
-    else
-      block = forward/-2
-    end
-    
-    block = self.lanes["d"..traveldir%2]["i"..bi]["l"..lane_index].lag
-    --block = block > 0 and block or 0
+
     --debugDump("l"..lane_index.." c:"..catchup.." b:"..block,true)
 
     new_curve.position = move_right_forward(rail.position, direction, right, forward)
-    local _, b = self:getRail(new_curve, traveldir,1)
-    --self.lastCurve.blocked[lane_index] = b
-
     self.lastCurve.blocked[lane_index] = block
-    local s_lag = forward/2
-    local d_lag = original_dir % 2 == 0 and forward+right or (forward+right)/2
-    local lag = self.input == 0 and forward+right or -1*(forward+right)
-    local data = {s_lag=s_lag, d_lag=d_lag,in_lag=lag}
-
-    --debugDump(data,true)
-
     self:prepareAreaForCurve(new_curve)
     local success, ent = self:genericPlace(new_curve)
     if not ent then
@@ -1623,8 +1597,6 @@ FARL = {
     local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
     local new_rail = {name=lastRail.name, type=lastRail.type,direction=lastRail.direction, force=lastRail.force, position=lastRail.position}
     local lane = self.lanes["d"..traveldir%2]["i0"]["l"..lane_index]
-    local lane0 = self.lanes["d"..traveldir%2]["i0"]["l"..lane_index]
-    local lane2 = self.lanes["d"..traveldir%2]["i2"]["l"..lane_index]
     local right = traveldir%2==1 and d_lane or s_lane
     local lag = math.min(lane.lag, self.lanes["d"..traveldir%2]["i2"]["l"..lane_index].lag)
 
@@ -1634,19 +1606,9 @@ FARL = {
     local blocked = false
     local block = 0
     if self.lastCurve.input then
-      --block = self.lanes["d"..self.lastCurve.direction%2]["i"..self.lastCurve.input]["l"..lane_index].block
       block = self.lastCurve.blocked[lane_index] + math.abs(lag)
       blocked = self.lastCurve.dist < block
     end
---    if self.lastCurve.blocked[lane_index] then
---      local same =  distance(diagonal_to_real_pos(self.lastCurve.blocked[lane_index]),diagonal_to_real_pos(new_rail))
---      if same == 0 then
---        self.lastCurve.blocked[lane_index] = false
---        blocked = false
---      else
---        blocked = true
---      end
---    end
     --self:flyingText2(self.lastCurve.dist.."<"..block,RED,true,new_rail.position)
     if not blocked then
 
@@ -1747,23 +1709,6 @@ FARL = {
       y = y*mul
     end
     return addPos({x=x,y=y}, rail.position)
-  end,
-
-  fixDiagonalParallelTracks = function(self, rail, dir)
-    --debugDump({railDir = rail.direction, tdir = dir},true)
-    local x,y = 0,0
-    local newDir = rail.direction
-    local data = {}
-    --data[raildir][traveldir] = {x,y,newDir}
-    data[1] = {[7] = {x=2,y=-2}}
-    data[3] = {[1] = {x=2,y=2}}
-    data[5] = {[3] = {x=-2,y=2}}
-    data[7] = {[5] = {x=-2,y=-2}}
-    local tmp = util.table.deepcopy(rail)
-    tmp.direction = (rail.direction + 4) % 8
-    local c = (data[rail.direction] and data[rail.direction][dir]) and data[rail.direction][dir] or {x=0,y=0}
-    tmp.position = addPos(c, rail.position)
-    return tmp
   end,
 
   calcPole = function(self,lastrail, traveldir)
@@ -2017,7 +1962,7 @@ FARL = {
           self:protect(entity)
         end
         self:removeItemFromCargo(signal.name, 1)
-        if self.settings.parallelTracks and self.lastCurve.dist > self.settings.parallelLag and not self.settings.root then
+        if self.settings.parallelTracks and not self.settings.root then
           self:placeParallelSignals(traveldir, entity)
         end
         return success, entity
@@ -2075,7 +2020,6 @@ FARL = {
   end,
 
   debugInfo = function(self)
-    self.recheckRails = self.recheckRails or {}
     local locomotive = self.locomotive
     local player = self.driver
     --if not self.active then self:activate() end

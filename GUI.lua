@@ -152,13 +152,9 @@ GUI = {
         or name == "poleEntities" or name == "parallelTracks" then
         psettings[name] = not psettings[name]
         if name == "poles" then
-          if not psettings[name] then
-            farl:resetPoleData()
-          else
-            if farl.active then
+            if psettings[name] and farl.active then
               farl:findLastPole()
             end
-          end
         end
       elseif name == "bridge" then
         psettings.bridge = not psettings.bridge
