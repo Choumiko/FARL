@@ -360,6 +360,18 @@ FARL = {
           end
           local dir, last = self:placeRails(nextRail, newTravelDir)
           if dir then
+            if self.maintenance and type(dir) == "number" then
+              newTravelDir = dir
+              nextRail = last
+              local diff = self.direction-newTravelDir
+              if diff == 0 then
+                self.input = 1
+              elseif diff > 0 then
+                self.input = 2
+              elseif diff < 0 then
+                self.input = 0
+              end
+            end
             if not last.position and not last.name then
               self:deactivate({"msg-no-entity"})
               return
@@ -437,7 +449,7 @@ FARL = {
 
             if self.settings.signals and not self.settings.root then
               self.signalCount = self.signalCount + get_signal_weight(last,self.settings)
-              if self.getCargoCount("rail-signal") > 0 then
+              if self:getCargoCount("rail-signal") > 0 then
                 if self:placeSignal(newTravelDir,nextRail) then self.signalCount = 0 end
               else
                 self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
@@ -463,19 +475,31 @@ FARL = {
       --debugDump(path[i].rail.position,true)
     end
   end,
+  
+  createBoundingBox = function(self, rail, direction)
+    local bb = direction%2 == 1 and self.settings.activeBP.diagonal.boundingBox or self.settings.activeBP.straight.boundingBox
+    local realpos = diagonal_to_real_pos(rail)
+    local area = {
+      move_right_forward(realpos,direction,bb.tl.x,bb.tl.y),
+      move_right_forward(realpos, direction,bb.br.x,bb.br.y)}
+    local tl = {x=math.min(area[1].x,area[2].x),y=math.min(area[1].y,area[2].y)}
+    local br = {x=math.max(area[1].x,area[2].x),y=math.max(area[1].y,area[2].y)}
+    return {tl, br}
+  end,
+  
   --prepare an area for entity so it can be placed
-  prepareArea = function(self,entity,range)
+  prepareArea = function(self,entity,range, force)
     local pos = entity.position
     local area = (type(range) == "table") and range or false
     local range = (type(range) ~= "number") and 1.5 or false
     area = area and area or expandPos(pos,range)
-    if not self:genericCanPlace(entity) then
-      self:removeTrees(area)
-      self:pickupItems(area)
-      self:removeStone(area)
-    else
-      return true
-    end
+    --if force or not self:genericCanPlace(entity) then
+    self:removeTrees(area)
+    self:pickupItems(area)
+    self:removeStone(area)
+    --else
+    --return true
+    --end
     if entity and not self:genericCanPlace(entity) then
       self:fillWater(area)
     end
@@ -518,7 +542,6 @@ FARL = {
 
     if removeStone then
       local found = false
-
       for _, entity in pairs(self.surface.find_entities_filtered{area = area, name = "stone-rock"}) do
         found = true
         entity.die()
@@ -740,6 +763,7 @@ FARL = {
   findNeighbours = function(self, rail, travelDir)
     local paths = {}
     local found = false
+    if not travelDir then error("no travelDir", 2) end
     for i=0,2 do
       local newTravel, nrail = self:getRail(rail, travelDir, i)
       if type(newTravel) == "number" then
@@ -796,7 +820,7 @@ FARL = {
           break
         end
       end
-      local maintenance = self.maintenance and 10 or false
+      local maintenance = self.maintenance and 5 or false
       self.direction = self:calcTrainDir()
       self.lastrail = self:findLastRail(maintenance)
       if not self.lastrail then
@@ -806,7 +830,6 @@ FARL = {
 
       local bps = self.settings.activeBP
       local bb = self.lastrail.direction%2==0 and bps.straight.boundingBox or bps.diagonal.boundingBox
-      debugDump(bb,true)
       self:showArea(self.lastrail, self.direction, {bb.tl,bb.br}, 4)
       self.path = self:get_rails_below_train()
       if self.lastrail.name == self.settings.rail.curved then
@@ -825,10 +848,24 @@ FARL = {
       for i=2,#path do
         table.insert(self.path, 1, path[i])
       end
+      if self.maintenance and #self.path >= 5 then
+        self.maintenanceRail = self.path[1].rail
+        self.maintenanceDir = self.path[1].travel_dir
+        self.lastrail = self.path[2].rail
+        self.direction = self.path[2].travel_dir
+        self:flyingText2("L", RED, true, self.lastrail.position)
+      else
+        if self.maintenance then
+          self:deactivate({"msg-no-path-maintenance"})
+          return
+        end
+      end
+      self:findLastPole(self.lastrail)
+      self:protect(self.lastPole)
       --self:show_path()
       local last_signal, signal_rail = false, false
       local signalWeight = 1
-      local has_signal = self.getCargoCount("rail-signal") > 0
+      local has_signal = self:getCargoCount("rail-signal") > 0
       for i=1,#self.path,1 do
         local rail = self.path[i].rail
         local dir = self.path[i].travel_dir
@@ -846,7 +883,6 @@ FARL = {
           end
         end
       end
-      self:findLastPole(self.lastrail)
       if last_signal and signal_rail then
         self:flyingText2( "SR", GREEN, true, signal_rail.position)
         self:print(self.signalCount)
@@ -931,6 +967,18 @@ FARL = {
           end
         end
       end
+      --create curve blueprint
+      local c = 2
+      local main = {entity_number=1, direction=1,name="curved-rail",position={x=2,y=2}}
+      local bp_entities = {main}
+      for k, lane in pairs(self.lanes["d0"]["i2"]) do
+        local data= {entity_number=c, direction=1,name="curved-rail",
+          position={x=main.position.x+lane.right*2,
+                    y=main.position.y-lane.forward*2}}
+        c = c+1
+        table.insert(bp_entities, data)
+      end
+      self.curveBP = bp_entities
       self.lanerails ={}
       self.active = true
     end)
@@ -1237,8 +1285,6 @@ FARL = {
             end
           end
           if mainRail then
-            local min_x,min_y = math.huge,math.huge
-            local max_x, max_y = -1*math.huge,-1*math.huge
             local lamps = {}
             for _, l in ipairs(offsets.poleEntities) do
               if l.name ~= "wooden-chest" then
@@ -1296,8 +1342,12 @@ FARL = {
             end
             local tl = subPos(box.tl, diagonal_to_real_pos(mainRail))
             local br = subPos(box.br, diagonal_to_real_pos(mainRail))
-            tl.y = tl.y > 1 and tl.y or 1
-            br.y = br.y < -0.5 and tl.y or -0.5
+            --forward
+            tl.y = tl.y > 1.5 and tl.y or 1.5
+            br.y = br.y < -1 and tl.y or -1
+            --right
+            --tl.x = tl.x - 1
+            --br.x = br.x + 1
             local bp = {
               mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps,
               rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes}
@@ -1380,6 +1430,7 @@ FARL = {
     local newDir = nextRail.direction
     local newPos = nextRail.position
     local newRail = {name = nextRail.name, position = newPos, direction = newDir}
+
     if newRail.name == self.settings.rail.curved then
       self:prepareAreaForCurve(newRail)
     end
@@ -1387,9 +1438,10 @@ FARL = {
     local bp =  self.settings.activeBP[rtype]
     local mainRail = bp.mainRail
     local bb = bp.boundingBox
-
-    self:prepareArea(newRail, {addPos(bb.tl,newRail.position), addPos(bb.br, newRail.position)})
-    local canplace = self:prepareArea(newRail)
+    local area = self:createBoundingBox(newRail, newTravelDir)
+    local canplace = self:prepareArea(newRail, area)
+    --canplace = self:prepareArea(newRail)
+    self:showArea(newRail, newTravelDir, area, 2)
     local hasRail = self:getCargoCount(newRail.name) > 0
     if canplace and hasRail then
       newRail.force = self.locomotive.force
@@ -1441,10 +1493,12 @@ FARL = {
   end,
 
   protect = function(self, ent)
-    self.protected = self.protected or {}
-    self.protectedCount = self.protectedCount or 0
-    self.protected[protectedKey(ent)] = ent
-    self.protectedCount = self.protectedCount + 1
+    if self.maintenance then
+      self.protected = self.protected or {}
+      self.protectedCount = self.protectedCount or 0
+      self.protected[protectedKey(ent)] = ent
+      self.protectedCount = self.protectedCount + 1
+    end
   end,
 
   isProtected = function(self, ent)
@@ -1560,7 +1614,6 @@ FARL = {
       local dir, last = direction, self.lanerails[lane_index]
       for i=1,catchup do
         dir, last = self:getRail(last, dir, 1)
-        self:prepareArea(last)
         local success, ent = self:genericPlace(last)
         if not ent then
           self:print("Failed to create track @"..pos2Str(last.position))
@@ -1619,7 +1672,7 @@ FARL = {
     --self:flyingText2(self.lastCurve.dist.."<"..block,RED,true,new_rail.position)
     if not blocked then
 
-      self:prepareArea(new_rail)
+      --self:prepareArea(new_rail)
       local success, ent = self:genericPlace(new_rail)
       --self.lanes[lane_index].lastrail = ent or new_rail
       if not ent then
@@ -2126,9 +2179,9 @@ FARL = {
   showArea = function(self, rail, direction, area, duration)
     local bb = {tl=area[1],br=area[2]}
     for right=bb.tl.x,bb.br.x do
-      for forward=bb.br.y,bb.tl.y do
-        local pos = move_right_forward(diagonal_to_real_pos(rail),direction,right,forward)
-        self:create_overlay(pos,duration)
+      for forward=bb.tl.y,bb.br.y do
+        --local pos = move_right_forward(diagonal_to_real_pos(rail),direction,right,forward)
+        self:create_overlay({x=right,y=forward},duration)
       end
     end
   end

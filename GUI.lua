@@ -278,6 +278,9 @@ GUI = {
         local row3 = GUI.add(settings, {type="table", name="row4", colspan=2})
         GUI.addButton(row3, {name="blueprint", caption={"stg-blueprint-read"}}, GUI.readBlueprint)
         GUI.addButton(row3, {name="bpClear", caption={"stg-blueprint-clear"}}, GUI.clearBlueprints)
+        GUI.add(settings, {type="label", caption={"stg-blueprint-write"}})
+        local row4 = GUI.add(settings, {type="table", name="row5", colspan=2})
+        GUI.addButton(row4, {name="blueprintCurve", caption={"stg-blueprint-curve"}}, GUI.createBlueprint)
       end
     end,
 
@@ -340,9 +343,29 @@ GUI = {
       if global.savedBlueprints[player.name] then
         global.savedBlueprints[player.name] = nil
       end
-      farl:print("Cleared blueprints")
+      farl:print({"msg-bp-cleared"})
       GUI.destroyGui(player)
       GUI.createGui(player)
+    end,
+    
+    createBlueprint = function(event, farl, player)
+      local blueprints = GUI.findBlueprintsInHotbar(player)
+      local bp = false
+      if blueprints ~= nil then
+        for i, blueprint in ipairs(blueprints) do
+          if not blueprint.is_blueprint_setup() then
+            bp = blueprint
+            break
+          end
+        end
+        if bp then
+          local icons = {{index = 2, name = "farl"},[0] = {index = 1, name = "curved-rail"}}
+          bp.set_blueprint_entities(util.table.deepcopy(farl.curveBP))
+          bp.blueprint_icons = icons
+        else
+          farl:print({"msg-no-empty-blueprint"})
+        end
+      end
     end,
 
     mirror_bp = function(event, farl, player)
@@ -395,5 +418,6 @@ GUI.callbacks = {
   ccNetWires = GUI.toggleWires,
   blueprint = GUI.readBlueprint,
   bpClear = GUI.clearBlueprints,
+  blueprintCurve = GUI.createBlueprint,
   mirror_bp = GUI.mirror_bp
 }
