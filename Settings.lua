@@ -18,6 +18,24 @@ defaultsStraight = {
   pole = {name = "big-electric-pole", position = {x = 3, y = -1}},
   rails = {}, signals = {}, lanes = {},
   boundingBox = {br = {x = 3, y = 0.5}, tl = {x = -0.5, y = -1}}}
+  
+defaultsCurve = {
+  left = {
+    direction = 0,
+    poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
+    pole = {name = "big-electric-pole", position = {x = 4, y = 2}},
+    rails = {}, signals = {}, lanes = {},
+    boundingBox = {br = {x=4.5,y=3.5}, tl = {x=-2.5,y=-3.5}}
+  },
+  
+  right = {
+    direction = 1,
+    poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
+    pole = {name = "big-electric-pole", position = {x = 2, y = 2}},
+    rails = {}, signals = {}, lanes = {},
+    boundingBox = {br = {x=3.5,y=4.5}, tl = {x=-1.5,y=-3.5}}
+  }
+}
 
 defaultsMediumDiagonal = {
   direction = 7,
@@ -33,12 +51,30 @@ defaultsMediumStraight = {
   rails = {}, signals = {}, lanes = {},
   boundingBox = {br = {x = 2.5, y = 0.5}, tl = {x = -1.5, y = -1}}}
 
+defaultsCurveMedium = {
+  left = {
+    direction = 0,
+    poleEntities = {{name = "small-lamp", position = {x = 0, y = 1}}},
+    pole = {name = "medium-electric-pole", position = {x = 3.5, y = 1.5}},
+    rails = {}, signals = {}, lanes = {},
+    boundingBox = {br = {x=3.5,y=3.5}, tl = {x=-2.5,y=-3.5}}
+  },
+  
+  right = {
+    direction = 1,
+    poleEntities = {{name = "small-lamp", position = {x = 0, y = 1}}},
+    pole = {name = "medium-electric-pole", position = {x = 1.5, y = 1.5}},
+    rails = {}, signals = {}, lanes = {},
+    boundingBox = {br = {x=2.5,y=3.5}, tl = {x=-1.5,y=-3.5}}
+  }
+}
+
 defaultSettings =
   {
     activeBP = {},
     bp = {
-      medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight},
-      big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}},
+      medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight, curves=defaultsCurveMedium},
+      big=    {diagonal=defaultsDiagonal, straight=defaultsStraight, curves=defaultsCurve}},
     ccNet = false,
     ccWires = 1,
     collectWood = true,

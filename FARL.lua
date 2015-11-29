@@ -34,6 +34,7 @@ signalOffset =
       [5]={pos={x=0.5,y=-0.5}, dir=3}
     },
   }
+-- [traveldir%2][raildir]
 signalOffsetCurves =
   {
     [0] = {
@@ -471,11 +472,12 @@ FARL = {
 
   show_path = function(self)
     for i=1, #self.path do
-      self:flyingText(i..":"..self.path[i].travel_dir, RED, true, self.path[i].rail.position)
+      self:flyingText2(i, RED, true, self.path[i].rail.position)
+      --self:flyingText(i..":"..self.path[i].travel_dir, RED, true, self.path[i].rail.position)
       --debugDump(path[i].rail.position,true)
     end
   end,
-  
+
   createBoundingBox = function(self, rail, direction)
     local bb = direction%2 == 1 and self.settings.activeBP.diagonal.boundingBox or self.settings.activeBP.straight.boundingBox
     local realpos = diagonal_to_real_pos(rail)
@@ -486,7 +488,7 @@ FARL = {
     local br = {x=math.max(area[1].x,area[2].x),y=math.max(area[1].y,area[2].y)}
     return {tl, br}
   end,
-  
+
   --prepare an area for entity so it can be placed
   prepareArea = function(self,entity,range, force)
     local pos = entity.position
@@ -841,13 +843,14 @@ FARL = {
       local count = 0
       local path = {}
       while prev and count < 20 do
-        table.insert(path, {rail=prev, travel_dir=oppositedirection(prev_dir), input = 1})
+        table.insert(path, 1, {rail=prev, travel_dir=oppositedirection(prev_dir), input = 1})
         prev, prev_dir = self:get_connected_rail(prev, true, prev_dir)
         count = count + 1
       end
-      for i=2,#path do
+      for i=#path,2,-1 do
         table.insert(self.path, 1, path[i])
       end
+      self:show_path()
       if self.maintenance and #self.path >= 5 then
         self.maintenanceRail = self.path[1].rail
         self.maintenanceDir = self.path[1].travel_dir
@@ -864,23 +867,28 @@ FARL = {
       self:protect(self.lastPole)
       --self:show_path()
       local last_signal, signal_rail = false, false
-      local signalWeight = 1
-      local has_signal = self:getCargoCount("rail-signal") > 0
-      for i=1,#self.path,1 do
+      local signal_index = false
+      for i=#self.path,1,-1 do
         local rail = self.path[i].rail
         local dir = self.path[i].travel_dir
         last_signal, signal_rail = self:find_signal_rail(rail, dir)
         if last_signal then
           self.signalCount = 0
           self:flyingText2( "S", GREEN, true, last_signal.position)
+          signal_index = i
+          break
         end
-        if self.settings.signals and not self.settings.root then
-          self.signalCount = self.signalCount + get_signal_weight(rail,self.settings)
-          if has_signal then
+      end
+      if signal_index and self.settings.signals and not self.settings.root then
+        for i=signal_index+1,#self.path do
+          local rail = self.path[i].rail
+          local dir = self.path[i].travel_dir
+          if self:getCargoCount("rail-signal") > 0 then
             if self:placeSignal(dir,rail) then self.signalCount = 0 end
           else
             self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
           end
+          self.signalCount = self.signalCount + get_signal_weight(rail,self.settings)
         end
       end
       if last_signal and signal_rail then
@@ -961,20 +969,20 @@ FARL = {
                 block = -1*forward/2
               end
 
-              local data = {forward=f,right=r, lag=lag,catchup=catchup, block=block}
+              local data = {forward=forward,right=right, lag=lag,catchup=catchup, block=block}
               self.lanes["d"..direction_self]["i"..input_self]["l"..lane_index] = data
             end
           end
         end
       end
       --create curve blueprint
-      local c = 2
+      local c = 3
       local main = {entity_number=1, direction=1,name="curved-rail",position={x=2,y=2}}
-      local bp_entities = {main}
+      local signal = {entity_number=2, direction=4,name="rail-chain-signal",position=addPos(main.position, signalOffsetCurves[0][1].pos)}
+      local bp_entities = {main, signal}
       for k, lane in pairs(self.lanes["d0"]["i2"]) do
         local data= {entity_number=c, direction=1,name="curved-rail",
-          position={x=main.position.x+lane.right*2,
-                    y=main.position.y-lane.forward*2}}
+          position={x=main.position.x+lane.right,y=main.position.y-lane.forward}}
         c = c+1
         table.insert(bp_entities, data)
       end
@@ -1010,7 +1018,7 @@ FARL = {
     --self:flyingText2("b", RED, true, path[1].position)
     local count = 0
     while next and count < 20 and next ~= front do
-      --self:flyingText2("n", RED, true, next.position)
+      self:flyingText2("n", RED, true, next.position)
       table.insert(path, {rail = next, travel_dir = dir})
       next, dir = self:get_connected_rail(next, true, dir)
       count = count + 1
@@ -1244,12 +1252,18 @@ FARL = {
             offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
           elseif e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
             offsets.pole = {name = e[i].name, direction = dir, position = e[i].position}
-          elseif e[i].name == "straight-rail" then
+          elseif e[i].name == "straight-rail" or e[i].name == "curved-rail" then
             rails = rails + 1
             if not bpType then
-              bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
+              if e[i].name == "straight-rail" then
+                bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
+              else
+                bpType = (e[i].name == "curved-rail" and dir == 1) and "curve" or false
+              end
             end
-            if (bpType == "diagonal" and (dir == 3 or dir == 7)) or (bpType == "straight" and (dir == 0 or dir == 4)) then
+            if  (bpType == "diagonal" and (dir == 3 or dir == 7)) or
+              (bpType == "straight" and (dir == 0 or dir == 4)) or
+              (bpType == "curve" and dir == 1) then
               table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position, type=e[i].name})
             else
               self:print({"msg-bp-rail-direction"})
@@ -1261,12 +1275,18 @@ FARL = {
             table.insert(offsets.poleEntities, {name = e[i].name, direction = dir, position = e[i].position})
           end
         end
+        if rails == 1 and not offsets.chain then
+          local rail = offsets.rails[1]
+          local traveldir = (bpType == "straight" or bpType == "curve") and 0 or 1
+          local c = rail.name=="straight-rail" and signalOffset[traveldir][rail.direction] or signalOffsetCurves[0][rail.direction%2]
+          offsets.chain = {direction = c.dir, name = "rail-chain-signal", position = addPos(rail.position, c.pos)}
+        end
         if offsets.chain and offsets.pole and bpType then
           local mainRail = false
           local moved_main_rail = false
           for i,rail in pairs(offsets.rails) do
-            local traveldir = (bpType == "straight") and 0 or 1
-            local signalOff = signalOffset[traveldir][rail.direction]
+            local traveldir = (bpType == "straight" or bpType == "curve") and 0 or 1
+            local signalOff = bpType == "curve" and signalOffsetCurves[traveldir][rail.direction] or signalOffset[traveldir][rail.direction]
             local signalDir = signalOff.dir
             signalOff = signalOff.pos
             --local relChain = subPos(offsets.chain.position,rail.position)
@@ -1306,34 +1326,36 @@ FARL = {
             end
             local rails = {}
             local lanes = {}
-            local known_rails = {}
-            for _, l in pairs(offsets.rails) do
-              if not l.main then
-                local lane_distance = false
-                local tmp =
-                  {name=l.name, position=subPos(l.position, mainRail.position),
-                    direction = l.direction, type=l.name}
-                local move_dir = tmp.position.y < 0 and 1 or 5
-                if bpType == "diagonal" then
-                  lane_distance = subPos(diagonal_to_real_pos(l),diagonal_to_real_pos(mainRail))
-                  lane_distance = lane_distance.x + lane_distance.y
-                else
-                  lane_distance = tmp.position.x
+            if bpType ~= "curve" then
+              local known_rails = {}
+              for _, l in pairs(offsets.rails) do
+                if not l.main then
+                  local lane_distance = false
+                  local tmp =
+                    {name=l.name, position=subPos(l.position, mainRail.position),
+                      direction = l.direction, type=l.name}
+                  local move_dir = tmp.position.y < 0 and 1 or 5
+                  if bpType == "diagonal" then
+                    lane_distance = subPos(diagonal_to_real_pos(l),diagonal_to_real_pos(mainRail))
+                    lane_distance = lane_distance.x + lane_distance.y
+                  else
+                    lane_distance = tmp.position.x
+                  end
+                  lane_distance= lane_distance/2
+                  if not known_rails[lane_distance] and lane_distance ~= 0 then
+                    table.insert(lanes, lane_distance)
+                    known_rails[lane_distance] = true
+                  end
+                  local altRail, dir
+                  if l.direction % 2 == 1 and mainRail.direction == l.direction then
+                    dir, altRail = self:getRail(tmp, move_dir, 1)
+                    tmp = altRail
+                  end
+                  table.insert(rails, tmp)
                 end
-                lane_distance= lane_distance/2
-                if not known_rails[lane_distance] and lane_distance ~= 0 then
-                  table.insert(lanes, lane_distance)
-                  known_rails[lane_distance] = true
-                end
-                local altRail, dir
-                if l.direction % 2 == 1 and mainRail.direction == l.direction then
-                  dir, altRail = self:getRail(tmp, move_dir, 1)
-                  tmp = altRail
-                end
-                table.insert(rails, tmp)
               end
+              table.sort(lanes)
             end
-            table.sort(lanes)
             local signals = {}
             for _, l in pairs(offsets.signals) do
               table.insert(signals,
@@ -1343,11 +1365,17 @@ FARL = {
             local tl = subPos(box.tl, diagonal_to_real_pos(mainRail))
             local br = subPos(box.br, diagonal_to_real_pos(mainRail))
             --forward
-            tl.y = tl.y > 1.5 and tl.y or 1.5
-            br.y = br.y < -1 and tl.y or -1
+            tl.y = tl.y < -1.5 and tl.y or -1.5
+            br.y = br.y > 1 and br.y or 1
+            if bpType == "curve" then
+              tl.y = tl.y < -3.5 and tl.y or -3.5
+              br.y = br.y > 3.5 and br.y or 3.5
+            end
             --right
-            --tl.x = tl.x - 1
+            tl.x = tl.x < 0 and tl.x or -0.5
+            br.x = br.x > 0 and br.x or 0.5
             --br.x = br.x + 1
+            debugDump({tl=tl,br=br},true)
             local bp = {
               mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps,
               rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes}
@@ -1363,9 +1391,7 @@ FARL = {
             self:print({"msg-bp-chain-direction"})
           end
         else
-          if rails <= 1 then
-            self:parseBlueprint(e, concrete)
-          elseif not bpType then
+          if not bpType then
             self:print({"msg-bp-rail-direction"})
           elseif not offsets.chain then
             self:print({"msg-bp-chain-missing"})
@@ -1374,55 +1400,6 @@ FARL = {
           end
         end
       end
-    end
-  end,
-
-  parseBlueprint = function(self, bpEntities, concrete)
-    local e = bpEntities
-    local offsets = {pole=false, poleEntities={}, concrete={}}
-    local rail
-
-    for i=1,#e do
-      if e[i].name == "straight-rail" or e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
-        if not rail and e[i].name == "straight-rail" then
-          local dir = e[i].direction or 0
-          rail = {direction = dir, name = e[i].name, position = e[i].position}
-        end
-        if e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
-          offsets.pole = {name = e[i].name, direction = e[i].direction, position = e[i].position}
-        end
-      else
-        table.insert(offsets.poleEntities, {name = e[i].name, direction = e[i].direction, position = e[i].position})
-      end
-    end
-    if rail and offsets.pole then
-      local type = (rail.direction == 0 or rail.direction == 4) and "straight" or "diagonal"
-      if type == "diagonal" and not (rail.direction == 3 or rail.direction == 7) then
-        self:print({"msg-invalid-rail"})
-        return
-      end
-      if concrete then
-        local off = {x=0.5,y=0.5}
-        for _, c in pairs(concrete) do
-          table.insert(offsets.concrete, {name=c.name, position=subPos(subPos(c.position, off), mainRail.position)})
-        end
-      end
-      local lamps = {}
-      for _, l in ipairs(offsets.poleEntities) do
-        table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position)})
-      end
-      local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
-      local railPos = rail.position
-      if type == "diagonal" then
-        railPos = self:fixDiagonalPos(rail)
-      end
-      offsets.pole.position = subPos(offsets.pole.position,railPos)
-      local bp = {direction=rail.direction, pole = offsets.pole, poleEntities = lamps, lanes = {}}
-      self.settings.bp[poleType][type] = bp
-      saveBlueprint(self.driver, poleType, type, bp)
-      self:print("Saved blueprint for "..type.." rail with "..poleType.. " pole")
-    else
-      self:print({"", {"msg-bp-no-rail"}, " ",j})
     end
   end,
 
@@ -1441,7 +1418,7 @@ FARL = {
     local area = self:createBoundingBox(newRail, newTravelDir)
     local canplace = self:prepareArea(newRail, area)
     --canplace = self:prepareArea(newRail)
-    self:showArea(newRail, newTravelDir, area, 2)
+    --self:showArea(newRail, newTravelDir, area, 2)
     local hasRail = self:getCargoCount(newRail.name) > 0
     if canplace and hasRail then
       newRail.force = self.locomotive.force
@@ -2178,8 +2155,9 @@ FARL = {
 
   showArea = function(self, rail, direction, area, duration)
     local bb = {tl=area[1],br=area[2]}
-    for right=bb.tl.x,bb.br.x do
-      for forward=bb.tl.y,bb.br.y do
+    local min_x,min_y,max_x,max_y
+    for right=math.min(bb.tl.x,bb.br.x),math.max(bb.tl.x,bb.br.x) do
+      for forward=math.min(bb.tl.y,bb.br.y),math.max(bb.tl.y,bb.br.y) do
         --local pos = move_right_forward(diagonal_to_real_pos(rail),direction,right,forward)
         self:create_overlay({x=right,y=forward},duration)
       end
