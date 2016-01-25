@@ -807,6 +807,76 @@ FARL = {
     return found
   end,
 
+  calculate_rail_data = function(self)
+    local curves = {
+      [0]={ [0]={name="curved-rail",type="curved-rail", direction=0,position={x=0,y=0}},
+        [2]={name="curved-rail",type="curved-rail", direction=1,position={x=2,y=2}}},
+      [1]={ [0]={name="curved-rail",type="curved-rail", direction=3,position={x=1,y=1}},
+        [2]={name="curved-rail",type="curved-rail", direction=3,position={x=1,y=1}}}}
+    for _, direction_self in pairs({0,1}) do
+      self.lanes["d"..direction_self] = {}
+      for _1, input_self in pairs({0,2}) do
+        self.lanes["d"..direction_self]["i"..input_self] = {}
+        local rail = curves[direction_self][input_self]
+        local straight_lanes = self.settings.activeBP.straight.lanes
+        for lane_index, lane in pairs(straight_lanes) do
+          local direction = direction_self
+          local original_dir = direction
+          local s_lane = self.settings.activeBP.straight.lanes[lane_index]
+          local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
+          local input = input_self
+          -- invert direction, input, distances for diagonal rails
+          if direction%2 == 1 then
+            local input2dir = {[0]=-1,[1]=0,[2]=1}
+            direction = oppositedirection((direction+input2dir[input]) % 8)
+            input = input == 2 and 0 or 2
+            s_lane = -1*s_lane
+            d_lane = -1*d_lane
+          end
+
+          local new_curve = {name=rail.name, type=rail.type, direction=rail.direction, force=rail.force}
+          local right = original_dir % 2 == 0 and s_lane*2 or s_lane
+          --left hand turns need to go back, moving right already moves the diagonal rail part
+          local forward = input == 2 and (s_lane-d_lane)*2 or (d_lane-s_lane)*2
+
+          new_curve.position = move_right_forward(rail.position, direction, right, forward)
+          local lag = forward/2
+          local catchup = 0
+          local l,f,r = lag, forward, right
+
+          if original_dir == 1 then
+            right = -1*right
+            lag = 2*right+d_lane
+            lag = input == 2 and lag or -1*lag
+            forward = -1*forward
+
+            forward = forward/2
+            l,f,r = lag,-1*s_lane,forward
+            if input_self == 2 then
+              f=-1*f
+            end
+            catchup = l+f+r
+          else
+            catchup = l < 0 and l or f
+            f = f/-2
+            r= r/2
+          end
+          catchup = catchup > 0 and catchup or 0
+
+          local block = 0
+          if original_dir == 0 then
+            block = forward/2
+          else
+            block = -1*forward/2
+          end
+
+          local data = {forward=forward,right=right, lag=lag,catchup=catchup, block=block}
+          self.lanes["d"..direction_self]["i"..input_self]["l"..lane_index] = data
+        end
+      end
+    end
+  end,
+
   activate = function(self)
     local status, err = pcall(function()
       self.lastrail = false
@@ -834,6 +904,7 @@ FARL = {
       local bb = self.lastrail.direction%2==0 and bps.straight.boundingBox or bps.diagonal.boundingBox
       self:showArea(self.lastrail, self.direction, {bb.tl,bb.br}, 4)
       self.path = self:get_rails_below_train()
+      --self:show_path()
       if self.lastrail.name == self.settings.rail.curved then
         self:deactivate({"msg-error-curves"}, true)
         return
@@ -842,21 +913,25 @@ FARL = {
       local prev_dir = oppositedirection(self.path[1].travel_dir)
       local count = 0
       local path = {}
-      while prev and count < 20 do
+      while prev and count < 15 do
         table.insert(path, 1, {rail=prev, travel_dir=oppositedirection(prev_dir), input = 1})
         prev, prev_dir = self:get_connected_rail(prev, true, prev_dir)
+        --self:flyingText(count, GREEN, true, prev.position)
         count = count + 1
       end
-      for i=#path,2,-1 do
+      local s = #path-1
+      for i=s,2,-1 do
         table.insert(self.path, 1, path[i])
+        --self:flyingText(i, YELLOW, true, path[i].rail.position)
       end
       self:show_path()
+      self:print(#self.path)
       if self.maintenance and #self.path >= 5 then
-        self.maintenanceRail = self.path[1].rail
-        self.maintenanceDir = self.path[1].travel_dir
-        self.lastrail = self.path[2].rail
-        self.direction = self.path[2].travel_dir
-        self:flyingText2("L", RED, true, self.lastrail.position)
+        local c = #self.path
+        self.maintenanceRail = self.path[c].rail
+        self.maintenanceDir = self.path[c].travel_dir
+        self.lastrail = self.path[c-1].rail
+        self.direction = self.path[c-1].travel_dir
       else
         if self.maintenance then
           self:deactivate({"msg-no-path-maintenance"})
@@ -874,10 +949,16 @@ FARL = {
         last_signal, signal_rail = self:find_signal_rail(rail, dir)
         if last_signal then
           self.signalCount = 0
+          self.maintenanceRail = rail
+          self.maintenanceDir = dir
           self:flyingText2( "S", GREEN, true, last_signal.position)
           signal_index = i
           break
         end
+      end
+      if self.maintenance and self.maintenanceRail then
+        self:flyingText2("M", RED, true, self.maintenanceRail.position)
+        self:flyingText2("L", RED, true, self.lastrail.position)
       end
       if signal_index and self.settings.signals and not self.settings.root then
         for i=signal_index+1,#self.path do
@@ -892,12 +973,11 @@ FARL = {
         end
       end
       if last_signal and signal_rail then
-        self:flyingText2( "SR", GREEN, true, signal_rail.position)
+        --self:flyingText2( "SR", GREEN, true, signal_rail.position)
         self:print(self.signalCount)
       end
-      self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
+      --self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
 
-      --calculate lane lag (number of tracks the lanes have to stay behind for curves to fit)
       local bps = self.settings.activeBP
       local diag_lanes = bps.diagonal.lanes
       local straight_lanes = bps.straight.lanes
@@ -907,73 +987,10 @@ FARL = {
         self:deactivate({"msg-error-track-mismatch"})
         return
       end
+
+      -- lane lag, curve calculations
       if diag_lanes and straight_lanes then
-        local curves = {
-          [0]={ [0]={name="curved-rail",type="curved-rail", direction=0,position={x=0,y=0}},
-            [2]={name="curved-rail",type="curved-rail", direction=1,position={x=2,y=2}}},
-          [1]={ [0]={name="curved-rail",type="curved-rail", direction=3,position={x=1,y=1}},
-            [2]={name="curved-rail",type="curved-rail", direction=3,position={x=1,y=1}}}}
-        for _, direction_self in pairs({0,1}) do
-          self.lanes["d"..direction_self] = {}
-          for _1, input_self in pairs({0,2}) do
-            self.lanes["d"..direction_self]["i"..input_self] = {}
-            local rail = curves[direction_self][input_self]
-            for lane_index, lane in pairs(straight_lanes) do
-              local direction = direction_self
-              local original_dir = direction
-              local s_lane = self.settings.activeBP.straight.lanes[lane_index]
-              local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
-              local input = input_self
-              -- invert direction, input, distances for diagonal rails
-              if direction%2 == 1 then
-                local input2dir = {[0]=-1,[1]=0,[2]=1}
-                direction = oppositedirection((direction+input2dir[input]) % 8)
-                input = input == 2 and 0 or 2
-                s_lane = -1*s_lane
-                d_lane = -1*d_lane
-              end
-
-              local new_curve = {name=rail.name, type=rail.type, direction=rail.direction, force=rail.force}
-              local right = original_dir % 2 == 0 and s_lane*2 or s_lane
-              --left hand turns need to go back, moving right already moves the diagonal rail part
-              local forward = input == 2 and (s_lane-d_lane)*2 or (d_lane-s_lane)*2
-
-              new_curve.position = move_right_forward(rail.position, direction, right, forward)
-              local lag = forward/2
-              local catchup = 0
-              local l,f,r = lag, forward, right
-
-              if original_dir == 1 then
-                right = -1*right
-                lag = 2*right+d_lane
-                lag = input == 2 and lag or -1*lag
-                forward = -1*forward
-
-                forward = forward/2
-                l,f,r = lag,-1*s_lane,forward
-                if input_self == 2 then
-                  f=-1*f
-                end
-                catchup = l+f+r
-              else
-                catchup = l < 0 and l or f
-                f = f/-2
-                r= r/2
-              end
-              catchup = catchup > 0 and catchup or 0
-
-              local block = 0
-              if original_dir == 0 then
-                block = forward/2
-              else
-                block = -1*forward/2
-              end
-
-              local data = {forward=forward,right=right, lag=lag,catchup=catchup, block=block}
-              self.lanes["d"..direction_self]["i"..input_self]["l"..lane_index] = data
-            end
-          end
-        end
+        self:calculate_rail_data()
       end
       --create curve blueprint
       local c = 3
@@ -990,6 +1007,15 @@ FARL = {
       self.lanerails ={}
       self.active = true
     end)
+    if not status then
+      self:deactivate({"", {"msg-error-activating"}, err})
+    end
+  end,
+
+  activate_maintenance = function(self)
+    local status, err = pcall(function()
+
+      end)
     if not status then
       self:deactivate({"", {"msg-error-activating"}, err})
     end
@@ -1015,10 +1041,10 @@ FARL = {
     local front = self:rail_below_train()
     local next, dir = behind, self.direction
     local path = {}
-    --self:flyingText2("b", RED, true, path[1].position)
+    --self:flyingText2("b", RED, true, front.position)
     local count = 0
     while next and count < 20 and next ~= front do
-      self:flyingText2("n", RED, true, next.position)
+      --self:flyingText2("n", RED, true, next.position)
       table.insert(path, {rail = next, travel_dir = dir})
       next, dir = self:get_connected_rail(next, true, dir)
       count = count + 1
@@ -1123,7 +1149,7 @@ FARL = {
       count = count + 1
     end
     if last then
-      self:flyingText2({"text-front"}, RED, true, last.position)
+    --self:flyingText2({"text-front"}, RED, true, last.position)
     end
     return last
   end,
