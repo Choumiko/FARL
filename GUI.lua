@@ -337,8 +337,8 @@ GUI = {
     clearBlueprints = function(event, farl, player)
       local psettings = Settings.loadByPlayer(player)
       psettings.bp = {
-        medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight},
-        big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}}
+        medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight, curves=defaultsCurveMedium},
+        big=    {diagonal=defaultsDiagonal, straight=defaultsStraight, curves=defaultsCurve}}
       psettings.activeBP = psettings.medium and psettings.bp.medium or psettings.bp.big
       if global.savedBlueprints[player.name] then
         global.savedBlueprints[player.name] = nil
