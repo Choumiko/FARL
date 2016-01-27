@@ -903,7 +903,10 @@ FARL = {
       local bps = self.settings.activeBP
       local bb = self.lastrail.direction%2==0 and bps.straight.boundingBox or bps.diagonal.boundingBox
       self:showArea(self.lastrail, self.direction, {bb.tl,bb.br}, 4)
-      self.path = self:get_rails_below_train()
+      local front_rail_index = false
+      self.path, front_rail_index = self:get_rails_below_train()
+      front_rail_index = front_rail_index
+      self:flyingText("FR", YELLOW, true, self:rail_below_train().position)
       --self:show_path()
       if self.lastrail.name == self.settings.rail.curved then
         self:deactivate({"msg-error-curves"}, true)
@@ -922,16 +925,16 @@ FARL = {
       local s = #path-1
       for i=s,2,-1 do
         table.insert(self.path, 1, path[i])
+        front_rail_index = front_rail_index + 1
         --self:flyingText(i, YELLOW, true, path[i].rail.position)
       end
       self:show_path()
-      self:print(#self.path)
-      if self.maintenance and #self.path >= 5 then
+      if self.maintenance and #self.path >= front_rail_index+3 then
         local c = #self.path
-        self.maintenanceRail = self.path[c].rail
-        self.maintenanceDir = self.path[c].travel_dir
-        self.lastrail = self.path[c-1].rail
-        self.direction = self.path[c-1].travel_dir
+        self.maintenanceRail = self.path[front_rail_index+2].rail
+        self.maintenanceDir = self.path[front_rail_index+2].travel_dir
+        self.lastrail = self.path[front_rail_index+3].rail
+        self.direction = self.path[front_rail_index+3].travel_dir
       else
         if self.maintenance then
           self:deactivate({"msg-no-path-maintenance"})
@@ -948,20 +951,33 @@ FARL = {
         local dir = self.path[i].travel_dir
         last_signal, signal_rail = self:find_signal_rail(rail, dir)
         if last_signal then
-          self.signalCount = 0
-          self.maintenanceRail = rail
-          self.maintenanceDir = dir
-          self:flyingText2( "S", GREEN, true, last_signal.position)
-          signal_index = i
-          break
+          if not self.maintenance then
+            self.signalCount = 0
+            self:flyingText2( "S", GREEN, true, last_signal.position)
+            signal_index = i
+            break
+          -- only account for signals behind the maintenance rail
+          else
+            if i <= front_rail_index + 2 then
+              self.signalCount = 0
+              signal_index = i
+              self:print(signal_index.." "..front_rail_index+2)
+              for j=signal_index+1,front_rail_index+1 do
+                --self.signalCount = self.signalCount + get_signal_weight(self.path[j].rail,self.settings)
+              end
+              self:flyingText2( "S", GREEN, true, last_signal.position)
+              break
+            end
+          end
         end
       end
       if self.maintenance and self.maintenanceRail then
-        self:flyingText2("M", RED, true, self.maintenanceRail.position)
-        self:flyingText2("L", RED, true, self.lastrail.position)
+        self:flyingText("M", RED, true, self.maintenanceRail.position)
+        self:flyingText("L", RED, true, self.lastrail.position)
       end
       if signal_index and self.settings.signals and not self.settings.root then
-        for i=signal_index+1,#self.path do
+        local c = self.maintenance and front_rail_index+1 or #self.path
+        for i=signal_index+1,c do
           local rail = self.path[i].rail
           local dir = self.path[i].travel_dir
           if self:getCargoCount("rail-signal") > 0 then
@@ -973,8 +989,10 @@ FARL = {
         end
       end
       if last_signal and signal_rail then
+        self:protect(last_signal)
         --self:flyingText2( "SR", GREEN, true, signal_rail.position)
         self:print(self.signalCount)
+        self:flyingText(self.signalCount, YELLOW, true, last_signal.position)
       end
       --self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
 
@@ -1039,6 +1057,7 @@ FARL = {
   get_rails_below_train = function(self)
     local behind = self:rail_behind_train()
     local front = self:rail_below_train()
+    local front_rail_index = 0
     local next, dir = behind, self.direction
     local path = {}
     --self:flyingText2("b", RED, true, front.position)
@@ -1049,6 +1068,7 @@ FARL = {
       next, dir = self:get_connected_rail(next, true, dir)
       count = count + 1
     end
+    front_rail_index = count+1
     count = 0
     while next and count < 20 do
       --self:flyingText2("p", RED, true, next.position)
@@ -1056,7 +1076,7 @@ FARL = {
       next, dir = self:get_connected_rail(next, true, dir)
       count = count + 1
     end
-    return path
+    return path, front_rail_index
   end,
 
   deactivate = function(self, reason)
@@ -1208,6 +1228,7 @@ FARL = {
       --apiCalls.create = apiCalls.create + 1
     end
     if entity then
+      self:protect(entity)
       local diff = subPos(arg.position, entity.position)
       if diff.x ~= 0 or diff.y~= 0 then
         self:flyingText2("x", RED,true,entity.position)
