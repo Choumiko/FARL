@@ -359,6 +359,14 @@ FARL = {
         --self.last_moved = game.tick
         self.acc = self.driver.riding_state.acceleration
         if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) then
+          
+          --check if previous curve is far enough behind if input is the same
+          --left: wait for lanes < 0
+          --right: wait for lanes > 0
+          if self.lastCurve and self.lastCurve.input == self.input and self.lane_data2[self.input] then
+            local block
+          end          
+        
           local newTravelDir, nextRail = self:getRail(self.lastrail, self.direction, self.input)
           if not nextRail then
             --self:print("Need extra rail")
@@ -445,7 +453,7 @@ FARL = {
                 --self:flyingText2("bp", RED, true, bestpole.p)
                 --self:flyingText2("br", RED, true, bestrail.position)
               else
-                self:print("should place pole")
+                --self:print("should place pole")
                 self:flyingText2("sp", RED, true, self.lastCheckPole)
                 if self.lastCheckPole.x then
                   local status, err = pcall(function() self:placePole(self.lastCheckPole, self.lastCheckDir) end)
@@ -505,7 +513,7 @@ FARL = {
     local range = (type(range) ~= "number") and 1.5 or false
     area = area and area or expandPos(pos,range)
     --if force or not self:genericCanPlace(entity) then
-    debugDump(area,true)
+    --debugDump(area,true)
     --self:showArea2(area)
     self:removeTrees(area)
     self:pickupItems(area)
@@ -883,6 +891,10 @@ FARL = {
 
           local data = {forward=forward,right=right, lag=lag,catchup=catchup, block=block}
           self.lanes["d"..direction_self]["i"..input_self]["l"..lane_index] = data
+          
+          self.lane_data[lane_index] = self.lane_data[lane_index] or {}
+          self.lane_data[lane_index][input_self] = self.lane_data[lane_index][input_self] or {}
+          self.lane_data[lane_index][input_self][direction_self] = self.lane_data[lane_index][input_self][direction_self] or data
         end
       end
     end
@@ -1016,6 +1028,7 @@ FARL = {
       local straight_lanes = bps.straight.lanes
 
       self.lanes = {}
+      self.lane_data = {}
       if diag_lanes and straight_lanes and #diag_lanes ~= #straight_lanes then
         self:deactivate({"msg-error-track-mismatch"})
         return
@@ -1024,6 +1037,15 @@ FARL = {
       -- lane lag, curve calculations
       if diag_lanes and straight_lanes then
         self:calculate_rail_data()
+      end
+      self.lane_data2 = {[0]=false,[2]=false}
+      
+      for i,l in pairs(diag_lanes) do
+        if l < 0 then
+          self.lane_data2[0] = true
+        else
+          self.lane_data2[2] = true
+        end
       end
       --create curve blueprint
       local c = 3
@@ -1660,16 +1682,21 @@ FARL = {
     local catchup = self.lanes["d"..direction%2]["i"..input]["l"..lane_index].catchup
     local bi = self.input == 0 and 2 or 0
     local block = self.lanes["d"..traveldir%2]["i"..bi]["l"..lane_index].lag
+
     if catchup > 0 then
       local dir, last = direction, self.lanerails[lane_index]
-      for i=1,catchup do
-        dir, last = self:getRail(last, dir, 1)
-        local success, ent = self:genericPlace(last)
-        if not ent then
-          self:print("Failed to create track @"..pos2Str(last.position))
-          self:flyingText2("E",RED,true, last.position)
-        else
-          self:removeItemFromCargo(ent.name, 1)
+      if last then
+        for i=1,catchup do
+          dir, last = self:getRail(last, dir, 1)
+          if not last then break end
+          self:prepareArea(last)
+          local success, ent = self:genericPlace(last)
+          if not ent then
+            self:print("Failed to create track @"..pos2Str(last.position))
+            self:flyingText2("E",RED,true, last.position)
+          else
+            self:removeItemFromCargo(ent.name, 1)
+          end
         end
       end
     end
@@ -1692,6 +1719,12 @@ FARL = {
 
     new_curve.position = move_right_forward(rail.position, direction, right, forward)
     self.lastCurve.blocked[lane_index] = block
+    local lane = self.lanes["d"..traveldir%2]["i0"]["l"..lane_index]
+    local right = traveldir%2==1 and d_lane or s_lane
+    local lag = math.min(lane.lag, self.lanes["d"..traveldir%2]["i2"]["l"..lane_index].lag)
+    --block = self.lastCurve.blocked[lane_index] + math.abs(lag)
+    self:print("block:"..block+math.abs(lag))
+        
     self:prepareAreaForCurve(new_curve)
     local success, ent = self:genericPlace(new_curve)
     if not ent then
