@@ -67,6 +67,9 @@ GUI = {
           end
         end
       end
+      if e.type == "checkbox" and not e.state then
+        e.state = false
+      end
       local ret = parent.add(e)
       if bind and e.type == "textfield" then
         ret.text = bind
@@ -152,9 +155,9 @@ GUI = {
         or name == "poleEntities" or name == "parallelTracks" then
         psettings[name] = not psettings[name]
         if name == "poles" then
-            if psettings[name] and farl.active then
-              farl:findLastPole()
-            end
+          if psettings[name] and farl.active then
+            farl:findLastPole()
+          end
         end
       elseif name == "bridge" then
         psettings.bridge = not psettings.bridge
@@ -347,7 +350,7 @@ GUI = {
       GUI.destroyGui(player)
       GUI.createGui(player)
     end,
-    
+
     createBlueprint = function(event, farl, player)
       local blueprints = GUI.findBlueprintsInHotbar(player)
       local bp = false

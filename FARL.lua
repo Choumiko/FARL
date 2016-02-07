@@ -45,6 +45,11 @@ signalOffsetCurves =
 
 local math = math
 
+function round(num, idp)
+  local mult = 10 ^ (idp or 0)
+  return math.floor(num*mult +0.5)/mult
+end
+
 function get_signal_weight(rail, settings)
   local weight = rail.name == settings.rail.curved and settings.curvedWeight or 1
   if rail.name ~= settings.rail.curved then
@@ -169,8 +174,12 @@ function diagonal_to_real_pos(rail)
     [5] = {x=-0.5,y=0.5},
     [7] = {x=-0.5,y=-0.5}
   }
-  local off = data[rail.direction] and data[rail.direction] or {x=0,y=0}
-  return addPos(off, rail.position)
+  if rail.type and rail.type == "straight-rail" then
+    local off = data[rail.direction] and data[rail.direction] or {x=0,y=0}
+    return addPos(off, rail.position)
+  else
+    return rail.position
+  end
 end
 
 function moveRail(rail, direction,distance)
@@ -433,8 +442,8 @@ FARL = {
                 self.lastCheckPole = bestpole.p
                 self.lastCheckDir = bestpole.dir
                 self.lastCheckRail = bestrail
-                self:flyingText2("bp", RED, true, bestpole.p)
-                self:flyingText2("br", RED, true, bestrail.position)
+                --self:flyingText2("bp", RED, true, bestpole.p)
+                --self:flyingText2("br", RED, true, bestrail.position)
               else
                 self:print("should place pole")
                 self:flyingText2("sp", RED, true, self.lastCheckPole)
@@ -496,6 +505,8 @@ FARL = {
     local range = (type(range) ~= "number") and 1.5 or false
     area = area and area or expandPos(pos,range)
     --if force or not self:genericCanPlace(entity) then
+    debugDump(area,true)
+    --self:showArea2(area)
     self:removeTrees(area)
     self:pickupItems(area)
     self:removeStone(area)
@@ -899,19 +910,23 @@ FARL = {
         self:deactivate({"msg-error-2"}, true)
         return
       end
-
+      if self.lastrail.name == self.settings.rail.curved then
+        self:deactivate({"msg-error-curves"}, true)
+        return
+      end
+      if debugButton then
+        self:print("TrainDir: "..self.direction)
+      end
       local bps = self.settings.activeBP
       local bb = self.lastrail.direction%2==0 and bps.straight.boundingBox or bps.diagonal.boundingBox
-      self:showArea(self.lastrail, self.direction, {bb.tl,bb.br}, 4)
+      debugDump(bb,true)
+      self:showArea(self:rail_below_train(), self.direction, {bb.tl,bb.br}, 4)
       local front_rail_index = false
       self.path, front_rail_index = self:get_rails_below_train()
       front_rail_index = front_rail_index
       self:flyingText("FR", YELLOW, true, self:rail_below_train().position)
       --self:show_path()
-      if self.lastrail.name == self.settings.rail.curved then
-        self:deactivate({"msg-error-curves"}, true)
-        return
-      end
+
       local prev = self.path[1].rail
       local prev_dir = oppositedirection(self.path[1].travel_dir)
       local count = 0
@@ -1288,11 +1303,12 @@ FARL = {
         local rails = 0
         local box = {tl={x=0,y=0}, br={x=0,y=0}}
         for i=1,#e do
-          if box.tl.x > e[i].position.x then box.tl.x = e[i].position.x end
-          if box.tl.y > e[i].position.y then box.tl.y = e[i].position.y end
+          local position = diagonal_to_real_pos(e[i])
+          if box.tl.x > position.x then box.tl.x = position.x end
+          if box.tl.y > position.y then box.tl.y = position.y end
 
-          if box.br.x < e[i].position.x then box.br.x = e[i].position.x end
-          if box.br.y < e[i].position.y then box.br.y = e[i].position.y end
+          if box.br.x < position.x then box.br.x = position.x end
+          if box.br.y < position.y then box.br.y = position.y end
 
           local dir = e[i].direction or 0
           if e[i].name == "rail-chain-signal" and not offsets.chain then
@@ -1413,7 +1429,7 @@ FARL = {
             local br = subPos(box.br, diagonal_to_real_pos(mainRail))
             --forward
             tl.y = tl.y < -1.5 and tl.y or -1.5
-            br.y = br.y > 1 and br.y or 1
+            br.y = br.y > 1.5 and br.y or 1.5
             if bpType == "curve" then
               tl.y = tl.y < -3.5 and tl.y or -3.5
               br.y = br.y > 3.5 and br.y or 3.5
@@ -1422,6 +1438,15 @@ FARL = {
             tl.x = tl.x < 0 and tl.x or -0.5
             br.x = br.x > 0 and br.x or 0.5
             --br.x = br.x + 1
+            
+            if bpType == "diagonal" then
+              tl.x = tl.x - 1.5
+              tl.y = tl.y - 1.5
+              
+              br.x = br.x + 1.5
+              br.y = br.y + 1.5
+            end
+            
             debugDump({tl=tl,br=br},true)
             local bp = {
               mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps,
@@ -1462,8 +1487,9 @@ FARL = {
     local bp =  self.settings.activeBP[rtype]
     local mainRail = bp.mainRail
     local bb = bp.boundingBox
-    local area = self:createBoundingBox(newRail, newTravelDir)
-    local canplace = self:prepareArea(newRail, area)
+    --local area = self:createBoundingBox(newRail, newTravelDir)
+    --local canplace = self:prepareArea(newRail, area)
+    local canplace = self:prepareArea(newRail)
     --canplace = self:prepareArea(newRail)
     --self:showArea(newRail, newTravelDir, area, 2)
     local hasRail = self:getCargoCount(newRail.name) > 0
@@ -1696,7 +1722,7 @@ FARL = {
     --self:flyingText2(self.lastCurve.dist.."<"..block,RED,true,new_rail.position)
     if not blocked then
 
-      --self:prepareArea(new_rail)
+      self:prepareArea(new_rail)
       local success, ent = self:genericPlace(new_rail)
       --self.lanes[lane_index].lastrail = ent or new_rail
       if not ent then
@@ -1941,7 +1967,7 @@ FARL = {
       local polePoints = self:getPolePoints(rail)
       for i,pole in pairs(polePoints) do
         local pos = {x=pole.pos[1],y=pole.pos[2]}
-        if foo then self:flyingText2(foo, RED, true, pos) end
+        --if foo then self:flyingText2(foo, RED, true, pos) end
         local dist = distance(lastPole.position, pos)
         table.insert(points, {d=dist, p=pos, dir=pole.dir})
         if dist >= max and dist <= reach then
@@ -2110,6 +2136,7 @@ FARL = {
     self:print("Train@"..pos2Str(locomotive.position).." dir:"..self:calcTrainDir().." orient:"..locomotive.orientation)
     self:print("Frontmover: "..tostring(self.frontmover))
     self:print("calcDir: "..self.locomotive.orientation * 8)
+    self:print("calcDirRound: "..round(self.locomotive.orientation*8,0))
     local rail = self.train.front_rail
     if rail then
       --self:flyingText2("B", GREEN, true, rail.position)
@@ -2132,8 +2159,8 @@ FARL = {
   end,
 
   calcTrainDir = function(self)
-    local r = (self.locomotive.orientation > 0.99 and self.locomotive.orientation < 1) and 0 or self.locomotive.orientation
-    return math.floor(r * 8)
+    --local r = (self.locomotive.orientation > 0.99 and self.locomotive.orientation < 1) and 0 or self.locomotive.orientation
+    return round(self.locomotive.orientation*8,0) --math.floor(r * 8)
   end,
 
   rail_below_train = function(self)
@@ -2194,22 +2221,49 @@ FARL = {
   create_overlay = function(self, position, duration)
     local tick = game.tick + 60*duration
     global.overlayStack[tick] = global.overlayStack[tick] or {}
-    local overlay = self.surface.create_entity{name="rm_overlay", position = position}
+    local overlay = self.surface.create_entity{name="farl_overlay", position = position}
     overlay.minable = false
     overlay.destructible = false
     table.insert(global.overlayStack[tick], overlay)
   end,
 
-  showArea = function(self, rail, direction, area, duration)
+  showArea = function(self, rail, direction, area, duration, add)
     local bb = {tl=area[1],br=area[2]}
-    local min_x,min_y,max_x,max_y
-    for right=math.min(bb.tl.x,bb.br.x),math.max(bb.tl.x,bb.br.x) do
-      for forward=math.min(bb.tl.y,bb.br.y),math.max(bb.tl.y,bb.br.y) do
-        --local pos = move_right_forward(diagonal_to_real_pos(rail),direction,right,forward)
-        self:create_overlay({x=right,y=forward},duration)
+    local min_x = math.min(bb.tl.x, bb.br.x)
+    local max_x = math.max(bb.tl.x, bb.br.x)
+    
+    local min_y = math.min(bb.tl.y, bb.br.y)
+    local max_y = math.max(bb.tl.y, bb.br.y)
+    
+    min_x = math.ceil(min_x+0.5)-0.5
+    min_y = math.ceil(min_y+0.5)-0.5
+    max_x = math.ceil(max_x-0.5)+0.5
+    max_y = math.ceil(max_y-0.5)+0.5
+    for right=min_x,max_x do
+      for forward=min_y,max_y do
+        local pos = move_right_forward(diagonal_to_real_pos(rail),direction,right,forward)
+        --self:create_overlay({x=right,y=forward},duration)
+        self:create_overlay(pos, duration)
       end
     end
-  end
+--    for right=math.min(bb.tl.x,bb.br.x),math.max(bb.tl.x,bb.br.x) do
+--      for forward=math.min(bb.tl.y,bb.br.y),math.max(bb.tl.y,bb.br.y) do
+--        local pos = move_right_forward(diagonal_to_real_pos(rail),direction,right,forward)
+--        --self:create_overlay({x=right,y=forward},duration)
+--        self:create_overlay(pos, duration)
+--      end
+--    end
+  end,
+  
+  showArea2 = function(self, area)
+    --area[1] = tl, area[2]=br
+    debugDump(area,true)
+    for x=area[1].x,area[2].x do
+      for y=area[1].y,area[2].y do
+        self:create_overlay({x=x,y=y}, 1)
+      end 
+    end
+  end,
 }
 
 -- [traveldir][rail_type][rail_dir][input] = offset, new rail dir, new rail type

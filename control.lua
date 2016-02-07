@@ -258,7 +258,7 @@ script.on_event(defines.events.on_player_driving_changed_state, on_player_drivin
 remote.add_interface("farl",
   {
     railInfo = function(rail)
-      debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
+      debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction.." realPos:"..pos2Str(diagonal_to_real_pos(rail)),true)
       if type(global.railInfoLast) == "table" and global.railInfoLast.valid then
         local pos = global.railInfoLast.position
         local diff=subPos(rail.position,pos)
