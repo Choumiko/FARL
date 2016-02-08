@@ -361,10 +361,11 @@ FARL = {
         if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) then
           
           --check if previous curve is far enough behind if input is the same
-          --left: wait for lanes < 0
-          --right: wait for lanes > 0
-          if self.lastCurve and self.lastCurve.input == self.input and self.lane_data2[self.input] then
-            local block
+          if self.lastCurve and self.lastCurve.input == self.input and self.settings.parallelTracks then
+            self:print("curveblock:"..self.lastCurve.curveblock.."dist:"..self.lastCurve.dist)
+            if self.lastCurve.dist < self.lastCurve.curveblock then
+              self.input = 1
+            end 
           end          
         
           local newTravelDir, nextRail = self:getRail(self.lastrail, self.direction, self.input)
@@ -421,14 +422,20 @@ FARL = {
             end
             self.path = tmp
             if last.type == "curved-rail" then
-              self.lastCurve = {dist=-1, input=self.input, direction=self.direction, blocked={}}
+              self.lastCurve = {dist=-1, input=self.input, direction=self.direction, blocked={}, curveblock = 0}
             else
               self.lastCurve.dist = self.lastCurve.dist + 1
             end
             if self.settings.parallelTracks then
+              local max = -1
               for i, l in pairs(self.settings.activeBP.straight.lanes) do
                 if last.type == "curved-rail" then
-                  self:placeParallelCurve(newTravelDir, last, i)
+                  local traveldir = newTravelDir
+                  local block = self:placeParallelCurve(newTravelDir, last, i)
+                  local lane = self.lanes["d"..traveldir%2]["i0"]["l"..i]
+                  local lag = math.abs(math.min(lane.lag, self.lanes["d"..traveldir%2]["i2"]["l"..i].lag))+block
+                  max = lag > max and lag or max
+                  self.lastCurve.curveblock = max
                 else
                   self.lanerails[i] = self:placeParallelTrack(newTravelDir, last, i)
                 end
@@ -891,10 +898,6 @@ FARL = {
 
           local data = {forward=forward,right=right, lag=lag,catchup=catchup, block=block}
           self.lanes["d"..direction_self]["i"..input_self]["l"..lane_index] = data
-          
-          self.lane_data[lane_index] = self.lane_data[lane_index] or {}
-          self.lane_data[lane_index][input_self] = self.lane_data[lane_index][input_self] or {}
-          self.lane_data[lane_index][input_self][direction_self] = self.lane_data[lane_index][input_self][direction_self] or data
         end
       end
     end
@@ -908,7 +911,7 @@ FARL = {
       self.protectedCount = 0
       self.protectedCalls = {}
       self.frontmover = false
-      self.lastCurve = {dist=20, input=false, direction=0, blocked={}}
+      self.lastCurve = {dist=20, input=false, direction=0, blocked={}, curveblock = 0}
       for i,l in pairs(self.train.locomotives.front_movers) do
         if l == self.locomotive then
           self.frontmover = true
@@ -1028,7 +1031,6 @@ FARL = {
       local straight_lanes = bps.straight.lanes
 
       self.lanes = {}
-      self.lane_data = {}
       if diag_lanes and straight_lanes and #diag_lanes ~= #straight_lanes then
         self:deactivate({"msg-error-track-mismatch"})
         return
@@ -1038,15 +1040,7 @@ FARL = {
       if diag_lanes and straight_lanes then
         self:calculate_rail_data()
       end
-      self.lane_data2 = {[0]=false,[2]=false}
-      
-      for i,l in pairs(diag_lanes) do
-        if l < 0 then
-          self.lane_data2[0] = true
-        else
-          self.lane_data2[2] = true
-        end
-      end
+
       --create curve blueprint
       local c = 3
       local main = {entity_number=1, direction=1,name="curved-rail",position={x=2,y=2}}
@@ -1718,12 +1712,7 @@ FARL = {
     --debugDump("l"..lane_index.." c:"..catchup.." b:"..block,true)
 
     new_curve.position = move_right_forward(rail.position, direction, right, forward)
-    self.lastCurve.blocked[lane_index] = block
-    local lane = self.lanes["d"..traveldir%2]["i0"]["l"..lane_index]
-    local right = traveldir%2==1 and d_lane or s_lane
-    local lag = math.min(lane.lag, self.lanes["d"..traveldir%2]["i2"]["l"..lane_index].lag)
-    --block = self.lastCurve.blocked[lane_index] + math.abs(lag)
-    self:print("block:"..block+math.abs(lag))
+    self.lastCurve.blocked[lane_index] = self.lanes["d"..traveldir%2]["i"..bi]["l"..lane_index].lag
         
     self:prepareAreaForCurve(new_curve)
     local success, ent = self:genericPlace(new_curve)
@@ -1732,6 +1721,7 @@ FARL = {
     else
       self:removeItemFromCargo(ent.name, 1)
     end
+    return self.lastCurve.blocked[lane_index]
   end,
 
   placeParallelTrack = function(self, traveldir, lastRail, lane_index)
