@@ -371,5 +371,20 @@ remote.add_interface("farl",
         debugDump("Placement mismatch:",true)
         debugDump(diff,true)
       end
-    end
+    end,
+    
+    timing = function(player)
+      local area_large = expandPos(player.position,50)
+      local area_small = expandPos(player.position,10)
+      log("find_entities large")
+      for i=1,1000 do
+        player.surface.find_entities_filtered{area = area_large, type = "tree"}
+      end
+      log("large finished")
+      log("find_entities small")
+      for i=1,1000 do
+        player.surface.find_entities_filtered{area = area_small, type = "tree"}
+      end
+      log("small finished")
+    end,
   })
