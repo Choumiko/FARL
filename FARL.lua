@@ -484,9 +484,11 @@ FARL = {
                   local block = self:placeParallelCurve(newTravelDir, last, i)
                   local lane = self.lanes["d"..traveldir%2]["i0"]["l"..i]
                   local lag = math.abs(math.min(lane.lag, self.lanes["d"..traveldir%2]["i2"]["l"..i].lag))+block
+
                   --subtract forward movement of next curve if positive
                   local nextCurveForward = self.lanes["d"..(traveldir+1)%2]["i"..self.input]["l"..i].forward
                   lag = nextCurveForward < 0 and lag + nextCurveForward or lag
+
                   max = lag > max and lag or max
                   self.lastCurve.curveblock = max
                 else
