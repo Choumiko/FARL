@@ -34,6 +34,38 @@ signalOffset =
       [5]={pos={x=0.5,y=-0.5}, dir=3}
     },
   }
+  
+real_signalOffset =
+  {
+    [0] = {
+      [0] = {x=1.5,y=0.5}
+    },
+    [1] = {
+      [3] = {x=1,y=1},
+      [7] = {x=1,y=1}
+    },
+    [2] = {
+      [2] = {x=-0.5,y=1.5}
+    },
+    [3] = {
+      [1]={x=-1,y=1},
+      [5]={x=-1,y=1}
+    },
+    [4] = {
+      [0] = {x=-1.5,y=-0.5}
+    },
+    [5] = {
+      [3]={x=-1,y=-1},
+      [7]={x=-1,y=-1}
+    },
+    [6] = {
+      [2] = {x=0.5,y=-1.5}
+    },
+    [7] = {
+      [1]={x=1,y=-1},
+      [5]={x=1,y=-1}
+    },
+  }  
 -- [traveldir%2][raildir]
 signalOffsetCurves =
   {
@@ -207,6 +239,21 @@ end
 function move_right_forward(pos, direction, right,forward)
   local dir = (direction + 2) % 8
   return pos12toXY(moveposition(moveposition(fixPos(pos), dir, right),direction,forward))
+end
+
+function get_signal_for_rail(rail, traveldir, end_of_rail)
+  local rail_pos = diagonal_to_real_pos(rail)
+  local offset = real_signalOffset[traveldir][rail.direction]
+  local pos = addPos(rail_pos, offset)
+  local dir = (traveldir+4)%8
+  local signal = {name="rail-signal", position=pos,direction=dir}
+  if rail.force then 
+    signal.force = rail.force
+  end
+  if end_of_rail and rail.direction % 2 == 0 then
+    signal.position = move_right_forward(signal.position, traveldir, 0,1)
+  end
+  return signal
 end
 
 function saveBlueprint(player, poleType, type, bp)
@@ -1054,8 +1101,10 @@ FARL = {
         self:calculate_rail_data()
       end
       
+      local mainCount = get_signal_weight(self.lastrail, self.settings)
       for i,l in pairs(straight_lanes) do
-        self.signalCount[i] = self.signalCount.main
+        local lag = math.abs(self.lanes["d"..self.direction%2]["i0"]["l"..i].lag)
+        self.signalCount[i] = self.signalCount.main - mainCount - lag + 1
       end
       
       --create curve blueprint
@@ -1088,10 +1137,10 @@ FARL = {
   end,
 
   find_signal_rail = function(self, rail, travel_dir)
-    local data = signalOffset[travel_dir][rail.direction]
-    if not data then return end
-    local signal_dir = data.dir
-    local signal_pos = addPos(data.pos, rail.position)
+    local signal = get_signal_for_rail(rail,travel_dir)
+    if not signal then return end
+    local signal_dir = signal.direction
+    local signal_pos = signal.position
     local range = (travel_dir % 2 == 0) and 1 or 0.5
     for _1, name in pairs({"rail-signal", "rail-chain-signal"}) do
       for _, entity in pairs(self.surface.find_entities_filtered{area = expandPos(signal_pos,range), name = name}) do
@@ -1286,48 +1335,11 @@ FARL = {
     return canPlace, entity
   end,
 
-  mirror_bp = function(self, bp)
-    local curve_bp = false
-    local offsets = {pole=false, chain=false, rails={}, signals={}}
-    for j=1,#bp do
-      local e = bp[j].get_blueprint_entities()
-      for i=1,#e do
-        local name = e[i].name
-        local pos = e[i].position
-        local dir = e[i].direction or 0
-        local ent = {name=name, position=pos, direction=dir}
-        if name == "curved-rail" and not curve_bp then
-          curve_bp = bp[j]
-        end
-        if name == "rail-chain-signal" and not offsets.chain then
-          offsets.chain = ent
-        elseif name == "rail-signal" then
-          table.insert(offsets.signals, ent)
-        elseif name == "curved-rail" then
-          table.insert(offsets.rails, ent)
-        end
-      end
-    end
-    if curve_bp then
-      --find rail belonging to chainsignal
-      for i, r in pairs(offsets.rails) do
-        local signalpos = addPos(r.position, signalOffsetCurves[0][r.direction].pos)
-        local diff = subPos(signalpos, offsets.chain.position)
-        if diff.x == 0 and diff.y == 0 then
-          offsets.main = r
-        end
-      end
-      saveVar(offsets, "BPcurve")
-    end
-  end,
-
   --parese blueprints
   -- chain signal: needs direction == 4, defines track that FARL drives on
   --normal signals: define signal position for other tracks
-  parseBlueprints2 = function(self, bp)
+  parseBlueprints = function(self, bp)
     for j=1,#bp do
-      local vertSignal = signalOffset[0]
-      local diagSignal = signalOffset[1]
       local e = bp[j].get_blueprint_entities()
       local concrete = bp[j].get_blueprint_tiles()
       if e then
@@ -1480,7 +1492,7 @@ FARL = {
               br.y = br.y + 1.5
             end
             
-            debugDump({tl=tl,br=br},true)
+            --debugDump({tl=tl,br=br},true)
             local bp = {
               mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps,
               rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes}
@@ -1709,11 +1721,11 @@ FARL = {
           if not last then break end
           self:prepareArea(last)
           local success, ent = self:genericPlace(last)
+          self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(last,self.settings)
           if not ent then
             self:print("Failed to create track @"..pos2Str(last.position))
             self:flyingText2("E",RED,true, last.position)
           else
-            self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(ent,self.settings)
             self:removeItemFromCargo(ent.name, 1)
           end
         end
@@ -1773,60 +1785,51 @@ FARL = {
 
       self:prepareArea(new_rail)
       local success, ent = self:genericPlace(new_rail)
+      self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(new_rail,self.settings)
       --self.lanes[lane_index].lastrail = ent or new_rail
       if not ent then
         self:print("Failed to create track @"..pos2Str(new_rail.position))
         self:flyingText2("E",RED,true, new_rail.position)
         return new_rail
       else
-        self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(ent,self.settings)
+        if self.settings.signals and not self.settings.root then
+          if self:getCargoCount("rail-signal") > 0 then
+            if self:placeParallelSignals(traveldir,new_rail, lane_index) then self.signalCount[lane_index] = 0 end
+          else
+            self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
+          end
+        end
         self:removeItemFromCargo(ent.name, 1)
         return ent
       end
     end
   end,
 
-  placeParallelSignals = function(self,traveldir, signal)
-    local signals = traveldir % 2 == 0 and self.settings.activeBP.straight.signals or self.settings.activeBP.diagonal.signals
-    if signals and type(signals) == "table" then
-      local diff = traveldir % 2 == 0 and traveldir or traveldir-1
-      local rad = diff * (math.pi/4)
-      for i=1,#signals do
-        if self:getCargoCount(signals[i].name) > 1 then
-          local offset = signals[i].position
-          offset = rotate(offset, rad)
-          local pos = addPos(signal.position, offset)
-          --debugDump(pos, true)
-          local entity = {name = signals[i].name, position = pos, force = self.locomotive.force}
-          entity.direction = signals[i].reverse and ((signal.direction+4)%8)or signal.direction
-          if self:prepareArea(entity) then
-            local _, ent = self:genericPlace(entity)
-            if ent then
-              if self.maintenance then
-                self:protect(ent)
-              end
-              self:removeItemFromCargo(signals[i].name, 1)
-            else
-              self:deactivate("Trying to place "..signals[i].name.." failed")
-            end
+  placeParallelSignals = function(self,traveldir, rail, lane_index)
+    if self.signalCount[lane_index] > self.settings.signalDistance and rail.name ~= self.settings.rail.curved then
+      local signals = traveldir % 2 == 0 and self.settings.activeBP.straight.signals or self.settings.activeBP.diagonal.signals
+      if signals and type(signals) == "table" and signals[lane_index] then
+        local signal_data = signals[lane_index]
+        local rail = rail
+        local end_of_rail = signal_data.reverse
+        local traveldir = signal_data.reverse and (traveldir+4)%8 or traveldir
+        local signal = get_signal_for_rail(rail,traveldir,end_of_rail)
+        signal.force = self.locomotive.force
+  
+        self:prepareArea(signal)
+        local success, entity = self:genericPlace(signal)
+        if entity then
+          if self.maintenance then
+            self:protect(entity)
           end
+          self:removeItemFromCargo(signal.name, 1)
+          return success, entity
+        else
+          --self:print("Can't place signal@"..pos2Str(pos))
+          return success, entity
         end
       end
     end
-  end,
-
-  flipEntity = function(self, pos, traveldir)
-    local ret = {x=pos.x, y=pos.y}
-    if traveldir % 2 == 1 then
-      if ret.x == ret.y and ret.x then return ret end
-      return {x=ret.x * -1, y=ret.y * -1}
-    end
-    if traveldir == 0 or traveldir == 4 then
-      ret.x = ret.x * -1
-    elseif traveldir == 2 or traveldir == 6 then
-      ret.y = ret.y * -1
-    end
-    return ret
   end,
 
   mirrorEntity = function(self, pos, traveldir)
@@ -2101,20 +2104,8 @@ FARL = {
   placeSignal = function(self,traveldir, rail)
     if self.signalCount.main > self.settings.signalDistance and rail.name ~= self.settings.rail.curved then
       local rail = rail
-      local data = signalOffset[traveldir]
-      local offset = data[rail.direction].pos
-      local dir = data[rail.direction].dir
-      if self.settings.flipSignals then
-        local off = offset
-        if traveldir % 2 == 1 then
-          off = data[(rail.direction+4)%8] or data.pos
-        end
-        offset = {x=off.x*-1, y=off.y*-1}
-        dir = (dir + 4) % 8
-      end
-      local pos = addPos(rail.position, offset)
-      local signal = {name = "rail-signal", position = pos, direction = dir, force = self.locomotive.force}
-
+      local signal = get_signal_for_rail(rail,traveldir)
+      signal.force = self.locomotive.force
       self:prepareArea(signal)
       local success, entity = self:genericPlace(signal)
       if entity then
@@ -2122,9 +2113,9 @@ FARL = {
           self:protect(entity)
         end
         self:removeItemFromCargo(signal.name, 1)
-        if self.settings.parallelTracks and not self.settings.root then
-          self:placeParallelSignals(traveldir, entity)
-        end
+        --
+        
+        
         return success, entity
       else
         --self:print("Can't place signal@"..pos2Str(pos))

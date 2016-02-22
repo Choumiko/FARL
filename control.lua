@@ -262,7 +262,9 @@ remote.add_interface("farl",
       if type(global.railInfoLast) == "table" and global.railInfoLast.valid then
         local pos = global.railInfoLast.position
         local diff=subPos(rail.position,pos)
+        local rdiff = subPos(diagonal_to_real_pos(rail),diagonal_to_real_pos(global.railInfoLast))
         debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
+        debugDump("real Offset: x="..rdiff.x..",y="..rdiff.y,true)
         debugDump("Distance (util): "..util.distance(pos, rail.position),true)
         --debugDump("lag for diag: "..(diff.x-diff.y),true)
         --debugDump("lag for straight: "..(diff.y+diff.x),true)
@@ -387,4 +389,10 @@ remote.add_interface("farl",
       end
       log("small finished")
     end,
+    
+    place_signal = function(rail, travel_dir, end_of_rail)
+      local signal = get_signal_for_rail(rail, travel_dir, end_of_rail)
+      signal.force  = rail.force
+      rail.surface.create_entity(signal)
+    end
   })
