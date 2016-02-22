@@ -410,7 +410,7 @@ FARL = {
           
           --check if previous curve is far enough behind if input is the same
           if self.lastCurve and self.lastCurve.input == self.input and self.settings.parallelTracks then
-            --self:print("curveblock:"..self.lastCurve.curveblock.."dist:"..self.lastCurve.dist)
+            self:print("curveblock:"..self.lastCurve.curveblock.."dist:"..self.lastCurve.dist)
             if self.lastCurve.dist < self.lastCurve.curveblock then
               self.input = 1
             end 
@@ -495,7 +495,7 @@ FARL = {
                   self.lanerails[i] = self:placeParallelTrack(newTravelDir, last, i)
                 end
               end
-              debugDump(self.signalCount,true)
+              --debugDump(self.signalCount,true)
             end
             if last.type == "curved-rail" then
               self:print("block:"..self.lastCurve.curveblock)
@@ -1105,10 +1105,14 @@ FARL = {
       
       local mainCount = get_signal_weight(self.lastrail, self.settings)
       for i,l in pairs(straight_lanes) do
-        local lag = math.abs(self.lanes["d"..self.direction%2]["i0"]["l"..i].lag)
-        self.signalCount[i] = self.signalCount.main - mainCount - lag + 1
+        local lane_data = self.lanes["d"..self.direction%2]["i0"]["l"..i]
+        local lag = math.abs(lane_data.lag)
+        if self.direction%2==1 and lane_data.right > 0 then
+          lag = lag*mainCount
+        end
+        self.signalCount[i] = self.signalCount.main - lag --+ mainCount
       end
-      
+      debugDump(self.signalCount,true)
       --create curve blueprint
       local c = 3
       local main = {entity_number=1, direction=1,name="curved-rail",position={x=2,y=2}}
