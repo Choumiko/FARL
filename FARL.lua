@@ -301,7 +301,7 @@ FARL = {
       direction = false, input = 1, name = vehicle.backer_name,
       signalCount = {main=0}, cruise = false, cruiseInterrupt = 0,
       lastposition = false, maintenance = false, surface = vehicle.surface,
-      destroy = false
+      destroy = false, concrete_queue = {}
     }
     new.settings = Settings.loadByPlayer(player)
     setmetatable(new, {__index=FARL})
@@ -501,7 +501,11 @@ FARL = {
               self:print("block:"..self.lastCurve.curveblock)
             end
             --self:show_path()
-            self:placeConcrete(newTravelDir, last)
+            
+            --add concrete to the queue to be placed in a tick without track placement (probably the next one)
+            table.insert(self.concrete_queue, {travelDir = newTravelDir, rail={
+              direction=last.direction,type=last.type,name=last.name,position=addPos(last.position)}})
+            
             if self.settings.poles and #self.path > 2 then
               local c = #self.path
               local rail = self.path[c-1].rail
@@ -549,7 +553,12 @@ FARL = {
           end
         end
       else
-
+        if #self.concrete_queue > 0 then
+          for i, queue in pairs(self.concrete_queue) do
+            self:placeConcrete(queue.travelDir, queue.rail)
+          end
+          self.concrete_queue = {}
+        end
       end
     end
   end,
@@ -1201,6 +1210,7 @@ FARL = {
     self.protected = nil
     self.protectedCount = nil
     self.protectedCalls = {}
+    self.concrete_queue = {}
   end,
 
   toggleActive = function(self)

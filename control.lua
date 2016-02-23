@@ -117,6 +117,11 @@ local function on_configuration_changed(data)
       for name,p in pairs(global.players) do
         p.maintenance = false
       end
+      for i,f in pairs(global.farl) do
+        if not f.concrete_queue then
+          f.concrete_queue = {}
+        end
+      end
     end
     global.version = "0.4.43"
   end
