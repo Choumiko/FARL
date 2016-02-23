@@ -129,7 +129,7 @@ GUI = {
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
       GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
-      GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance},GUI.toggleMaintenance)
+      --GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance},GUI.toggleMaintenance)
       GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
     end,
 
@@ -398,11 +398,11 @@ GUI = {
           farl.settings = Settings.loadByPlayer(farl.driver)
         end
         farl.driver.gui.left.farl.rows.root.state = farl.settings.root
-        if not farl.driver.gui.left.farl.rows.maintenance then
-          GUI.destroyGui(farl.driver)
-          GUI.createGui(farl.driver)
-        end
-        farl.driver.gui.left.farl.rows.maintenance.state = farl.maintenance
+        --if not farl.driver.gui.left.farl.rows.maintenance then
+          --GUI.destroyGui(farl.driver)
+          --GUI.createGui(farl.driver)
+        --end
+        --farl.driver.gui.left.farl.rows.maintenance.state = farl.maintenance
       end
     end,
 }

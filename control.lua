@@ -113,7 +113,12 @@ local function on_configuration_changed(data)
     init_global()
     init_players()
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
-    global.version = "0.4.41"
+    if newVersion and newVersion > "0.4.41" then
+      for name,p in pairs(global.players) do
+        p.maintenance = false
+      end
+    end
+    global.version = "0.4.43"
   end
   if data.mod_changes["5dim_trains"] then
     --5dims_trains was added/updated
