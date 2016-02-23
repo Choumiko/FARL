@@ -69,6 +69,118 @@ defaultsCurveMedium = {
   }
 }
 
+defaults_concrete_diag = {
+  entities = {
+    {
+      direction = 7,
+      entity_number = 1,
+      name = "straight-rail",
+      position = {x = -1,y = -1}},
+    {
+      direction = 5,
+      entity_number = 2,
+      name = "rail-chain-signal",
+      position = {x = -0.5,y = -0.5}},
+    {
+      entity_number = 3,
+      name = "big-electric-pole",
+      position = {x = 1,y = 0}},
+    {
+      direction = 7,
+      entity_number = 4,
+      name = "straight-rail",
+      position = {x = 3,y = 3}},
+    {
+      direction = 1,
+      entity_number = 5,
+      name = "rail-signal",
+      position = {x = 1.5,y = 1.5}}
+  },
+  tiles = {
+    { name = "concrete", position = {x = -3,y = -3}},
+    { name = "concrete", position = {x = -2,y = -3}},
+    { name = "concrete", position = {x = -2,y = -2}},
+    { name = "concrete", position = {x = -1,y = -2}},
+    { name = "concrete", position = {x = -1,y = -1}},
+    { name = "concrete", position = {x = 0,y = -1}},
+    { name = "concrete", position = {x = 0,y = 0}},
+    { name = "concrete", position = {x = 1,y = 0}},
+    { name = "concrete", position = {x = 1,y = 1}},
+    { name = "concrete", position = {x = 2,y = 1}},
+    { name = "concrete", position = {x = 2,y = 2}},
+    { name = "concrete", position = {x = 3,y = 2}},
+    { name = "concrete", position = {x = 3,y = 3}}
+  }
+}
+
+defaults_concrete_vert = {
+  entities = {
+    {
+      entity_number = 1,
+      name = "big-electric-pole",
+      position = {x = 0,y = 0}},
+    {
+      entity_number = 2,
+      name = "straight-rail",
+      position = {x = -3,y = 1}},
+    {
+      direction = 4,
+      entity_number = 3,
+      name = "rail-chain-signal",
+      position = {x = -1.5,y = 1.5}},
+    {
+      entity_number = 4,
+      name = "rail-signal",
+      position = {x = 1.5,y = 1.5}},
+    {
+      entity_number = 5,
+      name = "straight-rail",
+      position = {x = 3,y = 1}}
+  },
+  tiles = {
+    { name = "concrete",
+      position = {x = -5,y = 0}},
+    { name = "concrete",
+      position = {x = -5,y = 1}},
+    { name = "concrete",
+      position = {x = -4,y = 0}},
+    { name = "concrete",
+      position = {x = -4,y = 1}},
+    { name = "concrete",
+      position = {x = -3,y = 0}},
+    { name = "concrete",
+      position = {x = -3,y = 1}},
+    { name = "concrete",
+      position = {x = -2,y = 0}},
+    { name = "concrete",
+      position = {x = -2,y = 1}},
+    { name = "concrete",
+      position = {x = -1,y = 0}},
+    { name = "concrete",
+      position = {x = -1,y = 1}},
+    { name = "concrete",
+      position = {x = 0,y = 0}},
+    { name = "concrete",
+      position = {x = 0,y = 1}},
+    { name = "concrete",
+      position = {x = 1,y = 0}},
+    { name = "concrete",
+      position = {x = 1,y = 1}},
+    { name = "concrete",
+      position = {x = 2,y = 0}},
+    { name = "concrete",
+      position = {x = 2,y = 1}},
+    { name = "concrete",
+      position = {x = 3,y = 0}},
+    { name = "concrete",
+      position = {x = 3,y = 1}},
+    { name = "concrete",
+      position = {x = 4,y = 0}},
+    { name = "concrete",
+      position = {x = 4,y = 1}}
+  }
+}
+
 defaultSettings =
   {
     activeBP = {},

@@ -281,8 +281,9 @@ GUI = {
         GUI.addButton(row3, {name="blueprint", caption={"stg-blueprint-read"}}, GUI.readBlueprint)
         GUI.addButton(row3, {name="bpClear", caption={"stg-blueprint-clear"}}, GUI.clearBlueprints)
         GUI.add(settings, {type="label", caption={"stg-blueprint-write"}})
-        local row4 = GUI.add(settings, {type="table", name="row5", colspan=2})
-        GUI.addButton(row4, {name="blueprintCurve", caption={"stg-blueprint-curve"}}, GUI.createBlueprint)
+        local row4 = GUI.add(settings, {type="flow", name="row5", direction="horizontal"})
+        GUI.addButton(row4, {name="blueprint_concrete_vertical", caption={"stg-blueprint-vertical"}}, GUI.create_concrete_vertical)
+        GUI.addButton(row4,{name="blueprint_concrete_diagonal", caption={"stg-blueprint-diagonal"}},GUI.create_concrete_diagonal)
       end
     end,
 
@@ -350,7 +351,15 @@ GUI = {
       GUI.createGui(player)
     end,
 
-    createBlueprint = function(event, farl, player)
+    create_concrete_vertical = function(event, farl, player)
+      GUI.createBlueprint(defaults_concrete_vert,farl,player)
+    end,
+    
+    create_concrete_diagonal = function(event, farl, player)
+      GUI.createBlueprint(defaults_concrete_diag,farl,player)
+    end,
+
+    createBlueprint = function(bp_table, farl, player)
       local blueprints = GUI.findBlueprintsInHotbar(player)
       local bp = false
       if blueprints ~= nil then
@@ -361,15 +370,16 @@ GUI = {
           end
         end
         if bp then
-          local icons = {{index = 2, name = "farl"},[0] = {index = 1, name = "curved-rail"}}
-          bp.set_blueprint_entities(util.table.deepcopy(farl.curveBP))
+          local icons = {{index = 2, name = "farl"},[0] = {index = 1, name = "straight-rail"}}
+          bp.set_blueprint_entities(util.table.deepcopy(bp_table.entities))
+          bp.set_blueprint_tiles(util.table.deepcopy(bp_table.tiles))
           bp.blueprint_icons = icons
         else
           farl:print({"msg-no-empty-blueprint"})
         end
       end
     end,
-
+    
     saveSettings = function(s, player)
       local psettings = Settings.loadByPlayer(player)
       for i,p in pairs(s) do
@@ -408,5 +418,6 @@ GUI.callbacks = {
   ccNetWires = GUI.toggleWires,
   blueprint = GUI.readBlueprint,
   bpClear = GUI.clearBlueprints,
-  blueprintCurve = GUI.createBlueprint,
+  blueprint_concrete_vertical = GUI.create_concrete_vertical,
+  blueprint_concrete_diagonal = GUI.create_concrete_diagonal,
 }
