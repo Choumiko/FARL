@@ -206,6 +206,7 @@ defaultSettings =
     bridge = false,
     root = false,
     parallelTracks = true,
+    concrete = true
   }
 
 defaultSettings.activeBP = defaultSettings.bp.big

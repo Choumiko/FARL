@@ -503,8 +503,10 @@ FARL = {
             --self:show_path()
             
             --add concrete to the queue to be placed in a tick without track placement (probably the next one)
-            table.insert(self.concrete_queue, {travelDir = newTravelDir, rail={
-              direction=last.direction,type=last.type,name=last.name,position=addPos(last.position)}})
+            if self.settings.concrete then
+              table.insert(self.concrete_queue, {travelDir = newTravelDir, rail={
+                direction=last.direction,type=last.type,name=last.name,position=addPos(last.position)}})
+            end
             
             if self.settings.poles and #self.path > 2 then
               local c = #self.path
@@ -553,7 +555,7 @@ FARL = {
           end
         end
       else
-        if #self.concrete_queue > 0 then
+        if self.settings.concrete and #self.concrete_queue > 0 then
           for i, queue in pairs(self.concrete_queue) do
             self:placeConcrete(queue.travelDir, queue.rail)
           end
@@ -786,7 +788,9 @@ FARL = {
     if enough then
       self.surface.set_tiles(pave)
       for name, c in pairs(counts) do
-        self:removeItemFromCargo(name, c)
+        if c > 0 then
+          self:removeItemFromCargo(name, c)
+        end
       end
     else
       self:print({"msg-not-enough-concrete"})
@@ -1006,7 +1010,7 @@ FARL = {
       local bps = self.settings.activeBP
       local bb = self.lastrail.direction%2==0 and bps.straight.boundingBox or bps.diagonal.boundingBox
       --debugDump(bb,true)
-      --self:showArea(self:rail_below_train(), self.direction, {bb.tl,bb.br}, 4)
+      self:showArea(self:rail_below_train(), self.direction, {bb.tl,bb.br}, 4)
       local front_rail_index = false
       self.path, front_rail_index = self:get_rails_below_train()
       front_rail_index = front_rail_index
@@ -1446,6 +1450,12 @@ FARL = {
               local pos = subPos(railPos, off)
               for _, c in pairs(concrete) do
                 table.insert(offsets.concrete, {name=c.name, position=subPos(c.position, pos)})
+                local position = c.position
+                if box.tl.x > position.x then box.tl.x = position.x end
+                if box.tl.y > position.y then box.tl.y = position.y end
+
+                if box.br.x < position.x then box.br.x = position.x end
+                if box.br.y < position.y then box.br.y = position.y end
               end
             end
             local rails = {}
@@ -1549,11 +1559,16 @@ FARL = {
     local mainRail = bp.mainRail
     local bb = bp.boundingBox
     local removeItem, removeAmount = newRail.name, 1
-    --local area = self:createBoundingBox(newRail, newTravelDir)
-    --local canplace = self:prepareArea(newRail, area)
-    local canplace = self:prepareArea(newRail)
-    --canplace = self:prepareArea(newRail)
-    --self:showArea(newRail, newTravelDir, area, 2)
+    local canplace = false
+    local area = false
+    if newRail.direction % 2 == 0 and newRail.name ~= self.settings.rail.curved then
+      area = self:createBoundingBox(newRail, newTravelDir)
+      canplace = self:prepareArea(newRail, area)
+      --self:showArea(newRail, newTravelDir, area, 2)
+    else
+      canplace = self:prepareArea(newRail)
+    end
+
     local hasRail = self:getCargoCount(newRail.name) > 0
     if not hasRail and newRail.name == self.settings.rail.curved then
       hasRail = self:getCargoCount(self.settings.rail.straight) >= 4

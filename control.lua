@@ -117,6 +117,7 @@ local function on_configuration_changed(data)
     if newVersion and newVersion > "0.4.41" then
       for name,p in pairs(global.players) do
         p.maintenance = false
+        p.concrete = true
       end
       for i,f in pairs(global.farl) do
         if not f.concrete_queue then

@@ -128,6 +128,7 @@ GUI = {
       end
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
+      GUI.add(rows, {type="checkbox", name="concrete", caption={"tgl-concrete"}}, "concrete")
       GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
       --GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance},GUI.toggleMaintenance)
       GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
@@ -151,7 +152,7 @@ GUI = {
         farl:debugInfo()
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
         or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
-        or name == "poleEntities" or name == "parallelTracks" then
+        or name == "poleEntities" or name == "parallelTracks" or name == "concrete" then
         psettings[name] = not psettings[name]
         if name == "poles" then
           if psettings[name] and farl.active then
