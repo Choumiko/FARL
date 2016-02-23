@@ -410,7 +410,7 @@ FARL = {
           
           --check if previous curve is far enough behind if input is the same
           if self.lastCurve and self.lastCurve.input == self.input and self.settings.parallelTracks then
-            self:print("curveblock:"..self.lastCurve.curveblock.."dist:"..self.lastCurve.dist)
+            --self:print("curveblock:"..self.lastCurve.curveblock.."dist:"..self.lastCurve.dist)
             if self.lastCurve.dist < self.lastCurve.curveblock then
               self.input = 1
             end 
@@ -498,7 +498,7 @@ FARL = {
               --debugDump(self.signalCount,true)
             end
             if last.type == "curved-rail" then
-              self:print("block:"..self.lastCurve.curveblock)
+              --self:print("block:"..self.lastCurve.curveblock)
             end
             --self:show_path()
             
@@ -523,7 +523,7 @@ FARL = {
                 --self:flyingText2("br", RED, true, bestrail.position)
               else
                 --self:print("should place pole")
-                self:flyingText2("sp", RED, true, self.lastCheckPole)
+                --self:flyingText2("sp", RED, true, self.lastCheckPole)
                 if self.lastCheckPole.x then
                   local status, err = pcall(function() self:placePole(self.lastCheckPole, self.lastCheckDir) end)
                   if not status then
@@ -1006,11 +1006,11 @@ FARL = {
       local bps = self.settings.activeBP
       local bb = self.lastrail.direction%2==0 and bps.straight.boundingBox or bps.diagonal.boundingBox
       --debugDump(bb,true)
-      self:showArea(self:rail_below_train(), self.direction, {bb.tl,bb.br}, 4)
+      --self:showArea(self:rail_below_train(), self.direction, {bb.tl,bb.br}, 4)
       local front_rail_index = false
       self.path, front_rail_index = self:get_rails_below_train()
       front_rail_index = front_rail_index
-      self:flyingText("FR", YELLOW, true, self:rail_below_train().position)
+      --self:flyingText("FR", YELLOW, true, self:rail_below_train().position)
       --self:show_path()
 
       local prev = self.path[1].rail
@@ -1029,7 +1029,7 @@ FARL = {
         front_rail_index = front_rail_index + 1
         --self:flyingText(i, YELLOW, true, path[i].rail.position)
       end
-      self:show_path()
+      --self:show_path()
       if self.maintenance and #self.path >= front_rail_index+3 then
         local c = #self.path
         self.maintenanceRail = self.path[front_rail_index+2].rail
@@ -1092,8 +1092,8 @@ FARL = {
       if last_signal and signal_rail then
         self:protect(last_signal)
         --self:flyingText2( "SR", GREEN, true, signal_rail.position)
-        self:print(self.signalCount.main)
-        self:flyingText(self.signalCount.main, YELLOW, true, last_signal.position)
+        --self:print(self.signalCount.main)
+        --self:flyingText(self.signalCount.main, YELLOW, true, last_signal.position)
       end
       --self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
 
@@ -1121,7 +1121,7 @@ FARL = {
         end
         self.signalCount[i] = self.signalCount.main - lag --+ mainCount
       end
-      debugDump(self.signalCount,true)
+      --debugDump(self.signalCount,true)
       --create curve blueprint
       local c = 3
       local main = {entity_number=1, direction=1,name="curved-rail",position={x=2,y=2}}
@@ -2088,7 +2088,7 @@ FARL = {
     local canPlace = self:prepareArea(pole)
     if not canPlace and self.surface.count_entities_filtered{area=expandPos(polePos,0.6),name=name} > 1 then
       canPlace = true
-      debugDump("found pole@"..pos2Str(polePos),true)
+      --debugDump("found pole@"..pos2Str(polePos),true)
     end
     local hasPole = self:getCargoCount(name) > 0
     if canPlace and hasPole then
@@ -2126,7 +2126,7 @@ FARL = {
 
   placeSignal = function(self,traveldir, rail)
     if self.signalCount.main > self.settings.signalDistance and rail.name ~= self.settings.rail.curved then
-      debugDump(self.signalCount,true)
+      --debugDump(self.signalCount,true)
       local rail = rail
       local signal = get_signal_for_rail(rail,traveldir)
       signal.force = self.locomotive.force

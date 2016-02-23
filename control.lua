@@ -4,7 +4,7 @@ require "FARL"
 require "GUI"
 
 MOD_NAME = "FARL"
-debugButton = true
+debugButton = false
 godmode = false
 removeStone = true
 
@@ -79,6 +79,7 @@ local function init_global()
   godmode = global.godmode
   global.destroyNextTick = global.destroyNextTick or {}
   global.overlayStack = global.overlayStack or {}
+  global.statistics = global.statistics or {}
   global.version = global.version or "0.4.41"
   setMetatables()
 end
