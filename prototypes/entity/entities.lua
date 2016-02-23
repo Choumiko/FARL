@@ -1,6 +1,7 @@
 local farl = copyPrototype("locomotive", "diesel-locomotive", "farl")
 farl.icon = "__FARL__/graphics/icons/farl.png"
 farl.max_speed = 0.8
+farl.energy_source.fuel_inventory_size = 4
 farl.pictures.filenames =
   {
     "__FARL__/graphics/entity/farl/farl-01.png",
