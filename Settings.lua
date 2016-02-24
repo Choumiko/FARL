@@ -204,6 +204,7 @@ defaultSettings =
     rail = rails.basic,
     signals = true,
     bridge = false,
+    maintenance = false,
     root = false,
     parallelTracks = true,
     concrete = true

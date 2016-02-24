@@ -121,22 +121,14 @@ local function on_configuration_changed(data)
   if data.mod_changes[MOD_NAME] then
     local newVersion = data.mod_changes[MOD_NAME].new_version
     local oldVersion = data.mod_changes[MOD_NAME].old_version
+    if oldVersion and oldVersion < "0.5.0" then
+      global = {}
+    end
     init_global()
     init_forces()
     init_players()
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
-    if newVersion and newVersion > "0.4.41" then
-      for name,p in pairs(global.players) do
-        p.maintenance = false
-        p.concrete = true
-      end
-      for i,f in pairs(global.farl) do
-        if not f.concrete_queue then
-          f.concrete_queue = {}
-        end
-      end
-    end
-    global.version = "0.4.43"
+    global.version = "0.5.0"
   end
   if data.mod_changes["5dim_trains"] then
     --5dims_trains was added/updated
