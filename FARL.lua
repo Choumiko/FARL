@@ -1,5 +1,7 @@
 require "util"
 
+trigger_event = {["concrete-lamppost"] = true}
+
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 input2dir = {[0]=-1,[1]=0,[2]=1}
 --[traveldir] ={[raildir]
@@ -1345,6 +1347,9 @@ FARL = {
       --apiCalls.create = apiCalls.create + 1
     end
     if entity then
+      if trigger_event[entity.name] then
+        game.raise_event(defines.events.on_robot_built_entity, {created_entity = entity})
+      end
       self:protect(entity)
       local diff = subPos(arg.position, entity.position)
       if diff.x ~= 0 or diff.y~= 0 then
