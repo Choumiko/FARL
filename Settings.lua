@@ -9,14 +9,14 @@ defaultsDiagonal = {
   direction = 7,
   poleEntities = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
   pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}},
-  rails = {}, signals = {}, lanes = {},
+  rails = {}, signals = {}, lanes = {}, clearance_points = {},
   boundingBox = {br = {x = 2.5, y = 4}, tl = {x = -1, y = 0}}}
 
 defaultsStraight = {
   direction = 0,
   poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
   pole = {name = "big-electric-pole", position = {x = 3, y = -1}},
-  rails = {}, signals = {}, lanes = {},
+  rails = {}, signals = {}, lanes = {}, clearance_points = {},
   boundingBox = {br = {x = 3, y = 0.5}, tl = {x = -0.5, y = -1}}}
   
 defaultsCurve = {
@@ -24,7 +24,7 @@ defaultsCurve = {
     direction = 0,
     poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
     pole = {name = "big-electric-pole", position = {x = 4, y = 2}},
-    rails = {}, signals = {}, lanes = {},
+    rails = {}, signals = {}, lanes = {}, clearance_points = {},
     boundingBox = {br = {x=4.5,y=3.5}, tl = {x=-2.5,y=-3.5}}
   },
   
@@ -32,7 +32,7 @@ defaultsCurve = {
     direction = 1,
     poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
     pole = {name = "big-electric-pole", position = {x = 2, y = 2}},
-    rails = {}, signals = {}, lanes = {},
+    rails = {}, signals = {}, lanes = {}, clearance_points = {},
     boundingBox = {br = {x=3.5,y=4.5}, tl = {x=-1.5,y=-3.5}}
   }
 }
@@ -41,14 +41,14 @@ defaultsMediumDiagonal = {
   direction = 7,
   poleEntities = {{name = "small-lamp", position = {x = -1, y = 1}}},
   pole = {name = "medium-electric-pole", position = {x = 2, y = 2}},
-  rails = {}, signals = {}, lanes = {},
+  rails = {}, signals = {}, lanes = {}, clearance_points = {},
   boundingBox = {br = {x = 1, y = 4}, tl = {x = -2, y = 0}}}
 
 defaultsMediumStraight = {
   direction = 0,
   poleEntities = {{name = "small-lamp", position = {x = 0,y = 1}}},
   pole = {name = "medium-electric-pole", position = {x = 2.5,y = -0.5}},
-  rails = {}, signals = {}, lanes = {},
+  rails = {}, signals = {}, lanes = {}, clearance_points = {},
   boundingBox = {br = {x = 2.5, y = 0.5}, tl = {x = -1.5, y = -1}}}
 
 defaultsCurveMedium = {
@@ -56,7 +56,7 @@ defaultsCurveMedium = {
     direction = 0,
     poleEntities = {{name = "small-lamp", position = {x = 0, y = 1}}},
     pole = {name = "medium-electric-pole", position = {x = 3.5, y = 1.5}},
-    rails = {}, signals = {}, lanes = {},
+    rails = {}, signals = {}, lanes = {}, clearance_points = {},
     boundingBox = {br = {x=3.5,y=3.5}, tl = {x=-2.5,y=-3.5}}
   },
   
@@ -64,7 +64,7 @@ defaultsCurveMedium = {
     direction = 1,
     poleEntities = {{name = "small-lamp", position = {x = 0, y = 1}}},
     pole = {name = "medium-electric-pole", position = {x = 1.5, y = 1.5}},
-    rails = {}, signals = {}, lanes = {},
+    rails = {}, signals = {}, lanes = {}, clearance_points = {},
     boundingBox = {br = {x=2.5,y=3.5}, tl = {x=-1.5,y=-3.5}}
   }
 }

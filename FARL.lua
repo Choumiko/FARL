@@ -603,7 +603,7 @@ FARL = {
     --else
     --return true
     --end
-    if entity and not self:genericCanPlace(entity) then
+    if entity and entity.name and not self:genericCanPlace(entity) then
       self:fillWater(area)
     end
     return self:genericCanPlace(entity)
@@ -1012,7 +1012,7 @@ FARL = {
       local bps = self.settings.activeBP
       local bb = self.lastrail.direction%2==0 and bps.straight.boundingBox or bps.diagonal.boundingBox
       --debugDump(bb,true)
-      self:showArea(self:rail_below_train(), self.direction, {bb.tl,bb.br}, 4)
+      --self:showArea(self:rail_below_train(), self.direction, {bb.tl,bb.br}, 4)
       local front_rail_index = false
       self.path, front_rail_index = self:get_rails_below_train()
       front_rail_index = front_rail_index
@@ -1354,6 +1354,7 @@ FARL = {
       local diff = subPos(arg.position, entity.position)
       if diff.x ~= 0 or diff.y~= 0 then
         self:flyingText2("x", RED,true,entity.position)
+        self:print("Misplaced entity: "..entity.name)
         self:print("arg:"..pos2Str(arg.position).." ent:"..pos2Str(entity.position))
       end
     end
@@ -1514,19 +1515,24 @@ FARL = {
             tl.x = tl.x < 0 and tl.x or -0.5
             br.x = br.x > 0 and br.x or 0.5
             --br.x = br.x + 1
-            
+            local clearance_points = {}            
             if bpType == "diagonal" then
               tl.x = tl.x - 1.5
               tl.y = tl.y - 1.5
               
               br.x = br.x + 1.5
               br.y = br.y + 1.5
+
+              local tl2 = {x=tl.x+1.5,y=tl.y+1.5}
+              local br2 = {x=br.x-1.5,y=br.y-1.5}
+              for i=tl2.x,br2.x,1.5 do
+                table.insert(clearance_points, {x=i,y=i})
+              end
             end
-            
             --debugDump({tl=tl,br=br},true)
             local bp = {
               mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps,
-              rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes}
+              rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes, clearance_points = clearance_points}
             bp.boundingBox = {tl = tl,
               br = br}
             self.settings.bp[poleType][bpType] = bp
@@ -1573,7 +1579,17 @@ FARL = {
     else
       canplace = self:prepareArea(newRail)
     end
-
+    
+    if newRail.direction % 2 == 1 and newRail.name == self.settings.rail.straight then
+      for i,p in pairs(bp.clearance_points) do
+        local pos = move_right_forward(newRail.position,newTravelDir,p.x,0)
+        local area = expandPos(pos, 1.5)
+        self:removeTrees(area)
+        self:pickupItems(area)
+        self:removeStone(area)
+      end
+    end
+    
     local hasRail = self:getCargoCount(newRail.name) > 0
     if not hasRail and newRail.name == self.settings.rail.curved then
       hasRail = self:getCargoCount(self.settings.rail.straight) >= 4
