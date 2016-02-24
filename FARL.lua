@@ -595,11 +595,11 @@ FARL = {
     --if force or not self:genericCanPlace(entity) then
     --debugDump(area,true)
     --self:showArea2(area)
-    log(game.tick.." prepArea")
+    --log(game.tick.." prepArea")
     self:removeTrees(area)
     self:pickupItems(area)
     self:removeStone(area)
-    log(game.tick.." prepArea done")
+    --log(game.tick.." prepArea done")
     --else
     --return true
     --end
@@ -782,7 +782,9 @@ FARL = {
         counts[c.name] = counts[c.name] + 1
       end
     end
-    self:replaceWater(tiles, w, dw)
+    if self.settings.bridge then
+      self:replaceWater(tiles, w, dw)
+    end
     local enough  = true
     for name, c in pairs(counts) do
       if self:getCargoCount(name) < c then
