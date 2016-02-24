@@ -40,7 +40,7 @@ data:extend({
   inventory_size = 1,
   picture =
   {
-    filename = "__ResourceCombinator__/graphics/rm_Overlay.png",
+    filename = "__FARL__/graphics/rm_Overlay.png",
     priority = "extra-high",
     width = 32,
     height = 32,
