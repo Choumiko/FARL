@@ -29,7 +29,7 @@ data:extend({
   name = "farl_overlay",
   icon = "__FARL__/graphics/rm_Overlay.png",
   flags = {"placeable-neutral", "player-creation"},
-  minable = {mining_time = 1, result = "resource-combinator"},
+  minable = {mining_time = 1, result = "raw-wood"},
   order = "b[rm_overlay]",
   collision_mask = {"resource-layer"},
   max_health = 100,
