@@ -94,6 +94,16 @@ local function init_players()
   end
 end
 
+local function init_force(force)
+  global.statistics[force.name] = global.statistics[force.name] or {created={}, removed={}} 
+end
+
+local function init_forces()
+  for _, f in pairs(game.forces) do
+    init_force(f)
+  end
+end
+
 local function on_init()
   init_global()
 end
@@ -112,6 +122,7 @@ local function on_configuration_changed(data)
     local newVersion = data.mod_changes[MOD_NAME].new_version
     local oldVersion = data.mod_changes[MOD_NAME].old_version
     init_global()
+    init_forces()
     init_players()
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
     if newVersion and newVersion > "0.4.41" then
@@ -144,6 +155,10 @@ end
 
 local function on_player_created(event)
   init_player(game.players[event.player_index])
+end
+
+local function on_force_created(event)
+  init_force(event.force)
 end
 
 local function on_gui_click(event)
@@ -241,6 +256,7 @@ script.on_init(on_init)
 script.on_load(on_load)
 script.on_configuration_changed(on_configuration_changed)
 script.on_event(defines.events.on_player_created, on_player_created)
+script.on_event(defines.events.on_force_created, on_force_created)
 
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event(defines.events.on_gui_click, on_gui_click)
@@ -304,6 +320,7 @@ remote.add_interface("farl",
         if p.gui.top.farl then p.gui.top.farl.destroy() end
       end
       init_global()
+      init_forces()
       init_players()
     end,
 

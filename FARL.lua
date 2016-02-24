@@ -629,6 +629,8 @@ FARL = {
     local found = false
     for _, entity in pairs(self.surface.find_entities_filtered{area = area, type = "tree"}) do
       found = true
+      local stat = global.statistics[self.locomotive.force.name].removed["tree-01"] or 0
+      global.statistics[self.locomotive.force.name].removed["tree-01"] = stat+1
       entity.die()
       if not godmode and self.settings.collectWood then
         self:addItemToCargo("raw-wood", 1)
@@ -648,6 +650,8 @@ FARL = {
       for _, entity in pairs(self.surface.find_entities_filtered{area = area, name = "stone-rock"}) do
         found = true
         entity.die()
+        local stat = global.statistics[self.locomotive.force.name].removed["stone-rock"] or 0
+        global.statistics[self.locomotive.force.name].removed["stone-rock"] = stat+1
       end
 
       if found then
@@ -673,16 +677,14 @@ FARL = {
             break
           end
           self:addItemToCargo(item, 1)
+          local stat = global.statistics[self.locomotive.force.name].removed[item] or 0
+          global.statistics[self.locomotive.force.name].removed[item] = stat+1
         end
         if not entity.destroy() then
           self:deactivate({"msg-cant-remove"})
           return
         end
       end
-    end
-
-    if found then
-    --apiCalls.find.other = apiCalls.find.other + 1
     end
   end,
 
@@ -792,6 +794,8 @@ FARL = {
       for name, c in pairs(counts) do
         if c > 0 then
           self:removeItemFromCargo(name, c)
+          local stat = global.statistics[self.locomotive.force.name].created[name] or 0
+          global.statistics[self.locomotive.force.name].created[name] = stat+c
         end
       end
     else
@@ -1350,6 +1354,8 @@ FARL = {
       if trigger_event[entity.name] then
         game.raise_event(defines.events.on_robot_built_entity, {created_entity = entity})
       end
+      local stat = global.statistics[entity.force.name].created[entity.name] or 0
+      global.statistics[entity.force.name].created[entity.name] = stat+1
       self:protect(entity)
       local diff = subPos(arg.position, entity.position)
       if diff.x ~= 0 or diff.y~= 0 then

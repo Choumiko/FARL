@@ -285,6 +285,8 @@ GUI = {
         local row4 = GUI.add(settings, {type="flow", name="row5", direction="horizontal"})
         GUI.addButton(row4, {name="blueprint_concrete_vertical", caption={"stg-blueprint-vertical"}}, GUI.create_concrete_vertical)
         GUI.addButton(row4,{name="blueprint_concrete_diagonal", caption={"stg-blueprint-diagonal"}},GUI.create_concrete_diagonal)
+        local row6 = GUI.add(settings, {type="flow", name="row6", direction="horizontal"})
+        GUI.addButton(row6,{name="print_statistics", caption={"stg-statistics"}}, GUI.print_statistics)
       end
     end,
 
@@ -359,6 +361,32 @@ GUI = {
     create_concrete_diagonal = function(event, farl, player)
       GUI.createBlueprint(defaults_concrete_diag,farl,player)
     end,
+    
+    print_statistics = function(event, farl, player)
+      if player.valid then
+        local stats = global.statistics[player.force.name]
+        player.print({"stg-statistics"})
+        player.print({"text-created-entities"})
+        for n,c in pairs(stats.created) do
+          local proto = game.entity_prototypes[n] or game.item_prototypes[n] or false
+          if proto then
+            player.print({"",proto.localised_name, ": "..c})
+          else
+            player.print(n..": "..c)
+          end
+        end
+        player.print({"text-removed-entities"})
+        for n,c in pairs(stats.removed) do
+          local proto = game.entity_prototypes[n] or game.item_prototypes[n] or false
+          if proto then
+            player.print({"",proto.localised_name, ": "..c})
+          else
+            player.print(n..": "..c)
+          end
+        end
+        GUI.toggleSettingsWindow(event, farl, player)
+      end
+    end,
 
     createBlueprint = function(bp_table, farl, player)
       local blueprints = GUI.findBlueprintsInHotbar(player)
@@ -421,4 +449,5 @@ GUI.callbacks = {
   bpClear = GUI.clearBlueprints,
   blueprint_concrete_vertical = GUI.create_concrete_vertical,
   blueprint_concrete_diagonal = GUI.create_concrete_diagonal,
+  print_statistics = GUI.print_statistics,
 }
