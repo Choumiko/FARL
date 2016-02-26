@@ -506,6 +506,11 @@ FARL = {
                 direction=last.direction,type=last.type,name=last.name,position=addPos(last.position)}})
             end
             
+            --place rail entities (only walls for now)
+            if last.name == self.settings.rail.straight then
+              self:placeRailEntities(newTravelDir, last)
+            end
+            
             if self.settings.poles and #self.path > 2 then
               local c = #self.path
               local rail = self.path[c-1].rail
@@ -1373,7 +1378,9 @@ FARL = {
       local e = bp[j].get_blueprint_entities()
       local concrete = bp[j].get_blueprint_tiles()
       if e then
-        local offsets = {pole=false, chain=false, poleEntities={}, rails={}, signals={}, concrete={}, lanes={}}
+        local offsets = {
+                pole=false, chain=false, poleEntities={}, railEntities={},
+                rails={}, signals={}, concrete={}, lanes={}}
         local bpType = false
         local rails = 0
         local poles = {}
@@ -1409,7 +1416,13 @@ FARL = {
           elseif e[i].name == "rail-signal" then
             table.insert(offsets.signals, {name = e[i].name, direction = dir, position = e[i].position})
           else
-            table.insert(offsets.poleEntities, {name = e[i].name, direction = dir, position = e[i].position})
+            local e_type = game.entity_prototypes[e[i].name].type
+            local rail_entities = {["wall"]=true}
+            if not rail_entities[e_type] then
+              table.insert(offsets.poleEntities, {name = e[i].name, direction = dir, position = e[i].position})
+            else
+              table.insert(offsets.railEntities, {name = e[i].name, direction = dir, position = e[i].position})
+            end
           end
         end
         if #poles > 0 then
@@ -1469,6 +1482,10 @@ FARL = {
               railPos = self:fixDiagonalPos(mainRail)
             end
             offsets.pole.position = subPos(offsets.pole.position,railPos)
+            local railEntities = {}
+            for _, re in pairs(offsets.railEntities) do
+              table.insert(railEntities, {name=re.name, position=subPos(re.position, railPos), direction = re.direction})
+            end            
             if concrete then
               local off = {x=0.5,y=0.5}
               local pos = subPos(railPos, off)
@@ -1548,7 +1565,8 @@ FARL = {
             --debugDump({tl=tl,br=br},true)
             local bp = {
               mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps,
-              rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes, clearance_points = clearance_points}
+              rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes,
+              clearance_points = clearance_points, railEntities = railEntities}
             bp.boundingBox = {tl = tl,
               br = br}
             self.settings.activeBP[bpType] = bp
@@ -2018,6 +2036,34 @@ FARL = {
               self:removeItemFromCargo(poleEntities[i].name, 1)
             else
               self:deactivate("Trying to place "..poleEntities[i].name.." failed")
+            end
+          end
+        end
+      end
+    end
+  end,
+  
+  placeRailEntities = function(self,traveldir,rail)
+    local railEntities = traveldir % 2 == 0 and self.settings.activeBP.straight.railEntities or self.settings.activeBP.diagonal.railEntities
+    local diff = traveldir % 2 == 0 and traveldir or traveldir-1
+    local rad = diff * (math.pi/4)
+    if type(railEntities) == "table" then
+      for i=1,#railEntities do
+        if self:getCargoCount(railEntities[i].name) > 1 then
+          local offset = railEntities[i].position
+          offset = rotate(offset, rad)
+          local pos = addPos(diagonal_to_real_pos(rail), offset)
+          --debugDump(pos, true)
+          local entity = {name = railEntities[i].name, position = pos}
+          if self:prepareArea(entity) then
+            local _, ent = self:genericPlace{name = railEntities[i].name, position = pos, direction=0,force = self.locomotive.force}
+            if ent then
+              if self.maintenance then
+                self:protect(ent)
+              end
+              self:removeItemFromCargo(railEntities[i].name, 1)
+            else
+              self:deactivate("Trying to place "..railEntities[i].name.." failed")
             end
           end
         end

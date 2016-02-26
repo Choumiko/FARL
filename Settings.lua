@@ -9,14 +9,14 @@ defaultsDiagonal = {
   direction = 7,
   poleEntities = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
   pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}},
-  rails = {}, signals = {}, lanes = {}, clearance_points = {},
+  rails = {}, signals = {}, lanes = {}, clearance_points = {}, railEntities = {},
   boundingBox = {br = {x = 2.5, y = 4}, tl = {x = -1, y = 0}}}
 
 defaultsStraight = {
   direction = 0,
   poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
   pole = {name = "big-electric-pole", position = {x = 3, y = -1}},
-  rails = {}, signals = {}, lanes = {}, clearance_points = {},
+  rails = {}, signals = {}, lanes = {}, clearance_points = {}, railEntities = {},
   boundingBox = {br = {x = 3, y = 0.5}, tl = {x = -0.5, y = -1}}}
   
 defaults_concrete_diag = {
