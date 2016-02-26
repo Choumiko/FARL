@@ -259,13 +259,9 @@ function get_signal_for_rail(rail, traveldir, end_of_rail)
 end
 
 function saveBlueprint(player, poleType, type, bp)
-  if not global.savedBlueprints[player.name] then
-    global.savedBlueprints[player.name] = {}
-  end
-  if not global.savedBlueprints[player.name][poleType] then
-    global.savedBlueprints[player.name][poleType] = {straight = {}, diagonal = {}}
-  end
-  global.savedBlueprints[player.name][poleType][type] = util.table.deepcopy(bp)
+  local psettings = Settings.loadByPlayer(player)
+  if not psettings.activeBP then psettings.activeBP = {} end
+  psettings.activeBP[type] = util.table.deepcopy(bp)
 end
 
 function protectedKey(ent)
@@ -1380,6 +1376,7 @@ FARL = {
         local offsets = {pole=false, chain=false, poleEntities={}, rails={}, signals={}, concrete={}, lanes={}}
         local bpType = false
         local rails = 0
+        local poles = {}
         local box = {tl={x=0,y=0}, br={x=0,y=0}}
         for i=1,#e do
           local position = diagonal_to_real_pos(e[i])
@@ -1392,8 +1389,9 @@ FARL = {
           local dir = e[i].direction or 0
           if e[i].name == "rail-chain-signal" and not offsets.chain then
             offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
-          elseif e[i].name == "big-electric-pole" or e[i].name == "medium-electric-pole" then
-            offsets.pole = {name = e[i].name, direction = dir, position = e[i].position}
+          -- collect all poles in bp
+          elseif global.electric_poles[e[i].name] then
+            table.insert(poles, {name = e[i].name, direction = dir, position = e[i].position})
           elseif e[i].name == "straight-rail" or e[i].name == "curved-rail" then
             rails = rails + 1
             if not bpType then
@@ -1415,6 +1413,22 @@ FARL = {
             table.insert(offsets.signals, {name = e[i].name, direction = dir, position = e[i].position})
           else
             table.insert(offsets.poleEntities, {name = e[i].name, direction = dir, position = e[i].position})
+          end
+        end
+        if #poles > 0 then
+          local max = 0
+          local max_index
+          for i,p in pairs(poles) do
+            if global.electric_poles[p.name] > max then
+              max = global.electric_poles[p.name]
+              max_index = i
+            end
+          end
+          offsets.pole = poles[max_index]
+          for i,p in pairs(poles) do
+            if i ~= max_index then
+              table.insert(offsets.poleEntities, p)
+            end
           end
         end
         if rails == 1 and not offsets.chain then
@@ -1453,7 +1467,6 @@ FARL = {
                 table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position), direction = l.direction})
               end
             end
-            local poleType = offsets.pole.name == "medium-electric-pole" and "medium" or "big"
             local railPos = mainRail.position
             if bpType == "diagonal" then
               railPos = self:fixDiagonalPos(mainRail)
@@ -1543,12 +1556,12 @@ FARL = {
               rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes, clearance_points = clearance_points}
             bp.boundingBox = {tl = tl,
               br = br}
-            self.settings.bp[poleType][bpType] = bp
+            self.settings.activeBP[bpType] = bp
             if #rails > 0 then
               self.settings.flipPoles = false
             end
-            saveBlueprint(self.driver, poleType, bpType, bp)
-            self:print({"msg-bp-saved", bpType, {"entity-name."..poleType.."-electric-pole"}})
+            saveBlueprint(self.driver, bpType, bp)
+            self:print({"msg-bp-saved", bpType, {"entity-name."..bp.pole.name}})
           else
             self:print({"msg-bp-chain-direction"})
           end
@@ -2046,9 +2059,9 @@ FARL = {
   end,
 
   findClosestPole = function(self, minPos)
-    local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
+    local name = self.settings.activeBP.diagonal.pole.name --settings.medium and "medium-electric-pole" or "big-electric-pole"
+    local reach = global.electric_poles[name]--self.settings.medium and 9 or 30
     local tmp, ret, minDist = minPos, false, 100
-    local reach = self.settings.medium and 9 or 30
     for i,p in pairs(self.surface.find_entities_filtered{area=expandPos(tmp, reach), name=name}) do
       local dist = distance(p.position, tmp)
       --debugDump({dist=dist, minPos=minPos, p=p.position},true)
@@ -2075,8 +2088,10 @@ FARL = {
   end,
 
   getBestPole = function(self, lastPole, rails, foo)
-    local reach = self.settings.medium and 9 or 30
-    local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
+    local name = self.settings.activeBP.diagonal.pole.name
+    local reach = global.electric_poles[name]
+    --local reach = self.settings.medium and 9 or 30
+    --local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local min, max = 100, -1
     local minPole, maxPole, maxRail
     local points = {}
@@ -2125,7 +2140,8 @@ FARL = {
   end,
 
   placePole = function(self, polePos, poleDir)
-    local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
+    local name = self.settings.activeBP.diagonal.pole.name
+    --local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     local lastPole = self.lastPole
     local pole = {name = name, position = polePos}
     --debugDump(util.distance(pole.position, self.lastPole.position),true)
@@ -2192,8 +2208,10 @@ FARL = {
   end,
 
   findLastPole = function(self, rail)
-    local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
-    local reach = self.settings.medium and 9 or 30
+    local name = self.settings.activeBP.diagonal.pole.name
+    local reach = global.electric_poles[name]
+    --local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
+    --local reach = self.settings.medium and 9 or 30
     local min, pole = 900, nil
     local pos = rail and rail.position or self.locomotive.position
     for i, p in pairs(self.surface.find_entities_filtered{area=expandPos(pos, reach), name=name}) do

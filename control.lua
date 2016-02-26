@@ -22,6 +22,15 @@ function setMetatables()
   end
 end
 
+local function getMetaItemData()
+  game.forces.player.recipes["farl-meta"].reload()
+  local metaitem = game.forces.player.recipes["farl-meta"].ingredients
+  global.electric_poles = {}
+  for i, ent in pairs(metaitem) do
+    global.electric_poles[ent.name] = ent.amount/10
+  end
+end
+
 local function on_tick(event)
   local status, err = pcall(function()
     if global.overlayStack and global.overlayStack[event.tick] then
@@ -80,6 +89,7 @@ local function init_global()
   global.destroyNextTick = global.destroyNextTick or {}
   global.overlayStack = global.overlayStack or {}
   global.statistics = global.statistics or {}
+  global.electric_poles = global.electric_poles or {}
   global.version = global.version or "0.4.41"
   setMetatables()
 end
@@ -124,6 +134,22 @@ local function on_configuration_changed(data)
     if oldVersion and oldVersion < "0.5.0" then
       global = {}
     end
+    if oldVersion and oldVersion < "0.5.01" then
+      local new = {}
+      for name, bptype in pairs(global.savedBlueprints) do
+        for _, bp in pairs(bptype) do
+          table.insert(new, util.table.deepcopy(bp))
+        end
+        if global.players[name].activeBP then
+          global.savedBlueprints[name][1] = util.table.deepcopy(global.players[name].activeBP)
+        end
+        for i=2,3 do
+          global.savedBlueprints[name][i] = new[i] or false
+        end
+        global.savedBlueprints[name].big = nil
+        global.savedBlueprints[name].medium = nil
+      end
+    end
     init_global()
     init_forces()
     init_players()
@@ -139,6 +165,8 @@ local function on_configuration_changed(data)
       global.electricInstalled = false
     end
   end
+  --some mod changed, readd poles
+  getMetaItemData()
   setMetatables()
   for name,s in pairs(global.players) do
     s:checkMods()

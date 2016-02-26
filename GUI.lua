@@ -4,6 +4,14 @@ Observer = {
   end
 }
 
+function startsWith(String,Start)
+  return string.sub(String,1,string.len(Start))==Start
+end
+
+function endsWith(String,End)
+  return End=='' or string.sub(String,-string.len(End))==End
+end
+
 GUI = {
 
     ccWires = {
@@ -150,6 +158,12 @@ GUI = {
       if name == "debug" then
         saveVar(global,"debug")
         farl:debugInfo()
+      elseif startsWith(event.element.name,"load_bp_") then
+        local i = event.element.name:match("load_bp_(%w*)")
+        GUI.load_bp(event,farl, player,tonumber(i))
+      elseif startsWith(event.element.name,"save_bp_") then
+        local i = event.element.name:match("save_bp_(%w*)")
+        GUI.save_bp(event,farl, player,tonumber(i))
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
         or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
         or name == "poleEntities" or name == "parallelTracks" or name == "concrete" then
@@ -188,19 +202,28 @@ GUI = {
       farl:toggleMaintenance()
     end,
 
-    togglePole = function(event, farl, player)
+    load_bp = function(event, farl, player, i)
+      if global.savedBlueprints[player.name][i] then
+        local bps = global.savedBlueprints[player.name][i]
+        local psettings = Settings.loadByPlayer(player)
+        local lanes = #bps.straight.lanes + 1
+        local pole = game.entity_prototypes[bps.straight.pole.name].localised_name
+        psettings.activeBP = global.savedBlueprints[player.name][i]
+        if farl.active then
+          farl:deactivate()
+          farl:activate()
+        end
+        player.print({"", {"text-blueprint-loaded"}, " ",{"text-blueprint-description", lanes, pole}})
+        GUI.toggleSettingsWindow(event,farl,player)
+      end
+    end,
+    
+    save_bp = function(event, farl, player, i)
       local psettings = Settings.loadByPlayer(player)
-      psettings.medium = not psettings.medium
-      if psettings.medium then
-        psettings.activeBP = psettings.bp.medium
-        event.element.caption = {"stg-poleMedium"}
-      else
-        psettings.activeBP = psettings.bp.big
-        event.element.caption = {"stg-poleBig"}
-      end
-      if farl.active then
-        farl:findLastPole()
-      end
+      global.savedBlueprints[player.name][i] = table.deepcopy(psettings.activeBP)
+      player.print({"text-blueprint-saved"})
+      GUI.toggleSettingsWindow(event,farl,player)
+      GUI.toggleSettingsWindow(event,farl,player)
     end,
 
     toggleSide = function(event, farl, player)
@@ -257,9 +280,6 @@ GUI = {
           GUI.add(settings, {type="label", caption=""})
         end
 
-        GUI.add(settings, {type="label", caption={"stg-poleType"}})
-        GUI.addButton(settings, {name="poleType", caption=captionPole}, GUI.togglePole)
-
         GUI.add(settings, {type="label", caption={"stg-poleSide"}})
         GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=psettings.flipPoles})
 
@@ -277,6 +297,24 @@ GUI = {
         GUI.add(row2, {type="label", caption={"stg-ccNetWire"}})
         GUI.addButton(row2, {name="ccNetWires", caption=GUI.ccWires[psettings.ccWires]}, GUI.toggleWires)
 
+        GUI.addLabel(settings, {caption={"stg-stored-blueprints"}})
+        local stored_bp = GUI.add(settings,{type="table", colspan=3})
+
+        local bps = global.savedBlueprints[player.name]        
+        for i=1,3 do
+          if bps[i] then
+            local lanes = #bps[i].straight.lanes + 1
+            local pole = game.entity_prototypes[bps[i].straight.pole.name].localised_name
+            GUI.addLabel(stored_bp, {caption={"text-blueprint-description", lanes, pole}})
+            GUI.addButton(stored_bp,{name="load_bp_"..i, caption="L"})
+            GUI.addButton(stored_bp,{name="save_bp_"..i, caption="S"})
+          else
+            GUI.addLabel(stored_bp, {caption="--"})
+            GUI.addLabel(stored_bp,{caption="L"})
+            GUI.addButton(stored_bp,{name="save_bp_"..i, caption="S"})
+          end
+        end
+        
         GUI.add(settings, {type="label", caption={"stg-blueprint"}})
         local row3 = GUI.add(settings, {type="table", name="row4", colspan=2})
         GUI.addButton(row3, {name="blueprint", caption={"stg-blueprint-read"}}, GUI.readBlueprint)
@@ -329,9 +367,14 @@ GUI = {
       local status, err = pcall(function()
         local bp = GUI.findSetupBlueprintsInHotbar(player)
         if bp then
+          local was_active = farl.active
+          farl:deactivate()
           farl:parseBlueprints(bp)
           GUI.destroyGui(player)
           GUI.createGui(player)
+          if was_active then
+            farl:activate()
+          end
           return
         end
       end)
@@ -342,13 +385,8 @@ GUI = {
 
     clearBlueprints = function(event, farl, player)
       local psettings = Settings.loadByPlayer(player)
-      psettings.bp = {
-        medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight, curves=defaultsCurveMedium},
-        big=    {diagonal=defaultsDiagonal, straight=defaultsStraight, curves=defaultsCurve}}
-      psettings.activeBP = psettings.medium and psettings.bp.medium or psettings.bp.big
-      if global.savedBlueprints[player.name] then
-        global.savedBlueprints[player.name] = nil
-      end
+      psettings.bp = {diagonal=defaultsDiagonal, straight=defaultsStraight, curves=defaultsCurve}
+      psettings.activeBP = psettings.bp
       farl:print({"msg-bp-cleared"})
       GUI.destroyGui(player)
       GUI.createGui(player)
@@ -443,7 +481,6 @@ GUI.callbacks = {
   debug = GUI.debugInfo,
   root = GUI.toggleRootMode,
   maintenance = GUI.toggleMaintenance,
-  poleType = GUI.togglePole,
   ccNetWires = GUI.toggleWires,
   blueprint = GUI.readBlueprint,
   bpClear = GUI.clearBlueprints,

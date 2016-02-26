@@ -37,38 +37,6 @@ defaultsCurve = {
   }
 }
 
-defaultsMediumDiagonal = {
-  direction = 7,
-  poleEntities = {{name = "small-lamp", position = {x = -1, y = 1}}},
-  pole = {name = "medium-electric-pole", position = {x = 2, y = 2}},
-  rails = {}, signals = {}, lanes = {}, clearance_points = {},
-  boundingBox = {br = {x = 1, y = 4}, tl = {x = -2, y = 0}}}
-
-defaultsMediumStraight = {
-  direction = 0,
-  poleEntities = {{name = "small-lamp", position = {x = 0,y = 1}}},
-  pole = {name = "medium-electric-pole", position = {x = 2.5,y = -0.5}},
-  rails = {}, signals = {}, lanes = {}, clearance_points = {},
-  boundingBox = {br = {x = 2.5, y = 0.5}, tl = {x = -1.5, y = -1}}}
-
-defaultsCurveMedium = {
-  left = {
-    direction = 0,
-    poleEntities = {{name = "small-lamp", position = {x = 0, y = 1}}},
-    pole = {name = "medium-electric-pole", position = {x = 3.5, y = 1.5}},
-    rails = {}, signals = {}, lanes = {}, clearance_points = {},
-    boundingBox = {br = {x=3.5,y=3.5}, tl = {x=-2.5,y=-3.5}}
-  },
-  
-  right = {
-    direction = 1,
-    poleEntities = {{name = "small-lamp", position = {x = 0, y = 1}}},
-    pole = {name = "medium-electric-pole", position = {x = 1.5, y = 1.5}},
-    rails = {}, signals = {}, lanes = {}, clearance_points = {},
-    boundingBox = {br = {x=2.5,y=3.5}, tl = {x=-1.5,y=-3.5}}
-  }
-}
-
 defaults_concrete_diag = {
   entities = {
     {
@@ -184,9 +152,7 @@ defaults_concrete_vert = {
 defaultSettings =
   {
     activeBP = {},
-    bp = {
-      medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight, curves=defaultsCurveMedium},
-      big=    {diagonal=defaultsDiagonal, straight=defaultsStraight, curves=defaultsCurve}},
+    bp = {diagonal=defaultsDiagonal, straight=defaultsStraight, curves=defaultsCurve},
     ccNet = false,
     ccWires = 1,
     collectWood = true,
@@ -197,7 +163,6 @@ defaultSettings =
     flipPoles = false,
     flipSignals = false,
     signalDistance = 15,
-    medium = false,
     minPoles = true,
     poles = true,
     poleEntities = true,
@@ -210,7 +175,7 @@ defaultSettings =
     concrete = true
   }
 
-defaultSettings.activeBP = defaultSettings.bp.big
+defaultSettings.activeBP = defaultSettings.bp
 
 Settings = {
   loadByPlayer = function(player)
