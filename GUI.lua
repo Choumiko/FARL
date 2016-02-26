@@ -385,7 +385,7 @@ GUI = {
 
     clearBlueprints = function(event, farl, player)
       local psettings = Settings.loadByPlayer(player)
-      psettings.bp = {diagonal=defaultsDiagonal, straight=defaultsStraight, curves=defaultsCurve}
+      psettings.bp = {diagonal=defaultsDiagonal, straight=defaultsStraight}
       psettings.activeBP = psettings.bp
       farl:print({"msg-bp-cleared"})
       GUI.destroyGui(player)

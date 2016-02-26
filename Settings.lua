@@ -19,24 +19,6 @@ defaultsStraight = {
   rails = {}, signals = {}, lanes = {}, clearance_points = {},
   boundingBox = {br = {x = 3, y = 0.5}, tl = {x = -0.5, y = -1}}}
   
-defaultsCurve = {
-  left = {
-    direction = 0,
-    poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
-    pole = {name = "big-electric-pole", position = {x = 4, y = 2}},
-    rails = {}, signals = {}, lanes = {}, clearance_points = {},
-    boundingBox = {br = {x=4.5,y=3.5}, tl = {x=-2.5,y=-3.5}}
-  },
-  
-  right = {
-    direction = 1,
-    poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
-    pole = {name = "big-electric-pole", position = {x = 2, y = 2}},
-    rails = {}, signals = {}, lanes = {}, clearance_points = {},
-    boundingBox = {br = {x=3.5,y=4.5}, tl = {x=-1.5,y=-3.5}}
-  }
-}
-
 defaults_concrete_diag = {
   entities = {
     {
@@ -152,7 +134,7 @@ defaults_concrete_vert = {
 defaultSettings =
   {
     activeBP = {},
-    bp = {diagonal=defaultsDiagonal, straight=defaultsStraight, curves=defaultsCurve},
+    bp = {diagonal=defaultsDiagonal, straight=defaultsStraight},
     ccNet = false,
     ccWires = 1,
     collectWood = true,

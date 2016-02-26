@@ -1392,18 +1392,15 @@ FARL = {
           -- collect all poles in bp
           elseif global.electric_poles[e[i].name] then
             table.insert(poles, {name = e[i].name, direction = dir, position = e[i].position})
-          elseif e[i].name == "straight-rail" or e[i].name == "curved-rail" then
+          elseif e[i].name == "straight-rail" then
             rails = rails + 1
             if not bpType then
               if e[i].name == "straight-rail" then
                 bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
-              else
-                bpType = (e[i].name == "curved-rail" and dir == 1) and "curve" or false
               end
             end
             if  (bpType == "diagonal" and (dir == 3 or dir == 7)) or
-              (bpType == "straight" and (dir == 0 or dir == 4)) or
-              (bpType == "curve" and dir == 1) then
+              (bpType == "straight" and (dir == 0 or dir == 4)) then
               table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position, type=e[i].name})
             else
               self:print({"msg-bp-rail-direction"})
@@ -1433,16 +1430,16 @@ FARL = {
         end
         if rails == 1 and not offsets.chain then
           local rail = offsets.rails[1]
-          local traveldir = (bpType == "straight" or bpType == "curve") and 0 or 1
-          local c = rail.name=="straight-rail" and signalOffset[traveldir][rail.direction] or signalOffsetCurves[0][rail.direction%2]
+          local traveldir = bpType == "straight" and 0 or 1
+          local c = signalOffset[traveldir][rail.direction]
           offsets.chain = {direction = c.dir, name = "rail-chain-signal", position = addPos(rail.position, c.pos)}
         end
         if offsets.chain and offsets.pole and bpType then
           local mainRail = false
           local moved_main_rail = false
           for i,rail in pairs(offsets.rails) do
-            local traveldir = (bpType == "straight" or bpType == "curve") and 0 or 1
-            local signalOff = bpType == "curve" and signalOffsetCurves[traveldir][rail.direction] or signalOffset[traveldir][rail.direction]
+            local traveldir = bpType == "straight" and 0 or 1
+            local signalOff = signalOffset[traveldir][rail.direction]
             local signalDir = signalOff.dir
             signalOff = signalOff.pos
             --local relChain = subPos(offsets.chain.position,rail.position)
@@ -1487,33 +1484,31 @@ FARL = {
             end
             local rails = {}
             local lanes = {}
-            if bpType ~= "curve" then
-              local known_rails = {}
-              for _, l in pairs(offsets.rails) do
-                if not l.main then
-                  local lane_distance = false
-                  local tmp =
-                    {name=l.name, position=subPos(l.position, mainRail.position),
-                      direction = l.direction, type=l.name}
-                  local move_dir = tmp.position.y < 0 and 1 or 5
-                  if bpType == "diagonal" then
-                    lane_distance = subPos(diagonal_to_real_pos(l),diagonal_to_real_pos(mainRail))
-                    lane_distance = lane_distance.x + lane_distance.y
-                  else
-                    lane_distance = tmp.position.x
-                  end
-                  lane_distance= lane_distance/2
-                  if not known_rails[lane_distance] and lane_distance ~= 0 then
-                    table.insert(lanes, lane_distance)
-                    known_rails[lane_distance] = true
-                  end
-                  local altRail, dir
-                  if l.direction % 2 == 1 and mainRail.direction == l.direction then
-                    dir, altRail = self:getRail(tmp, move_dir, 1)
-                    tmp = altRail
-                  end
-                  table.insert(rails, tmp)
+            local known_rails = {}
+            for _, l in pairs(offsets.rails) do
+              if not l.main then
+                local lane_distance = false
+                local tmp =
+                  {name=l.name, position=subPos(l.position, mainRail.position),
+                    direction = l.direction, type=l.name}
+                local move_dir = tmp.position.y < 0 and 1 or 5
+                if bpType == "diagonal" then
+                  lane_distance = subPos(diagonal_to_real_pos(l),diagonal_to_real_pos(mainRail))
+                  lane_distance = lane_distance.x + lane_distance.y
+                else
+                  lane_distance = tmp.position.x
                 end
+                lane_distance= lane_distance/2
+                if not known_rails[lane_distance] and lane_distance ~= 0 then
+                  table.insert(lanes, lane_distance)
+                  known_rails[lane_distance] = true
+                end
+                local altRail, dir
+                if l.direction % 2 == 1 and mainRail.direction == l.direction then
+                  dir, altRail = self:getRail(tmp, move_dir, 1)
+                  tmp = altRail
+                end
+                table.insert(rails, tmp)
               end
               table.sort(lanes)
             end

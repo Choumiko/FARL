@@ -96,6 +96,7 @@ end
 
 local function init_player(player)
   Settings.loadByPlayer(player)
+  global.savedBlueprints[player.name] = global.savedBlueprints[player.name] or {} 
 end
 
 local function init_players()
@@ -116,6 +117,8 @@ end
 
 local function on_init()
   init_global()
+  init_forces()
+  init_players()
 end
 
 local function on_load()
@@ -131,30 +134,21 @@ local function on_configuration_changed(data)
   if data.mod_changes[MOD_NAME] then
     local newVersion = data.mod_changes[MOD_NAME].new_version
     local oldVersion = data.mod_changes[MOD_NAME].old_version
-    if oldVersion and oldVersion < "0.5.0" then
+    if oldVersion then
+      debugDump("FARL version changed from "..oldVersion.." to "..newVersion,true)
+      if oldVersion > newVersion then
+        debugDump("Downgrading FARL, reset settings",true)
+        global = {}
+      end
+    else
+      debugDump("FARL version: "..newVersion,true)
+    end
+    if oldVersion and oldVersion < "0.5.11" then
       global = {}
     end
-    if oldVersion and oldVersion < "0.5.01" then
-      local new = {}
-      for name, bptype in pairs(global.savedBlueprints) do
-        for _, bp in pairs(bptype) do
-          table.insert(new, util.table.deepcopy(bp))
-        end
-        if global.players[name].activeBP then
-          global.savedBlueprints[name][1] = util.table.deepcopy(global.players[name].activeBP)
-        end
-        for i=2,3 do
-          global.savedBlueprints[name][i] = new[i] or false
-        end
-        global.savedBlueprints[name].big = nil
-        global.savedBlueprints[name].medium = nil
-      end
-    end
-    init_global()
-    init_forces()
-    init_players()
+    on_init()
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
-    global.version = "0.5.0"
+    global.version = "0.5.11"
   end
   if data.mod_changes["5dim_trains"] then
     --5dims_trains was added/updated
