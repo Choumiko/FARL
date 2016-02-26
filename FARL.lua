@@ -1396,7 +1396,7 @@ FARL = {
       --self:flyingText2("x", RED,true,entity.position)
       --self:print("Misplaced entity: "..entity.name)
       --self:print("arg:"..pos2Str(arg.position).." ent:"..pos2Str(entity.position))
-      end
+      --end
     end
     return canPlace, entity
   end,
