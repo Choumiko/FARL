@@ -166,7 +166,7 @@ GUI = {
         GUI.save_bp(event,farl, player,tonumber(i))
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
         or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
-        or name == "poleEntities" or name == "parallelTracks" or name == "concrete" then
+        or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" then
         psettings[name] = not psettings[name]
         if name == "poles" then
           if psettings[name] and farl.active then
@@ -208,7 +208,7 @@ GUI = {
         local psettings = Settings.loadByPlayer(player)
         local lanes = #bps.straight.lanes + 1
         local pole = game.entity_prototypes[bps.straight.pole.name].localised_name
-        psettings.activeBP = global.savedBlueprints[player.name][i]
+        psettings.activeBP = table.deepcopy(global.savedBlueprints[player.name][i])
         if farl.active then
           farl:deactivate()
           farl:activate()
@@ -265,7 +265,6 @@ GUI = {
         GUI.saveSettings({signalDistance = sDistance}, player)
         row.settings.destroy()
       else
-        local captionPole = psettings.medium and {"stg-poleMedium"} or {"stg-poleBig"}
         local settings = row.add({type="table", name="settings", colspan=2})
         player.gui.left.farl.rows.buttons.settings.caption={"text-save"}
 
@@ -288,9 +287,12 @@ GUI = {
 
         GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}},"poleEntities")
         GUI.addPlaceHolder(settings)
-
-        GUI.add(settings,{type="checkbox", name="parallelTracks", caption={"stg-parallel-tracks"}}, "parallelTracks")
+        
+        GUI.add(settings,{type="checkbox", name="railEntities", caption={"stg-railEntities"}}, "railEntities")
         GUI.addPlaceHolder(settings)
+
+        --GUI.add(settings,{type="checkbox", name="parallelTracks", caption={"stg-parallel-tracks"}}, "parallelTracks")
+        --GUI.addPlaceHolder(settings)
 
         GUI.add(settings, {type="checkbox", name="ccNet", caption={"stg-ccNet"}, state=psettings.ccNet})
         local row2 = GUI.add(settings, {type="table", name="row3", colspan=2})
@@ -305,13 +307,13 @@ GUI = {
           if bps[i] then
             local lanes = #bps[i].straight.lanes + 1
             local pole = game.entity_prototypes[bps[i].straight.pole.name].localised_name
-            GUI.addLabel(stored_bp, {caption={"text-blueprint-description", lanes, pole}})
             GUI.addButton(stored_bp,{name="load_bp_"..i, caption="L"})
             GUI.addButton(stored_bp,{name="save_bp_"..i, caption="S"})
+            GUI.addLabel(stored_bp, {caption={"text-blueprint-description", lanes, pole}})
           else
-            GUI.addLabel(stored_bp, {caption="--"})
             GUI.addLabel(stored_bp,{caption="L"})
             GUI.addButton(stored_bp,{name="save_bp_"..i, caption="S"})
+            GUI.addLabel(stored_bp, {caption="--"})
           end
         end
         

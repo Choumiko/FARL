@@ -154,7 +154,8 @@ defaultSettings =
     maintenance = false,
     root = false,
     parallelTracks = true,
-    concrete = true
+    concrete = true,
+    railEntities = true
   }
 
 defaultSettings.activeBP = defaultSettings.bp

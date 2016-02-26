@@ -299,7 +299,7 @@ FARL = {
       direction = false, input = 1, name = vehicle.backer_name,
       signalCount = {main=0}, cruise = false, cruiseInterrupt = 0,
       lastposition = false, maintenance = false, surface = vehicle.surface,
-      destroy = false, concrete_queue = {}
+      destroy = false, concrete_queue = {}, rail_queue = {}
     }
     new.settings = Settings.loadByPlayer(player)
     setmetatable(new, {__index=FARL})
@@ -476,6 +476,7 @@ FARL = {
             end
             if self.settings.parallelTracks then
               local max = -1
+              local all_placed = 0
               for i, l in pairs(self.settings.activeBP.straight.lanes) do
                 if last.type == "curved-rail" then
                   local traveldir = newTravelDir
@@ -491,9 +492,18 @@ FARL = {
                   self.lastCurve.curveblock = max
                 else
                   self.lanerails[i] = self:placeParallelTrack(newTravelDir, last, i)
+                  all_placed = self.lanerails[i] and all_placed+1 or all_placed
                 end
               end
-              --debugDump(self.signalCount,true)
+              if self.settings.railEntities and all_placed == #self.settings.activeBP.straight.lanes then
+               local lag = self.lanes.max_lag[newTravelDir%2]
+                local c = #self.path - lag
+                if c>0 and self.path[c] and self.lastCurve.dist > lag then
+                  local rail = self.path[c].rail
+                  rail = {direction=rail.direction,type=rail.type,name=rail.name,position=addPos(rail.position)}
+                  table.insert(self.rail_queue, {travelDir = newTravelDir, rail=rail})
+                end
+              end
             end
             if last.type == "curved-rail" then
               --self:print("block:"..self.lastCurve.curveblock)
@@ -506,9 +516,19 @@ FARL = {
                 direction=last.direction,type=last.type,name=last.name,position=addPos(last.position)}})
             end
             
-            --place rail entities (only walls for now)
-            if last.name == self.settings.rail.straight then
-              self:placeRailEntities(newTravelDir, last)
+            --place rail entities (only walls for now), place on the mainrail euqal to the furthest lagging parallel track
+            if self.settings.railEntities and not self.settings.parallelTracks then
+              local direction = self.lanes.max_lag[self.di] <= self.lastCurve.dist and 0 or 1 
+              local lag = self.lanes.max_lag[direction]
+              local c = #self.path - lag
+              if c>0 and self.path[c] then
+                local rail = self.path[c].rail
+                rail = {direction=rail.direction,type=rail.type,name=rail.name,position=addPos(rail.position)}
+              end
+              local blocked = false
+              if not blocked then
+                table.insert(self.rail_queue, {travelDir = newTravelDir, rail=0})
+              end
             end
             
             if self.settings.poles and #self.path > 2 then
@@ -563,6 +583,12 @@ FARL = {
             self:placeConcrete(queue.travelDir, queue.rail)
           end
           self.concrete_queue = {}
+        end
+        if self.settings.railEntities and #self.rail_queue > 0 then
+          for i,queue in pairs(self.rail_queue) do
+            self:placeRailEntities(queue.travelDir, queue.rail)
+          end
+          self.rail_queue = {}
         end
       end
     end
@@ -923,6 +949,8 @@ FARL = {
         [2]={name="curved-rail",type="curved-rail", direction=1,position={x=2,y=2}}},
       [1]={ [0]={name="curved-rail",type="curved-rail", direction=3,position={x=1,y=1}},
         [2]={name="curved-rail",type="curved-rail", direction=3,position={x=1,y=1}}}}
+    self.lanes.max_lag = {[0] = 0, [1]=0}
+    self.lanes.min_block = {[0] = 0, [1]=0}
     for _, direction_self in pairs({0,1}) do
       self.lanes["d"..direction_self] = {}
       for _1, input_self in pairs({0,2}) do
@@ -982,6 +1010,8 @@ FARL = {
 
           local data = {forward=forward,right=right, lag=lag,catchup=catchup, block=block}
           self.lanes["d"..direction_self]["i"..input_self]["l"..lane_index] = data
+          self.lanes.max_lag[direction_self] = self.lanes.max_lag[direction_self] < math.abs(lag) and math.abs(lag) or self.lanes.max_lag[direction_self]
+          debugDump(self.lanes.max_lag,true)
         end
       end
     end
@@ -1224,6 +1254,7 @@ FARL = {
     self.protectedCount = nil
     self.protectedCalls = {}
     self.concrete_queue = {}
+    self.rail_queue = {}
   end,
 
   toggleActive = function(self)
@@ -1360,11 +1391,11 @@ FARL = {
       local stat = global.statistics[entity.force.name].created[entity.name] or 0
       global.statistics[entity.force.name].created[entity.name] = stat+1
       self:protect(entity)
-      local diff = subPos(arg.position, entity.position)
-      if diff.x ~= 0 or diff.y~= 0 then
-        self:flyingText2("x", RED,true,entity.position)
-        self:print("Misplaced entity: "..entity.name)
-        self:print("arg:"..pos2Str(arg.position).." ent:"..pos2Str(entity.position))
+      --local diff = subPos(arg.position, entity.position)
+      --if diff.x ~= 0 or diff.y~= 0 then
+      --self:flyingText2("x", RED,true,entity.position)
+      --self:print("Misplaced entity: "..entity.name)
+      --self:print("arg:"..pos2Str(arg.position).." ent:"..pos2Str(entity.position))
       end
     end
     return canPlace, entity

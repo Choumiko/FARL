@@ -119,6 +119,7 @@ local function on_init()
   init_global()
   init_forces()
   init_players()
+  getMetaItemData()
 end
 
 local function on_load()
@@ -333,9 +334,7 @@ remote.add_interface("farl",
         if p.gui.left.farl then p.gui.left.farl.destroy() end
         if p.gui.top.farl then p.gui.top.farl.destroy() end
       end
-      init_global()
-      init_forces()
-      init_players()
+      on_init()
     end,
 
     setCurvedWeight = function(weight, player)
