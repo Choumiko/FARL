@@ -537,30 +537,38 @@ FARL = {
                 table.insert(self.rail_queue, {travelDir = newTravelDir, rail={direction=rail.direction,type=rail.type,name=rail.name,position=addPos(rail.position)}})
               end
             end
-            
+            debugLog("Path length: "..#self.path)
             if self.settings.poles and #self.path > 2 then
               local c = #self.path
               local rail = self.path[c-1].rail
               local dir = self.path[c-1].travel_dir
+              debugLog("calculating pole for rail@"..pos2Str(self.path[c-1].rail.position))
               local rails = self:getPoleRails(rail, dir, self.path[c-2].travel_dir)
               if self.path[c-2].rail.name == self.settings.rail.curved and #rails > 0 then
                 rails[1].range[1] = -1
               end
               local bestpole, bestrail = self:getBestPole(self.lastPole, rails, "o")
               if bestpole then
+                debugLog("--pole: "..pos2Str(bestpole.p))
                 self.lastCheckPole = bestpole.p
                 self.lastCheckDir = bestpole.dir
                 self.lastCheckRail = bestrail
-                --self:flyingText2("bp", RED, true, bestpole.p)
-                --self:flyingText2("br", RED, true, bestrail.position)
+                if global.debug_log then
+                  self:flyingText2("bp", RED, true, bestpole.p)
+                  self:flyingText2("br", RED, true, bestrail.position)
+                end
               else
                 --self:print("should place pole")
                 --self:flyingText2("sp", RED, true, self.lastCheckPole)
                 if self.lastCheckPole.x then
+                  debugLog("--Should be placing pole @"..pos2Str(self.lastCheckPole))
                   local status, err = pcall(function() self:placePole(self.lastCheckPole, self.lastCheckDir) end)
                   if not status then
                     error(err, 2)
                   end
+                else
+                  debugLog("--Should be placing pole, but no valid position found")
+                  debugLog(self.lastCheckPole)
                 end
               end
             end
@@ -1016,6 +1024,7 @@ FARL = {
 
   activate = function(self)
     local status, err = pcall(function()
+      debugLog("Activating")
       self.lastrail = false
       self.signalCount = {main=0}
       self.protected = {}
@@ -1052,7 +1061,6 @@ FARL = {
       front_rail_index = front_rail_index
       --self:flyingText("FR", YELLOW, true, self:rail_below_train().position)
       --self:show_path()
-
       local prev = self.path[1].rail
       local prev_dir = oppositedirection(self.path[1].travel_dir)
       local count = 0
@@ -1069,6 +1077,7 @@ FARL = {
         front_rail_index = front_rail_index + 1
         --self:flyingText(i, YELLOW, true, path[i].rail.position)
       end
+      debugLog("--Path length:"..#self.path)
       --self:show_path()
       if self.maintenance and #self.path >= front_rail_index+3 then
         local c = #self.path
@@ -1138,11 +1147,12 @@ FARL = {
         --self:flyingText(self.signalCount.main, YELLOW, true, last_signal.position)
       end
       --self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
-
+      debugLog("--SignalCount: "..self.signalCount.main)
       local bps = self.settings.activeBP
       local diag_lanes = bps.diagonal.lanes
       local straight_lanes = bps.straight.lanes
-
+      debugLog("--Lanes: vert: "..#straight_lanes.." diag: "..#diag_lanes)
+      debugLog("Poles: vert: "..bps.straight.pole.name.." diag: "..bps.diagonal.pole.name)
       self.lanes = {}
       if diag_lanes and straight_lanes and #diag_lanes ~= #straight_lanes then
         self:deactivate({"msg-error-track-mismatch"})
@@ -1163,7 +1173,7 @@ FARL = {
         end
         self.signalCount[i] = self.signalCount.main - lag --+ mainCount
       end
-      --debugDump(self.signalCount,true)
+      debugLog(self.signalCount, "--Signal count:")
       --create curve blueprint
       local c = 3
       local main = {entity_number=1, direction=1,name="curved-rail",position={x=2,y=2}}
@@ -2223,12 +2233,13 @@ FARL = {
     local canPlace = self:prepareArea(pole)
     if not canPlace and self.surface.count_entities_filtered{area=expandPos(polePos,0.6),name=name} > 1 then
       canPlace = true
-      --debugDump("found pole@"..pos2Str(polePos),true)
+      debugLog("--found pole@"..pos2Str(polePos))
     end
     local hasPole = self:getCargoCount(name) > 0
     if canPlace and hasPole then
       local success, pole = self:genericPlace{name = name, position = polePos, force = self.locomotive.force}
       if pole then
+        debugLog("--Placed pole@"..pos2Str(polePos))
         if not pole.neighbours.copper[1] then
           self:flyingText({"msg-unconnected-pole"}, RED, true)
         end
@@ -2311,8 +2322,10 @@ FARL = {
       self.lastCheckDir = trainDir
       self.lastCheckPole = addPos(lastrail.position, offset)
       self.lastCheckRail = lastrail
+      debugLog("No pole found, using "..pos2Str(self.lastPole.position)..", from rail@"..pos2Str(lastrail.position))
       --self:placePole(self.lastrail, trainDir)
     else
+      debugLog("--Found pole: "..pos2Str(pole.position))
       self.ccNetPole = pole
       self.lastPole = pole
       self:flyingText2("p", GREEN, true, pole.position)

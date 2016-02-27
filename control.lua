@@ -79,6 +79,7 @@ local function on_tick(event)
 end
 
 local function init_global()
+  global = global or {}
   global.players =  global.players or {}
   global.savedBlueprints = global.savedBlueprints or {}
   global.farl = global.farl or {}
@@ -91,6 +92,9 @@ local function init_global()
   global.statistics = global.statistics or {}
   global.electric_poles = global.electric_poles or {}
   global.version = global.version or "0.4.41"
+  if global.debug_log == nil then
+    global.debug_log = false
+  end 
   setMetatables()
 end
 
@@ -141,13 +145,13 @@ local function on_configuration_changed(data)
       debugDump("FARL version changed from "..oldVersion.." to "..newVersion,true)
       if oldVersion > newVersion then
         debugDump("Downgrading FARL, reset settings",true)
-        global = {}
+        global = nil
       end
     else
       debugDump("FARL version: "..newVersion,true)
     end
     if oldVersion and oldVersion < "0.5.11" then
-      global = {}
+      global = nil
     end
     on_init()
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
@@ -260,6 +264,21 @@ function debugDump(var, force)
       end
       player.print(msg)
     end
+  end
+end
+
+function debugLog(var, prepend)
+  if not global.debug_log then return end
+  local str = prepend or ""
+  for i,player in ipairs(game.players) do
+    local msg
+    if type(var) == "string" then
+      msg = var
+    else
+      msg = serpent.dump(var, {name="var", comment=false, sparse=false, sortkeys=true})
+    end
+    player.print(str..msg)
+    log(str..msg)
   end
 end
 
@@ -438,5 +457,11 @@ remote.add_interface("farl",
       local signal = get_signal_for_rail(rail, travel_dir, end_of_rail)
       signal.force  = rail.force
       rail.surface.create_entity(signal)
+    end,
+    
+    debuglog = function()
+      global.debug_log = not global.debug_log
+      local state = global.debug_log and "on" or "off"
+      debugDump("Debug: "..state,true)
     end
-  })
+    })
