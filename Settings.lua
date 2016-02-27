@@ -44,7 +44,23 @@ defaults_concrete_diag = {
       direction = 1,
       entity_number = 5,
       name = "rail-signal",
-      position = {x = 1.5,y = 1.5}}
+      position = {x = 1.5,y = 1.5}},
+    {
+      entity_number = 6,
+      name = "stone-wall",
+      position = {x = -3.5,y = -3.5}},
+    {
+      entity_number = 7,
+      name = "stone-wall",
+      position = {x = -2.5,y = -3.5}},
+    {
+      entity_number = 8,
+      name = "stone-wall",
+      position = {x = 4.5,y = 3.5}},
+    {
+      entity_number = 9,
+      name = "stone-wall",
+      position = {x = 4.5,y = 4.5}}
   },
   tiles = {
     { name = "concrete", position = {x = -3,y = -3}},
@@ -85,7 +101,24 @@ defaults_concrete_vert = {
     {
       entity_number = 5,
       name = "straight-rail",
-      position = {x = 3,y = 1}}
+      position = {x = 3,y = 1}},
+      {
+      entity_number = 6,
+      name = "stone-wall",
+      position = {x = -5.5,y = 1.5}},
+    {
+      entity_number = 7,
+      name = "stone-wall",
+      position = {x = -5.5,y = 0.5}},
+    {
+      entity_number = 8,
+      name = "stone-wall",
+      position = {x = 5.5,y = 1.5}},
+    {
+      entity_number = 9,
+      name = "stone-wall",
+      position = {x = 5.5,y = 0.5}
+    }      
   },
   tiles = {
     { name = "concrete",

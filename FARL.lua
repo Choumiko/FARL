@@ -275,14 +275,17 @@ function get_item_name(some_name)
   if game.item_prototypes[some_name] then
     return game.item_prototypes[some_name].name
   elseif game.entity_prototypes[some_name] then
-    return game.entity_prototypes[some_name].name
+    local items = game.entity_prototypes[some_name].items_to_place_this
+    for n, item in pairs(items) do
+      return item.name
+    end
   else
     --it's a tile?!
     if some_name == "stone-path" then
       return "stone-brick"
     end
   end
-  debugDump("Couldn't find item for:"..item,true)
+  error("Couldn't find item for:"..some_name,2)
 end
 --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
 local RED = {r = 0.9}

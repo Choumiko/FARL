@@ -150,7 +150,7 @@ local function on_configuration_changed(data)
     else
       debugDump("FARL version: "..newVersion,true)
     end
-    if oldVersion and oldVersion < "0.5.12" then
+    if oldVersion and oldVersion < "0.5.13" then
       debugDump("Reset settings",true)
       global = nil
     end
