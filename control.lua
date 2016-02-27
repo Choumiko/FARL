@@ -96,7 +96,9 @@ end
 
 local function init_player(player)
   Settings.loadByPlayer(player)
-  global.savedBlueprints[player.name] = global.savedBlueprints[player.name] or {} 
+  local name = player.name
+  if name == "" then name = "noname" end
+  global.savedBlueprints[name] = global.savedBlueprints[name] or {} 
 end
 
 local function init_players()
