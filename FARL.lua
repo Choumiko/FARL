@@ -407,7 +407,8 @@ FARL = {
         if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) then
           
           --check if previous curve is far enough behind if input is the same
-          if self.lastCurve and self.lastCurve.input == self.input and self.settings.parallelTracks then
+          if self.lastCurve and self.lastCurve.input == self.input and self.settings.parallelTracks
+            and #self.settings.activeBP.straight.lanes > 0 then
             --self:print("curveblock:"..self.lastCurve.curveblock.."dist:"..self.lastCurve.dist)
             if self.lastCurve.dist < self.lastCurve.curveblock then
               self.input = 1
@@ -474,7 +475,7 @@ FARL = {
             else
               self.lastCurve.dist = self.lastCurve.dist + 1
             end
-            if self.settings.parallelTracks then
+            if self.settings.parallelTracks and #self.settings.activeBP.straight.lanes > 0 then
               local max = -1
               local all_placed = 0
               for i, l in pairs(self.settings.activeBP.straight.lanes) do
@@ -504,11 +505,9 @@ FARL = {
                   table.insert(self.rail_queue, {travelDir = newTravelDir, rail=rail})
                 end
               end
+            else
+            
             end
-            if last.type == "curved-rail" then
-              --self:print("block:"..self.lastCurve.curveblock)
-            end
-            --self:show_path()
             
             --add concrete to the queue to be placed in a tick without track placement (probably the next one)
             if self.settings.concrete then
@@ -517,17 +516,11 @@ FARL = {
             end
             
             --place rail entities (only walls for now), place on the mainrail euqal to the furthest lagging parallel track
-            if self.settings.railEntities and not self.settings.parallelTracks then
-              local direction = self.lanes.max_lag[self.di] <= self.lastCurve.dist and 0 or 1 
-              local lag = self.lanes.max_lag[direction]
-              local c = #self.path - lag
-              if c>0 and self.path[c] then
+            if self.settings.railEntities and #self.settings.activeBP.straight.lanes == 0 then
+              local c = #self.path - 1
+              if c>0 and self.path[c] and self.path[c].rail.name ~= self.settings.rail.curved then
                 local rail = self.path[c].rail
-                rail = {direction=rail.direction,type=rail.type,name=rail.name,position=addPos(rail.position)}
-              end
-              local blocked = false
-              if not blocked then
-                table.insert(self.rail_queue, {travelDir = newTravelDir, rail=0})
+                table.insert(self.rail_queue, {travelDir = newTravelDir, rail={direction=rail.direction,type=rail.type,name=rail.name,position=addPos(rail.position)}})
               end
             end
             
@@ -1011,7 +1004,7 @@ FARL = {
           local data = {forward=forward,right=right, lag=lag,catchup=catchup, block=block}
           self.lanes["d"..direction_self]["i"..input_self]["l"..lane_index] = data
           self.lanes.max_lag[direction_self] = self.lanes.max_lag[direction_self] < math.abs(lag) and math.abs(lag) or self.lanes.max_lag[direction_self]
-          debugDump(self.lanes.max_lag,true)
+          --debugDump(self.lanes.max_lag,true)
         end
       end
     end
@@ -1640,6 +1633,9 @@ FARL = {
     if newRail.direction % 2 == 0 and newRail.name ~= self.settings.rail.curved then
       area = self:createBoundingBox(newRail, newTravelDir)
       canplace = self:prepareArea(newRail, area)
+      if not canplace then
+        canplace = self:prepareArea(newRail)
+      end
       --self:showArea(newRail, newTravelDir, area, 2)
     else
       canplace = self:prepareArea(newRail)
