@@ -270,6 +270,20 @@ function protectedKey(ent)
   end
   return false
 end
+
+function get_item_name(some_name)
+  if game.item_prototypes[some_name] then
+    return game.item_prototypes[some_name].name
+  elseif game.entity_prototypes[some_name] then
+    return game.entity_prototypes[some_name].name
+  else
+    --it's a tile?!
+    if some_name == "stone-path" then
+      return "stone-brick"
+    end
+  end
+  debugDump("Couldn't find item for:"..item,true)
+end
 --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
 local RED = {r = 0.9}
 local GREEN = {g = 0.7}
@@ -551,7 +565,6 @@ FARL = {
               end
             end
 
-
             if self.settings.signals and not self.settings.root then
               self.signalCount.main = self.signalCount.main + get_signal_weight(last,self.settings)
               if self:getCargoCount("rail-signal") > 0 then
@@ -770,7 +783,6 @@ FARL = {
     local tiles = {}
     local pave = {}
     local w,dw = 0,0
-    local counts = {}
     local data = {}
     local railpos = rail.position
     local off = {x=0,y=0}
@@ -779,10 +791,10 @@ FARL = {
     for _, c in pairs(concrete) do
       local entity = {name = c.name}
       local offset = c.position
-      counts[c.name] = counts[c.name] or 0
       offset = rotate(offset, rad)
       local pos = addPos(railpos, offset)
       entity.position = pos
+      pave[c.name] = pave[c.name] or {}
       --self:flyingText2(".", GREEN,true,entity.position)
       local tileName = self.surface.get_tile(pos.x, pos.y).name
       -- check that tile is water, if it is add it to a list of tiles to be changed to grass
@@ -794,34 +806,26 @@ FARL = {
             dw = dw+1
           end
           table.insert(tiles,{name="grass", position={pos.x, pos.y}})
-          table.insert(pave, entity)
-          counts[c.name] = counts[c.name] + 1
+          table.insert(pave[c.name], entity)
         end
       elseif tileName ~= c.name then
-        table.insert(pave, entity)
-        counts[c.name] = counts[c.name] + 1
+        table.insert(pave[c.name], entity)
       end
     end
     if self.settings.bridge then
       self:replaceWater(tiles, w, dw)
     end
-    local enough  = true
-    for name, c in pairs(counts) do
-      if self:getCargoCount(name) < c then
-        enough = false
+
+    for name, p in pairs(pave) do
+      local c = #p
+      if self:getCargoCount(name) > c then
+        self.surface.set_tiles(p)
+        self:removeItemFromCargo(name, c)
+        local stat = global.statistics[self.locomotive.force.name].created[name] or 0
+        global.statistics[self.locomotive.force.name].created[name] = stat+c
+      else
+        self:print({"msg-not-enough-concrete"})
       end
-    end
-    if enough then
-      self.surface.set_tiles(pave)
-      for name, c in pairs(counts) do
-        if c > 0 then
-          self:removeItemFromCargo(name, c)
-          local stat = global.statistics[self.locomotive.force.name].created[name] or 0
-          global.statistics[self.locomotive.force.name].created[name] = stat+c
-        end
-      end
-    else
-      self:print({"msg-not-enough-concrete"})
     end
   end,
 
@@ -1106,6 +1110,8 @@ FARL = {
               break
             end
           end
+        else
+        
         end
       end
       if self.maintenance and self.maintenanceRail then
@@ -1339,12 +1345,13 @@ FARL = {
     if godmode then
       return count
     end
-    return self.train.remove_item({name=item, count=count})
+    return self.train.remove_item({name=get_item_name(item), count=count})
   end,
 
   getCargoCount = function(self, item)
+    local name = get_item_name(item)
     if godmode then return 9001 end
-    return self.train.get_item_count(item)
+    return self.train.get_item_count(name)
   end,
 
   genericCanPlace = function(self, arg)
