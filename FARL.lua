@@ -465,7 +465,7 @@ FARL = {
             table.insert(self.path, {rail=last, travel_dir=newTravelDir, input = self.input})
             -- remove rails behind train from path
             local behind = self:rail_behind_train()
-            self:flyingText2("BEHIND", RED, true,behind.position)
+            --self:flyingText2("BEHIND", RED, true,behind.position)
             local tmp = {}
             local found = false
             for i, r in pairs(self.path) do
@@ -494,7 +494,7 @@ FARL = {
                 end
               end
             end
-            --debugDump(#tmp,true)
+            debugLog("Tmp: "..#tmp)
             if #tmp > 30 then
               self.path = tmp
             end
@@ -595,9 +595,15 @@ FARL = {
                 self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
               end
             end
+      
+            --self:place_fake_signal(newTravelDir, nextRail)
+            
             self.direction = newTravelDir
             self.lastrail = last
             --log("end update success")
+            if #self.path > 50 then
+              table.remove(self.path,1)
+            end
             return
           else
             self:deactivate(last)
@@ -618,6 +624,12 @@ FARL = {
           end
           self.rail_queue = {}
         end
+--        if self.fake_signals then
+--          for i,s in pairs(self.fake_signals) do
+--            if s.valid then s.destroy() end
+--          end
+--          self.fake_signals = nil
+--        end
       end
     end
   end,
@@ -1076,7 +1088,7 @@ FARL = {
       self.path, front_rail_index = self:get_rails_below_train()
       front_rail_index = front_rail_index
       --self:flyingText("FR", YELLOW, true, self:rail_below_train().position)
-      self:show_path()
+      --self:show_path()
       local prev = self.path[1].rail
       local prev_dir = oppositedirection(self.path[1].travel_dir)
       local count = 0
@@ -1240,11 +1252,11 @@ FARL = {
     local front_rail_index = 0
     local next, dir = behind, self.direction
     local path = {}
-    self:flyingText2("f", RED, true, front.position)
-    self:flyingText2("b", RED, true, behind.position)
+    --self:flyingText2("f", RED, true, front.position)
+    --self:flyingText2("b", RED, true, behind.position)
     local count = 0
     while next and count < 20 and next ~= front do
-      self:flyingText2(count, RED, true, next.position)
+      --self:flyingText2(count, RED, true, next.position)
       table.insert(path, {rail = next, travel_dir = dir})
       next, dir = self:get_connected_rail(next, true, dir)
       count = count + 1
@@ -1252,7 +1264,7 @@ FARL = {
     front_rail_index = count+1
     count = 0
     while next and count < 20 do
-      self:flyingText2("p", RED, true, next.position)
+      --self:flyingText2("p", RED, true, next.position)
       table.insert(path, {rail = next, travel_dir = oppositedirection(dir)})
       next, dir = self:get_connected_rail(next, true, dir)
       count = count + 1
@@ -1954,6 +1966,7 @@ FARL = {
             self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
           end
         end
+        --self:place_fake_signal(traveldir, new_rail, lane_index)
         self:removeItemFromCargo(ent.name, 1)
         return ent
       end
@@ -2309,6 +2322,35 @@ FARL = {
       end
     end
     return nil
+  end,
+  
+  place_fake_signal = function(self,traveldir, rail, lane_index)
+    if lane_index then
+      local signals = traveldir % 2 == 0 and self.settings.activeBP.straight.signals or self.settings.activeBP.diagonal.signals
+      if signals and type(signals) == "table" and signals[lane_index] then
+        local signal_data = signals[lane_index]
+        local end_of_rail = signal_data.reverse
+        traveldir = signal_data.reverse and (traveldir+4)%8 or traveldir
+      end
+    end
+    local li = lane_index and lane_index or "main"
+    self.fake_signals = self.fake_signals or {}
+    self.fake_signals[li] = self.fake_signals[li] or {}
+    if #self.fake_signals[li] > 1 then
+            debugDump(self.fake_signals[li][1].valid,true)
+        if self.fake_signals[li][1].valid then
+          self.fake_signals[li][1].destroy()
+        end
+        table.remove(self.fake_signals[li],1)
+      end
+    local signal = get_signal_for_rail(rail, traveldir)
+    signal.force = self.locomotive.force
+    self:prepareArea(signal)
+    local success, entity = self:genericPlace(signal)
+    if entity then
+      table.insert(self.fake_signals[li], entity)
+      return success, entity
+    end
   end,
 
   findLastPole = function(self, rail)
