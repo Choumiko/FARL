@@ -1142,6 +1142,9 @@ FARL = {
         self:flyingText("M", RED, true, self.maintenanceRail.position)
         self:flyingText("L", RED, true, self.lastrail.position)
       end
+      if not signal_index then
+        self.signalCount.main = self.settings.signalDistance
+      end
       if signal_index and self.settings.signals and not self.settings.root then
         local c = self.maintenance and front_rail_index+1 or #self.path
         for i=signal_index+1,c do
@@ -1241,7 +1244,7 @@ FARL = {
     local front_rail_index = 0
     local next, dir = self.lastrail, self.direction
     local path = {}
-    self:flyingText2("f", RED, true, addPos(front.position,{x=0,y=-1}))
+    --self:flyingText2("f", RED, true, addPos(front.position,{x=0,y=-1}))
     --self:flyingText2("b", RED, true, behind.position)
     local count = 0
     dir = oppositedirection(dir)    
@@ -1354,9 +1357,9 @@ FARL = {
       end
       count = count + 1
     end
-    if last then
-      self:flyingText2({"text-front"}, RED, true, last.position)
-    end
+    --    if last then
+    --      self:flyingText2({"text-front"}, RED, true, last.position)
+    --    end
     return last
   end,
 
