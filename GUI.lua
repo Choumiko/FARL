@@ -4,12 +4,12 @@ Observer = {
   end
 }
 
-function startsWith(String,Start)
-  return string.sub(String,1,string.len(Start))==Start
+function startsWith(haystack,needle)
+  return string.sub(haystack,1,string.len(needle))==needle
 end
 
-function endsWith(String,End)
-  return End=='' or string.sub(String,-string.len(End))==End
+function endsWith(haystack,needle)
+  return needle=='' or string.sub(haystack,-string.len(needle))==needle
 end
 
 GUI = {

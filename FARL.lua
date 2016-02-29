@@ -829,12 +829,25 @@ FARL = {
 
     railpos = diagonal_to_real_pos(rail)
     for _, c in pairs(concrete) do
-      local entity = {name = c.name}
+      local name = c.name
+      --mirror directional concrete from color-coding
+      local textured = {}
+      textured["concrete-hazard-left"] = "concrete-hazard-right"
+      textured["concrete-hazard-right"] = "concrete-hazard-left"
+      textured["concrete-fire-left"] = "concrete-fire-right"
+      textured["concrete-fire-right"] = "concrete-fire-left"
+      if endsWith(name, "-left") or endsWith(name, "-right") then
+        if (type == "straight" and dir % 4 == 2) or  (type == "diagonal" and (dir == 3 or dir == 7)) then
+         name = textured[name]
+        end
+      end
+      
+      local entity = {name = name}
       local offset = c.position
       offset = rotate(offset, rad)
       local pos = addPos(railpos, offset)
       entity.position = pos
-      pave[c.name] = pave[c.name] or {}
+      pave[name] = pave[name] or {}
       --self:flyingText2(".", GREEN,true,entity.position)
       local tileName = self.surface.get_tile(pos.x, pos.y).name
       -- check that tile is water, if it is add it to a list of tiles to be changed to grass
@@ -846,10 +859,10 @@ FARL = {
             dw = dw+1
           end
           table.insert(tiles,{name="grass", position={pos.x, pos.y}})
-          table.insert(pave[c.name], entity)
+          table.insert(pave[name], entity)
         end
-      elseif tileName ~= c.name then
-        table.insert(pave[c.name], entity)
+      elseif tileName ~= name then
+        table.insert(pave[name], entity)
       end
     end
     if self.settings.bridge then
@@ -946,7 +959,7 @@ FARL = {
       if type(newTravel) == "number" then
         local railEnt = self:findRail(nrail)
         if railEnt then
-          self:flyingText2("N", GREEN, true, railEnt.position)        
+          --self:flyingText2("N", GREEN, true, railEnt.position)        
           paths[i] = {newTravel, nrail, railEnt}
           found = true
         else
