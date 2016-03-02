@@ -2334,15 +2334,7 @@ FARL = {
         local bptype = rail.direction%2==1 and "diagonal" or "straight"
         for i,l in pairs(self.settings.activeBP[bptype].lanes) do
           local lane_data = self.lanes["d"..self.direction%2]["i0"]["l"..i]
-          local lag = math.abs(lane_data.lag)
-          if rail.direction % 2 == 1 then
-            lag = lag+1
-          else
-            if l>0 then
-              lag = lag+1
-            end
-          end
-          self.signal_in[i] = lag
+          self.signal_in[i] = math.abs(lane_data.lag) + 1
         end
         return success, entity
       else

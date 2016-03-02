@@ -292,7 +292,7 @@ GUI = {
         GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}},"poleEntities")
         GUI.addPlaceHolder(settings)
         
-        GUI.add(settings,{type="checkbox", name="railEntities", caption={"stg-railEntities"}}, "railEntities")
+        GUI.add(settings,{type="checkbox", name="railEntities", caption={"stg-rail-entities"}}, "railEntities")
         GUI.addPlaceHolder(settings)
 
         --GUI.add(settings,{type="checkbox", name="parallelTracks", caption={"stg-parallel-tracks"}}, "parallelTracks")
