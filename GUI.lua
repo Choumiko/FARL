@@ -4,6 +4,14 @@ Observer = {
   end
 }
 
+function startsWith(haystack,needle)
+  return string.sub(haystack,1,string.len(needle))==needle
+end
+
+function endsWith(haystack,needle)
+  return needle=='' or string.sub(haystack,-string.len(needle))==needle
+end
+
 GUI = {
 
     ccWires = {
@@ -67,6 +75,9 @@ GUI = {
           end
         end
       end
+      if e.type == "checkbox" and not e.state then
+        e.state = false
+      end
       local ret = parent.add(e)
       if bind and e.type == "textfield" then
         ret.text = bind
@@ -114,7 +125,7 @@ GUI = {
       local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
       local span = 3
       if debugButton then
-        span = 4
+        span = span+1
       end
       local buttons = GUI.add(rows, {type="table", name="buttons", colspan=span})
       GUI.addButton(buttons, {name="start"}, GUI.toggleStart)
@@ -125,8 +136,9 @@ GUI = {
       end
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
+      GUI.add(rows, {type="checkbox", name="concrete", caption={"tgl-concrete"}}, "concrete")
       GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
-      GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance},GUI.toggleMaintenance)
+      --GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance},GUI.toggleMaintenance)
       GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
     end,
 
@@ -146,17 +158,19 @@ GUI = {
       if name == "debug" then
         saveVar(global,"debug")
         farl:debugInfo()
+      elseif startsWith(event.element.name,"load_bp_") then
+        local i = event.element.name:match("load_bp_(%w*)")
+        GUI.load_bp(event,farl, player,tonumber(i))
+      elseif startsWith(event.element.name,"save_bp_") then
+        local i = event.element.name:match("save_bp_(%w*)")
+        GUI.save_bp(event,farl, player,tonumber(i))
       elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
         or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
-        or name == "poleEntities" or name == "parallelTracks" then
+        or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" then
         psettings[name] = not psettings[name]
         if name == "poles" then
-          if not psettings[name] then
-            farl:resetPoleData()
-          else
-            if farl.active then
-              farl:findLastPole()
-            end
+          if psettings[name] and farl.active then
+            farl:findLastPole()
           end
         end
       elseif name == "bridge" then
@@ -173,10 +187,6 @@ GUI = {
           psettings.rail = rails.basic
         end
         farl.lastrail = false
-      elseif name == "junctionLeft" then
-        farl:createJunction(0)
-      elseif name == "junctionRight" then
-        farl:createJunction(2)
       end
     end,
 
@@ -192,18 +202,32 @@ GUI = {
       farl:toggleMaintenance()
     end,
 
-    togglePole = function(event, farl, player)
-      local psettings = Settings.loadByPlayer(player)
-      psettings.medium = not psettings.medium
-      if psettings.medium then
-        psettings.activeBP = psettings.bp.medium
-        event.element.caption = {"stg-poleMedium"}
-      else
-        psettings.activeBP = psettings.bp.big
-        event.element.caption = {"stg-poleBig"}
+    load_bp = function(event, farl, player, i)
+      local name = player.name
+      if name == "" then name = "noname" end
+      if global.savedBlueprints[name][i] then
+        local bps = global.savedBlueprints[name][i]
+        local psettings = Settings.loadByPlayer(player)
+        local lanes = #bps.straight.lanes + 1
+        local pole = game.entity_prototypes[bps.straight.pole.name].localised_name
+        psettings.activeBP = table.deepcopy(global.savedBlueprints[name][i])
+        if farl.active then
+          farl:deactivate()
+          farl:activate()
+        end
+        player.print({"", {"text-blueprint-loaded"}, " ",{"text-blueprint-description", lanes, pole}})
+        GUI.toggleSettingsWindow(event,farl,player)
       end
-      farl:resetPoleData()
-      farl:findLastPole()
+    end,
+    
+    save_bp = function(event, farl, player, i)
+      local name = player.name
+      if name == "" then name = "noname" end
+      local psettings = Settings.loadByPlayer(player)
+      global.savedBlueprints[name][i] = table.deepcopy(psettings.activeBP)
+      player.print({"text-blueprint-saved"})
+      GUI.toggleSettingsWindow(event,farl,player)
+      GUI.toggleSettingsWindow(event,farl,player)
     end,
 
     toggleSide = function(event, farl, player)
@@ -241,14 +265,10 @@ GUI = {
         local s = row.settings
         local sDistance = tonumber(s.signalDistance.text) or psettings.signalDistance
         sDistance = sDistance < 0 and 0 or sDistance
-        local pLag = tonumber(s.parallelLag.text) or psettings.signalDistance
-        pLag = pLag < 1 and 1 or pLag
-        pLag = pLag > 20 and 20 or pLag
         player.gui.left.farl.rows.buttons.settings.caption={"text-settings"}
-        GUI.saveSettings({signalDistance = sDistance, parallelLag = pLag}, player)
+        GUI.saveSettings({signalDistance = sDistance}, player)
         row.settings.destroy()
       else
-        local captionPole = psettings.medium and {"stg-poleMedium"} or {"stg-poleBig"}
         local settings = row.add({type="table", name="settings", colspan=2})
         player.gui.left.farl.rows.buttons.settings.caption={"text-save"}
 
@@ -263,33 +283,57 @@ GUI = {
           GUI.add(settings, {type="label", caption=""})
         end
 
-        GUI.add(settings, {type="label", caption={"stg-poleType"}})
-        GUI.addButton(settings, {name="poleType", caption=captionPole}, GUI.togglePole)
-
         GUI.add(settings, {type="label", caption={"stg-poleSide"}})
         GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=psettings.flipPoles})
 
-        GUI.add(settings, {type="checkbox", name="minPoles", caption={"stg-minPoles"}}, "minPoles")
-        GUI.addPlaceHolder(settings)
+        --GUI.add(settings, {type="checkbox", name="minPoles", caption={"stg-minPoles"}}, "minPoles")
+        --GUI.addPlaceHolder(settings)
 
         GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}},"poleEntities")
         GUI.addPlaceHolder(settings)
-
-        GUI.add(settings,{type="checkbox", name="parallelTracks", caption={"stg-parallel-tracks"}}, "parallelTracks")
+        
+        GUI.add(settings,{type="checkbox", name="railEntities", caption={"stg-rail-entities"}}, "railEntities")
         GUI.addPlaceHolder(settings)
 
-        GUI.add(settings, {type="label", caption={"stg-parallel-lag"}})
-        GUI.add(settings,{type="textfield", name="parallelLag", style="farl_textfield_small"}, psettings.parallelLag)
+        --GUI.add(settings,{type="checkbox", name="parallelTracks", caption={"stg-parallel-tracks"}}, "parallelTracks")
+        --GUI.addPlaceHolder(settings)
 
         GUI.add(settings, {type="checkbox", name="ccNet", caption={"stg-ccNet"}, state=psettings.ccNet})
         local row2 = GUI.add(settings, {type="table", name="row3", colspan=2})
         GUI.add(row2, {type="label", caption={"stg-ccNetWire"}})
         GUI.addButton(row2, {name="ccNetWires", caption=GUI.ccWires[psettings.ccWires]}, GUI.toggleWires)
 
+        GUI.addLabel(settings, {caption={"stg-stored-blueprints"}})
+        local stored_bp = GUI.add(settings,{type="table", colspan=3})
+        
+        local name = player.name
+        if name == "" then name = "noname" end
+        local bps = global.savedBlueprints[name]
+        debugDump("Player: "..player.name)    
+        for i=1,3 do
+          if bps[i] then
+            local lanes = #bps[i].straight.lanes + 1
+            local pole = game.entity_prototypes[bps[i].straight.pole.name].localised_name
+            GUI.addButton(stored_bp,{name="load_bp_"..i, caption="L"})
+            GUI.addButton(stored_bp,{name="save_bp_"..i, caption="S"})
+            GUI.addLabel(stored_bp, {caption={"text-blueprint-description", lanes, pole}})
+          else
+            GUI.addLabel(stored_bp,{caption="L"})
+            GUI.addButton(stored_bp,{name="save_bp_"..i, caption="S"})
+            GUI.addLabel(stored_bp, {caption="--"})
+          end
+        end
+        
         GUI.add(settings, {type="label", caption={"stg-blueprint"}})
         local row3 = GUI.add(settings, {type="table", name="row4", colspan=2})
         GUI.addButton(row3, {name="blueprint", caption={"stg-blueprint-read"}}, GUI.readBlueprint)
         GUI.addButton(row3, {name="bpClear", caption={"stg-blueprint-clear"}}, GUI.clearBlueprints)
+        GUI.add(settings, {type="label", caption={"stg-blueprint-write"}})
+        local row4 = GUI.add(settings, {type="flow", name="row5", direction="horizontal"})
+        GUI.addButton(row4, {name="blueprint_concrete_vertical", caption={"stg-blueprint-vertical"}}, GUI.create_concrete_vertical)
+        GUI.addButton(row4,{name="blueprint_concrete_diagonal", caption={"stg-blueprint-diagonal"}},GUI.create_concrete_diagonal)
+        local row6 = GUI.add(settings, {type="flow", name="row6", direction="horizontal"})
+        GUI.addButton(row6,{name="print_statistics", caption={"stg-statistics"}}, GUI.print_statistics)
       end
     end,
 
@@ -332,9 +376,14 @@ GUI = {
       local status, err = pcall(function()
         local bp = GUI.findSetupBlueprintsInHotbar(player)
         if bp then
-          farl:parseBlueprints2(bp)
+          local was_active = farl.active
+          farl:deactivate()
+          farl:parseBlueprints(bp)
           GUI.destroyGui(player)
           GUI.createGui(player)
+          if was_active then
+            farl:activate()
+          end
           return
         end
       end)
@@ -345,18 +394,68 @@ GUI = {
 
     clearBlueprints = function(event, farl, player)
       local psettings = Settings.loadByPlayer(player)
-      psettings.bp = {
-        medium= {diagonal=defaultsMediumDiagonal, straight=defaultsMediumStraight},
-        big=    {diagonal=defaultsDiagonal, straight=defaultsStraight}}
-      psettings.activeBP = psettings.medium and psettings.bp.medium or psettings.bp.big
-      if global.savedBlueprints[player.name] then
-        global.savedBlueprints[player.name] = nil
-      end
-      farl:print("Cleared blueprints")
+      psettings.bp = {diagonal=defaultsDiagonal, straight=defaultsStraight}
+      psettings.activeBP = psettings.bp
+      farl:print({"msg-bp-cleared"})
       GUI.destroyGui(player)
       GUI.createGui(player)
     end,
 
+    create_concrete_vertical = function(event, farl, player)
+      GUI.createBlueprint(defaults_concrete_vert,farl,player)
+    end,
+    
+    create_concrete_diagonal = function(event, farl, player)
+      GUI.createBlueprint(defaults_concrete_diag,farl,player)
+    end,
+    
+    print_statistics = function(event, farl, player)
+      if player.valid then
+        local stats = global.statistics[player.force.name]
+        player.print({"stg-statistics"})
+        player.print({"text-created-entities"})
+        for n,c in pairs(stats.created) do
+          local proto = game.entity_prototypes[n] or game.item_prototypes[n] or false
+          if proto then
+            player.print({"",proto.localised_name, ": "..c})
+          else
+            player.print(n..": "..c)
+          end
+        end
+        player.print({"text-removed-entities"})
+        for n,c in pairs(stats.removed) do
+          local proto = game.entity_prototypes[n] or game.item_prototypes[n] or false
+          if proto then
+            player.print({"",proto.localised_name, ": "..c})
+          else
+            player.print(n..": "..c)
+          end
+        end
+        GUI.toggleSettingsWindow(event, farl, player)
+      end
+    end,
+
+    createBlueprint = function(bp_table, farl, player)
+      local blueprints = GUI.findBlueprintsInHotbar(player)
+      local bp = false
+      if blueprints ~= nil then
+        for i, blueprint in ipairs(blueprints) do
+          if not blueprint.is_blueprint_setup() then
+            bp = blueprint
+            break
+          end
+        end
+        if bp then
+          local icons = {{index = 2, name = "farl"},[0] = {index = 1, name = "straight-rail"}}
+          bp.set_blueprint_entities(util.table.deepcopy(bp_table.entities))
+          bp.set_blueprint_tiles(util.table.deepcopy(bp_table.tiles))
+          bp.blueprint_icons = icons
+        else
+          farl:print({"msg-no-empty-blueprint"})
+        end
+      end
+    end,
+    
     saveSettings = function(s, player)
       local psettings = Settings.loadByPlayer(player)
       for i,p in pairs(s) do
@@ -375,11 +474,11 @@ GUI = {
           farl.settings = Settings.loadByPlayer(farl.driver)
         end
         farl.driver.gui.left.farl.rows.root.state = farl.settings.root
-        if not farl.driver.gui.left.farl.rows.maintenance then
-          GUI.destroyGui(farl.driver)
-          GUI.createGui(farl.driver)
-        end
-        farl.driver.gui.left.farl.rows.maintenance.state = farl.maintenance
+        --if not farl.driver.gui.left.farl.rows.maintenance then
+          --GUI.destroyGui(farl.driver)
+          --GUI.createGui(farl.driver)
+        --end
+        --farl.driver.gui.left.farl.rows.maintenance.state = farl.maintenance
       end
     end,
 }
@@ -391,8 +490,10 @@ GUI.callbacks = {
   debug = GUI.debugInfo,
   root = GUI.toggleRootMode,
   maintenance = GUI.toggleMaintenance,
-  poleType = GUI.togglePole,
   ccNetWires = GUI.toggleWires,
   blueprint = GUI.readBlueprint,
-  bpClear = GUI.clearBlueprints
+  bpClear = GUI.clearBlueprints,
+  blueprint_concrete_vertical = GUI.create_concrete_vertical,
+  blueprint_concrete_diagonal = GUI.create_concrete_diagonal,
+  print_statistics = GUI.print_statistics,
 }

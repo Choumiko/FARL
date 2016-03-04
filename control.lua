@@ -22,8 +22,26 @@ function setMetatables()
   end
 end
 
+local function getMetaItemData()
+  game.forces.player.recipes["farl-meta"].reload()
+  local metaitem = game.forces.player.recipes["farl-meta"].ingredients
+  global.electric_poles = {}
+  for i, ent in pairs(metaitem) do
+    global.electric_poles[ent.name] = ent.amount/10
+  end
+end
+
 local function on_tick(event)
   local status, err = pcall(function()
+    if global.overlayStack and global.overlayStack[event.tick] then
+      local tick = event.tick
+      for _, overlay in pairs(global.overlayStack[tick]) do
+        if overlay.valid then
+          overlay.destroy()
+        end
+      end
+      global.overlayStack[event.tick] = nil
+    end
     if global.destroyNextTick[event.tick] then
       local pis = global.destroyNextTick[event.tick]
       for _, pi in pairs(pis) do
@@ -33,7 +51,7 @@ local function on_tick(event)
       global.destroyNextTick[event.tick] = nil
     end
     for i, farl in pairs(global.farl) do
-      if not farl.destroy then
+      if not farl.destroy and farl.driver and farl.driver.valid then
         local status, err = pcall(function()
           farl:update(event)
           if farl.driver and farl.driver.name ~= "farl_player" then
@@ -61,6 +79,7 @@ local function on_tick(event)
 end
 
 local function init_global()
+  global = global or {}
   global.players =  global.players or {}
   global.savedBlueprints = global.savedBlueprints or {}
   global.farl = global.farl or {}
@@ -69,12 +88,21 @@ local function init_global()
   global.godmode = false
   godmode = global.godmode
   global.destroyNextTick = global.destroyNextTick or {}
+  global.overlayStack = global.overlayStack or {}
+  global.statistics = global.statistics or {}
+  global.electric_poles = global.electric_poles or {}
   global.version = global.version or "0.4.41"
+  if global.debug_log == nil then
+    global.debug_log = false
+  end 
   setMetatables()
 end
 
 local function init_player(player)
   Settings.loadByPlayer(player)
+  local name = player.name
+  if name == "" then name = "noname" end
+  global.savedBlueprints[name] = global.savedBlueprints[name] or {} 
 end
 
 local function init_players()
@@ -83,13 +111,27 @@ local function init_players()
   end
 end
 
+local function init_force(force)
+  global.statistics[force.name] = global.statistics[force.name] or {created={}, removed={}} 
+end
+
+local function init_forces()
+  for _, f in pairs(game.forces) do
+    init_force(f)
+  end
+end
+
 local function on_init()
   init_global()
+  init_forces()
+  init_players()
+  getMetaItemData()
 end
 
 local function on_load()
   setMetatables()
   godmode = global.godmode
+  global.overlayStack = global.overlayStack or {}
 end
 
 local function on_configuration_changed(data)
@@ -99,10 +141,22 @@ local function on_configuration_changed(data)
   if data.mod_changes[MOD_NAME] then
     local newVersion = data.mod_changes[MOD_NAME].new_version
     local oldVersion = data.mod_changes[MOD_NAME].old_version
-    init_global()
-    init_players()
+    if oldVersion then
+      debugDump("FARL version changed from "..oldVersion.." to "..newVersion,true)
+      if oldVersion > newVersion then
+        debugDump("Downgrading FARL, reset settings",true)
+        global = nil
+      end
+    else
+      debugDump("FARL version: "..newVersion,true)
+    end
+    if oldVersion and oldVersion < "0.5.13" then
+      debugDump("Reset settings",true)
+      global = nil
+    end
+    on_init()
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
-    global.version = "0.4.41"
+    global.version = "0.5.11"
   end
   if data.mod_changes["5dim_trains"] then
     --5dims_trains was added/updated
@@ -113,6 +167,8 @@ local function on_configuration_changed(data)
       global.electricInstalled = false
     end
   end
+  --some mod changed, readd poles
+  getMetaItemData()
   setMetatables()
   for name,s in pairs(global.players) do
     s:checkMods()
@@ -121,6 +177,10 @@ end
 
 local function on_player_created(event)
   init_player(game.players[event.player_index])
+end
+
+local function on_force_created(event)
+  init_force(event.force)
 end
 
 local function on_gui_click(event)
@@ -208,6 +268,21 @@ function debugDump(var, force)
   end
 end
 
+function debugLog(var, prepend)
+  if not global.debug_log then return end
+  local str = prepend or ""
+  for i,player in ipairs(game.players) do
+    local msg
+    if type(var) == "string" then
+      msg = var
+    else
+      msg = serpent.dump(var, {name="var", comment=false, sparse=false, sortkeys=true})
+    end
+    player.print(str..msg)
+    log(str..msg)
+  end
+end
+
 function saveVar(var, name)
   local var = var or global
   local n = name or ""
@@ -218,6 +293,7 @@ script.on_init(on_init)
 script.on_load(on_load)
 script.on_configuration_changed(on_configuration_changed)
 script.on_event(defines.events.on_player_created, on_player_created)
+script.on_event(defines.events.on_force_created, on_force_created)
 
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event(defines.events.on_gui_click, on_gui_click)
@@ -247,12 +323,16 @@ script.on_event(defines.events.on_player_driving_changed_state, on_player_drivin
 remote.add_interface("farl",
   {
     railInfo = function(rail)
-      debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction,true)
+      debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction.." realPos:"..pos2Str(diagonal_to_real_pos(rail)),true)
       if type(global.railInfoLast) == "table" and global.railInfoLast.valid then
         local pos = global.railInfoLast.position
-        local diff={x=rail.position.x-pos.x, y=rail.position.y-pos.y}
+        local diff=subPos(rail.position,pos)
+        local rdiff = subPos(diagonal_to_real_pos(rail),diagonal_to_real_pos(global.railInfoLast))
         debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
+        debugDump("real Offset: x="..rdiff.x..",y="..rdiff.y,true)
         debugDump("Distance (util): "..util.distance(pos, rail.position),true)
+        --debugDump("lag for diag: "..(diff.x-diff.y),true)
+        --debugDump("lag for straight: "..(diff.y+diff.x),true)
         if AStar then
           local max = AStar.heuristic(global.railInfoLast, rail)
           debugDump("Distance (heuristic): "..max, true)
@@ -276,8 +356,7 @@ remote.add_interface("farl",
         if p.gui.left.farl then p.gui.left.farl.destroy() end
         if p.gui.top.farl then p.gui.top.farl.destroy() end
       end
-      init_global()
-      init_players()
+      on_init()
     end,
 
     setCurvedWeight = function(weight, player)
@@ -327,21 +406,63 @@ remote.add_interface("farl",
       end
     end,
 
-    wagons = function()
-      for i,w in ipairs(game.player.selected.train.carriages) do
-        debugDump({i=i,type=w.type},true)
-      end
-    end,
+    createCurve = function(direction, input, curve, s_lane, d_lane)
+      local player = game.players[1]
+      local surface = player.surface
 
-    setBoundingBox = function(type, corner, x,y, player)
-      local player = player
-      if not player then player = game.players[1] end
-      local psettings = Settings.loadByPlayer(player)
-      if psettings then
-        local bb = psettings.boundingBoxOffsets[type][corner]
-        local x = x and x or bb.x
-        local y = y and y or bb.y
-        psettings.boundingBoxOffsets[type][corner] = {x=x,y=y}
+      local original_dir = direction
+      -- invert direction, input, distances for diagonal rails
+      if direction%2 == 1 then
+        local input2dir = {[0]=-1,[1]=0,[2]=1}
+        direction = oppositedirection((direction+input2dir[input]) % 8)
+        input = input == 2 and 0 or 2
+        s_lane = -1*s_lane
+        d_lane = -1*d_lane
+      end
+
+      local new_curve = {name=curve.name, type=curve.type, direction=curve.direction, force=curve.force}
+      local right = s_lane*2
+
+      --left hand turns need to go back, moving right already moves the diagonal rail part
+      local forward = input == 2 and (s_lane-d_lane)*2 or (d_lane-s_lane)*2
+      debugDump("r:"..right.."f:"..forward,true)
+      new_curve.position = move_right_forward(curve.position, direction, right, forward)
+      local s_lag = forward/2
+      local d_lag = original_dir % 2 == 0 and forward+right or (forward+right)/2
+      local data = {s_lag=s_lag, d_lag=d_lag}
+      debugDump(data,true)
+      local ent = surface.create_entity(new_curve)
+      local diff = subPos(ent.position,new_curve.position)
+      if diff.x~=0 or diff.y~=0 then
+        debugDump("Placement mismatch:",true)
+        debugDump(diff,true)
       end
     end,
-  })
+    
+    timing = function(player)
+      local area_large = expandPos(player.position,50)
+      local area_small = expandPos(player.position,10)
+      log("find_entities large")
+      for i=1,1000 do
+        player.surface.find_entities_filtered{area = area_large, type = "tree"}
+      end
+      log("large finished")
+      log("find_entities small")
+      for i=1,1000 do
+        player.surface.find_entities_filtered{area = area_small, type = "tree"}
+      end
+      log("small finished")
+    end,
+    
+    place_signal = function(rail, travel_dir, end_of_rail)
+      local signal = get_signal_for_rail(rail, travel_dir, end_of_rail)
+      signal.force  = rail.force
+      rail.surface.create_entity(signal)
+    end,
+    
+    debuglog = function()
+      global.debug_log = not global.debug_log
+      local state = global.debug_log and "on" or "off"
+      debugDump("Debug: "..state,true)
+    end
+    })
