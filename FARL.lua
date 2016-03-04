@@ -315,7 +315,7 @@ FARL = {
       driver=driver, active=false, lastrail=false,
       direction = false, input = 1, name = vehicle.backer_name,
       signalCount = {main=0}, cruise = false, cruiseInterrupt = 0,
-      lastposition = false, maintenance = false, surface = vehicle.surface,
+      lastposition = false, bulldozer = false, maintenance = false, surface = vehicle.surface,
       destroy = false, concrete_queue = {}, rail_queue = {}
     }
     new.settings = Settings.loadByPlayer(player)
@@ -1340,10 +1340,20 @@ FARL = {
       end
       self.settings.root = not self.settings.root
       self.maintenance = false
+      self.bulldozer = false
     else
       self:print({"msg-root-error"})
       self.settings.root = false
     end
+  end,
+
+  toggleBulldozer = function(self)
+    if self.active then
+      self:deactivate({"msg-changing-modes"})
+    end
+    self.bulldozer = not self.bulldozer
+    self.settings.root = false
+    self.maintenance = false
   end,
 
   toggleMaintenance = function(self)
@@ -1762,7 +1772,7 @@ FARL = {
   end,
 
   protect = function(self, ent)
-    if self.maintenance then
+    if self.maintenance or self.bulldozer then
       self.protected = self.protected or {}
       self.protectedCount = self.protectedCount or 0
       self.protected[protectedKey(ent)] = ent
@@ -2000,9 +2010,7 @@ FARL = {
         self:prepareArea(signal)
         local success, entity = self:genericPlace(signal)
         if entity then
-          if self.maintenance then
-            self:protect(entity)
-          end
+          self:protect(entity)
           self:removeItemFromCargo(signal.name, 1)
           self.signal_in[lane_index] = false
           return success, entity
@@ -2119,9 +2127,7 @@ FARL = {
           if self:prepareArea(entity) then
             local _, ent = self:genericPlace{name = poleEntities[i].name, position = pos, direction=0,force = self.locomotive.force}
             if ent then
-              if self.maintenance then
-                self:protect(ent)
-              end
+              self:protect(ent)
               self:removeItemFromCargo(poleEntities[i].name, 1)
             else
               self:deactivate("Trying to place "..poleEntities[i].name.." failed")
@@ -2147,9 +2153,7 @@ FARL = {
           if self:prepareArea(entity) then
             local _, ent = self:genericPlace{name = railEntities[i].name, position = pos, direction=0,force = self.locomotive.force}
             if ent then
-              if self.maintenance then
-                self:protect(ent)
-              end
+              self:protect(ent)
               self:removeItemFromCargo(railEntities[i].name, 1)
             else
               self:deactivate("Trying to place "..railEntities[i].name.." failed")
@@ -2294,9 +2298,7 @@ FARL = {
         self:removeItemFromCargo(name, 1)
         self:connectCCNet(pole)
         self.lastPole = pole
-        if self.maintenance then
-          self:protect(pole)
-        end
+        self:protect(pole)
         return true
       else
         if not canPlace then
@@ -2324,9 +2326,7 @@ FARL = {
       self:prepareArea(signal)
       local success, entity = self:genericPlace(signal)
       if entity then
-        if self.maintenance then
-          self:protect(entity)
-        end
+        self:protect(entity)
         self:removeItemFromCargo(signal.name, 1)
         
         --reset lane counter, so that it lines up

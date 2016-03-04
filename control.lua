@@ -150,9 +150,26 @@ local function on_configuration_changed(data)
     else
       debugDump("FARL version: "..newVersion,true)
     end
-    if oldVersion and oldVersion < "0.5.13" then
-      debugDump("Reset settings",true)
-      global = nil
+    if oldVersion then
+      if oldVersion < "0.5.13" then
+        debugDump("Reset settings",true)
+        global = nil
+      elseif oldVersion < "0.5.16" then
+        for name, p_settings in pairs(global.players) do
+          if p_settings.bulldozer == nil then
+            p_settings.bulldozer = false
+          end
+        end
+        for i, farl in pairs(global.farl) do
+          if farl.bulldozer == nil then
+            farl.bulldozer = false
+            if farl.driver and farl.driver.valid then
+              GUI.destroyGui(farl.driver)
+              GUI.createGui(farl.driver)
+            end
+          end
+        end
+      end
     end
     on_init()
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated

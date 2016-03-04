@@ -185,6 +185,7 @@ defaultSettings =
     signals = true,
     bridge = false,
     maintenance = false,
+    bulldozer = false,
     root = false,
     parallelTracks = true,
     concrete = true,
