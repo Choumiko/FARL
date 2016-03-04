@@ -352,7 +352,6 @@ FARL = {
   onPlayerLeave = function(player, tick)
     for i,f in pairs(global.farl) do
       if f.driver and f.driver.name == player.name then
-        --debugDump(f.protectedCount,true)
         f:deactivate()
         f.driver = false
         f.destroy = tick
@@ -416,10 +415,10 @@ FARL = {
       if distance(self.lastrail.position, firstWagon.position) < 6 then
       --log("start update")
         --debugDump(#self.path, true)
-        --if not self.last_moved then self.last_moved = game.tick end
-        --local diff = game.tick - self.last_moved
+        if not self.last_moved then self.last_moved = game.tick end
+        local diff = game.tick - self.last_moved
         --self:print(diff.."@"..game.tick)
-        --self.last_moved = game.tick
+        self.last_moved = game.tick
         self.acc = self.driver.riding_state.acceleration
         if ((self.acc ~= 3 and self.frontmover) or (self.acc ~=1 and not self.frontmover)) then
           
@@ -461,6 +460,12 @@ FARL = {
               self:deactivate({"msg-no-entity"})
               return
             end
+            self.protected_index = self.protected_index + 1
+            if self.protected_index == 7 then
+              self.protected_index = 1
+              self.protected[self.protected_index] = {}
+            end
+            debugDump(self.protected_index,true)
             -- add created rail to path
             table.insert(self.path, {rail=last, travel_dir=newTravelDir, input = self.input})
             -- remove rails behind train from path
@@ -618,6 +623,16 @@ FARL = {
           end
         end
       else
+        -- if bulldoze mode is on, prepare the area for the next rail after self.lastrail according to input
+        if self.bulldozer then
+          local dir, next = self:getRail(self.lastrail, self.direction, 1)
+          if next and self.already_prepared ~= pos2Str(next.position) then
+            self:flyingText2("R", RED,true, next.position)
+            self.already_prepared = pos2Str(next.position)
+            self:bulldoze_area(next, self.direction)
+          end
+        end
+      
         if self.settings.concrete and #self.concrete_queue > 0 then
           for i, queue in pairs(self.concrete_queue) do
             self:placeConcrete(queue.travelDir, queue.rail)
@@ -691,6 +706,12 @@ FARL = {
       self:removeTrees(area)
       self:pickupItems(area)
       self:removeStone(area)
+      if self.bulldozer then
+        local types = {"straight-rail", "curved-rail", "rail-signal", "rail-chain-signal", "electric-pole", "lamp", "wall"}
+        for _, t in pairs(types) do
+          self:removeEntitiesFiltered({area=area, type=t}, self.protected)
+        end
+      end
       if not self:genericCanPlace(newRail) then
         self:fillWater(area)
       end
@@ -739,10 +760,11 @@ FARL = {
     --apiCalls.count.other = apiCalls.count.other + 1
     local exclude = exclude or {}
     local found = false
-
+    local force = self.locomotive.force
+    local neutral_force = game.forces.neutral
     for _, entity in pairs(self.surface.find_entities_filtered(args)) do
       found = true
-      if not self:isProtected(entity) then
+      if not self:isProtected(entity) and (entity.force == force or entity.force == neutral_force) then
         if entity.prototype.items_to_place_this then
           local item
           for k, v in pairs(entity.prototype.items_to_place_this) do
@@ -894,9 +916,34 @@ FARL = {
       end
     end
   end,
-  --583,5 -380,5
-  --dir 3: 583 -381 : -0.5 -0.5
-  --dir 7: +0.5 +0.5
+
+  bulldoze_area = function(self, rail, travel_dir)
+    if rail.name == self.settings.rail.curved then
+      self:prepareAreaForCurve(rail)
+      return
+    end
+    local types = {"straight-rail", "curved-rail", "rail-signal", "rail-chain-signal", "electric-pole", "lamp", "wall"}
+    local rtype = travel_dir % 2 == 0 and "straight" or "diagonal"
+    local bp =  self.settings.activeBP[rtype]
+    if rtype == "straight" then
+      local area = self:createBoundingBox(rail, travel_dir)
+      self:prepareArea(rail, area)
+      for _, t in pairs(types) do
+        self:removeEntitiesFiltered({area=area, type=t}, self.protected)
+      end
+    else
+      for i,p in pairs(bp.clearance_points) do
+        local pos = move_right_forward(rail.position,travel_dir,p.x,0)
+        local area = expandPos(pos, 1.5)
+        self:removeTrees(area)
+        self:pickupItems(area)
+        self:removeStone(area)
+        for _, t in pairs(types) do
+          self:removeEntitiesFiltered({area=area, type=t}, self.protected)
+        end
+      end
+    end
+  end,
 
   getRail = function(self, lastRail, travelDir, input)
     -- [traveldir][rail_type][rail_dir][input] = offset, new rail dir, new rail type
@@ -1077,8 +1124,8 @@ FARL = {
       self.lastrail = false
       self.signalCount = {main=0}
       self.protected = {}
-      self.protectedCount = 0
-      self.protectedCalls = {}
+      self.protected_index = 1
+      self.protected[self.protected_index] = {}
       self.frontmover = false
       self.lastCurve = {dist=20, input=false, direction=0, blocked={}, curveblock = 0}
       for i,l in pairs(self.train.locomotives.front_movers) do
@@ -1087,9 +1134,8 @@ FARL = {
           break
         end
       end
-      local maintenance = self.maintenance and 5 or false
       self.direction = self:calcTrainDir()
-      self.lastrail = self:findLastRail(maintenance)
+      self.lastrail = self:findLastRail()
       if not self.lastrail then
         self:deactivate({"msg-error-2"}, true)
         return
@@ -1109,7 +1155,7 @@ FARL = {
       self.path, front_rail_index = self:get_rails_below_train()
       front_rail_index = front_rail_index
       --self:flyingText("FR", YELLOW, true, self:rail_below_train().position)
-      --self:show_path()
+      self:show_path()
       for i=#self.path-1,#self.path-3,-1 do
         if self.settings.railEntities and not self.settings.root then
           local c = i
@@ -1132,21 +1178,10 @@ FARL = {
         local dir = self.path[i].travel_dir
         last_signal, signal_rail = self:find_signal_rail(rail, dir)
         if last_signal then
-          if not self.maintenance then
-            self.signalCount = {main=0}
-            self:flyingText2( "S", GREEN, true, last_signal.position)
-            signal_index = i
-            break
-          -- only account for signals behind the maintenance rail
-          else
-            if i <= front_rail_index + 2 then
-              self.signalCount = {main=0}
-              signal_index = i
-              self:print(signal_index.." "..front_rail_index+2)
-              self:flyingText2( "S", GREEN, true, last_signal.position)
-              break
-            end
-          end
+          self.signalCount = {main=0}
+          self:flyingText2( "S", GREEN, true, last_signal.position)
+          signal_index = i
+          break
         else
         
         end
@@ -1265,6 +1300,7 @@ FARL = {
     while next and count < 30 and next ~= behind do
       --self:flyingText2(count, RED, true, next.position)
       table.insert(path, {rail = next, travel_dir = oppositedirection(dir)})
+      self:protect(next)
       next, dir = self:get_connected_rail(next, true, dir)
       count = count + 1
     end
@@ -1295,9 +1331,8 @@ FARL = {
     self.ccNetPole = nil
     self.maintenanceRail = nil
     self.maintenanceDir = nil
-    self.protected = nil
-    self.protectedCount = nil
-    self.protectedCalls = {}
+    self.protected = {}
+    self.protected_index = nil
     self.concrete_queue = {}
     self.rail_queue = {}
   end,
@@ -1364,13 +1399,13 @@ FARL = {
     self.settings.root = false
   end,
 
-  findLastRail = function(self, limit)
+  findLastRail = function(self)
     local trainDir = self:calcTrainDir()
     local test = self:rail_below_train()
     local last = test
-    local limit, count = limit, 1
-    limit = limit or 20
-    while test do --and test.name ~= self.settings.rail.curved do
+    local count = 1
+    local limit = (self.maintenance or self.bulldozer) and 5 or 20
+    while test and count <= limit do --and test.name ~= self.settings.rail.curved do
       local rail = self:get_connected_rail(test, true, self.direction)
       if rail and count < limit then
         test = rail
@@ -1380,9 +1415,9 @@ FARL = {
       end
       count = count + 1
     end
-    --    if last then
-    --      self:flyingText2({"text-front"}, RED, true, last.position)
-    --    end
+    if last then
+      self:flyingText2({"text-front"}, RED, true, last.position)
+    end
     return last
   end,
 
@@ -1417,7 +1452,7 @@ FARL = {
     elseif not arg.name then
       error("no name", 2)
     end
-    local name = arg.innername or arg.name
+    local name = arg.type == "entity-ghost" and arg.ghost_name or arg.name
     --apiCalls.canplace = apiCalls.canplace + 1
     if not arg.direction then
       return self.surface.can_place_entity{name = name, position = arg.position}
@@ -1764,7 +1799,6 @@ FARL = {
       return self:protectRails(self.maintenanceRail, self.maintenanceDir, 10)
     else
       if found > 0 then
-        --debugDump(self.protectedCount,true)
         self:deactivate("Junction detected")
       end
       return false
@@ -1774,24 +1808,18 @@ FARL = {
   protect = function(self, ent)
     if self.maintenance or self.bulldozer then
       self.protected = self.protected or {}
-      self.protectedCount = self.protectedCount or 0
-      self.protected[protectedKey(ent)] = ent
-      self.protectedCount = self.protectedCount + 1
+      self.protected[self.protected_index] = self.protected[self.protected_index] or {} 
+      self.protected[self.protected_index][protectedKey(ent)] = ent
     end
   end,
 
   isProtected = function(self, ent)
     local key = protectedKey(ent)
-    if self.protected and self.protected[key] == ent then
-      self.protectedCalls[key] = self.protectedCalls[key] and self.protectedCalls[key] + 1 or 1
-      --debugDump(key.." "..self.protectedCalls[key],true)
-      --if self.protectedCalls[key] >= 10 then
-      --self.protectedCalls[key] = nil
-      --self.protected[key] = nil
-      --self.protectedCount = self.protectedCount - 1
-      --debugDump(self.protectedCount,true)
-      --end
-      return true
+    if not self.protected then return false end
+    for index, protected in pairs(self.protected) do
+      if protected[key] == ent then
+        return true
+      end
     end
     return false
   end,
@@ -1816,7 +1844,6 @@ FARL = {
         end
       end
       if found > 1 then
-        --debugDump(self.protectedCount,true)
         self:deactivate("Junction detected")
         return false
       else
