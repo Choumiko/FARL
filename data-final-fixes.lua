@@ -30,7 +30,9 @@ for _, ent in pairs(data.raw["electric-pole"]) do
         end
       end
     end
-    table.insert(metarecipe.ingredients, {item_name, ent.maximum_wire_distance*10})
+    if item_name then
+      table.insert(metarecipe.ingredients, {item_name, ent.maximum_wire_distance*10})
+    end
   end
 end
 data:extend({metarecipe})
