@@ -112,6 +112,9 @@ local function init_players()
 end
 
 local function init_force(force)
+  if not global.statistics then
+    init_global()
+  end
   global.statistics[force.name] = global.statistics[force.name] or {created={}, removed={}} 
 end
 
@@ -481,5 +484,11 @@ remote.add_interface("farl",
       global.debug_log = not global.debug_log
       local state = global.debug_log and "on" or "off"
       debugDump("Debug: "..state,true)
-    end
+    end,
+    
+    revive = function(player)
+      for _, entity in pairs(player.surface.find_entities_filtered{area = expandPos(player.position,50), type = "entity-ghost"}) do
+        entity.revive()
+      end
+    end,
     })

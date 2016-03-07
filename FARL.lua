@@ -465,7 +465,7 @@ FARL = {
               self.protected_index = 1
               self.protected[self.protected_index] = {}
             end
-            debugDump(self.protected_index,true)
+            --debugDump(self.protected_index,true)
             -- add created rail to path
             table.insert(self.path, {rail=last, travel_dir=newTravelDir, input = self.input})
             -- remove rails behind train from path
@@ -627,7 +627,7 @@ FARL = {
         if self.bulldozer then
           local dir, next = self:getRail(self.lastrail, self.direction, 1)
           if next and self.already_prepared ~= pos2Str(next.position) then
-            self:flyingText2("R", RED,true, next.position)
+            --self:flyingText2("R", RED,true, next.position)
             self.already_prepared = pos2Str(next.position)
             self:bulldoze_area(next, self.direction)
           end
@@ -1155,7 +1155,7 @@ FARL = {
       self.path, front_rail_index = self:get_rails_below_train()
       front_rail_index = front_rail_index
       --self:flyingText("FR", YELLOW, true, self:rail_below_train().position)
-      self:show_path()
+      --self:show_path()
       for i=#self.path-1,#self.path-3,-1 do
         if self.settings.railEntities and not self.settings.root then
           local c = i
