@@ -137,7 +137,7 @@ GUI = {
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
       GUI.add(rows, {type="checkbox", name="concrete", caption={"tgl-concrete"}}, "concrete")
-      --GUI.add(rows,{type="checkbox", name="bulldozer", caption={"tgl-bulldozer"}, state=psettings.bulldozer},GUI.toggleBulldozer)
+      GUI.add(rows,{type="checkbox", name="bulldozer", caption={"tgl-bulldozer"}, state=psettings.bulldozer},GUI.toggleBulldozer)
       GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
       --GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance},GUI.toggleMaintenance)
       GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
@@ -200,8 +200,8 @@ GUI = {
     end,
     
     toggleBulldozer = function(event, farl, player)
-      --farl:toggleBulldozer()
-      --GUI.updateGui(farl)
+      farl:toggleBulldozer()
+      GUI.updateGui(farl)
     end,
 
     toggleMaintenance = function(event, farl, player)
@@ -480,7 +480,7 @@ GUI = {
           farl.settings = Settings.loadByPlayer(farl.driver)
         end
         farl.driver.gui.left.farl.rows.root.state = farl.settings.root
-        --farl.driver.gui.left.farl.rows.bulldozer.state = farl.bulldozer
+        farl.driver.gui.left.farl.rows.bulldozer.state = farl.bulldozer
         --if not farl.driver.gui.left.farl.rows.maintenance then
           --GUI.destroyGui(farl.driver)
           --GUI.createGui(farl.driver)

@@ -22,12 +22,28 @@ function setMetatables()
   end
 end
 
+local concrete_lookup = {["stone-brick"] = "stone-path"}
+
 local function getMetaItemData()
   game.forces.player.recipes["farl-meta"].reload()
   local metaitem = game.forces.player.recipes["farl-meta"].ingredients
   global.electric_poles = {}
   for i, ent in pairs(metaitem) do
     global.electric_poles[ent.name] = ent.amount/10
+  end
+  
+  game.forces.player.recipes["farl-meta-concrete"].reload()
+  local meta_concrete = game.forces.player.recipes["farl-meta-concrete"].ingredients
+  global.concrete = {}
+  global.tiles = {}
+  for i, ent in pairs(meta_concrete) do
+    if concrete_lookup[ent.name] then
+      global.concrete[ent.name] = concrete_lookup[ent.name]
+      global.tiles[concrete_lookup[ent.name]] = ent.name
+    else
+      global.concrete[ent.name] = ent.name
+      global.tiles[ent.name] = ent.name
+    end
   end
 end
 
@@ -91,7 +107,9 @@ local function init_global()
   global.overlayStack = global.overlayStack or {}
   global.statistics = global.statistics or {}
   global.electric_poles = global.electric_poles or {}
-  global.version = global.version or "0.4.41"
+  global.concrete = global.concrete or {}
+  global.tiles = global.tiles or {}
+  global.version = global.version or "0.5.16"
   if global.debug_log == nil then
     global.debug_log = false
   end 
@@ -187,7 +205,7 @@ local function on_configuration_changed(data)
       global.electricInstalled = false
     end
   end
-  --some mod changed, readd poles
+  --some mod changed, readd poles, concrete
   getMetaItemData()
   setMetatables()
   for name,s in pairs(global.players) do

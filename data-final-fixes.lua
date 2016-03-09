@@ -35,4 +35,30 @@ for _, ent in pairs(data.raw["electric-pole"]) do
     end
   end
 end
-data:extend({metarecipe})
+
+local meta_concrete = copyPrototype("recipe", "deconstruction-planner", "farl-meta-concrete")
+meta_concrete.ingredients = {}
+meta_concrete.enabled = true
+meta_concrete.hidden = false
+
+for _, ent in pairs(data.raw["item"]) do
+  if ent.place_as_tile and ent.place_as_tile.result and type(ent.place_as_tile.result) == "string" then
+    local item_name = false
+    local amount = 1
+    local tile = data.raw["tile"][ent.place_as_tile.result] 
+    if tile and tile.minable and tile.minable.result then
+      item_name = ent.name
+      if ent.place_as_tile.result ~= item_name then
+        amount = 2
+      end
+    else
+      item_name = false
+      log("FARL: No item found for tile: "..ent.name)
+    end
+    if item_name then
+      table.insert(meta_concrete.ingredients, {item_name, amount})
+    end
+  end
+end
+
+data:extend({metarecipe, meta_concrete})

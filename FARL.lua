@@ -464,6 +464,7 @@ FARL = {
             if self.protected_index == 7 then
               self.protected_index = 1
               self.protected[self.protected_index] = {}
+              self.protected_tiles[self.protected_index] = {}
             end
             --debugDump(self.protected_index,true)
             -- add created rail to path
@@ -475,7 +476,7 @@ FARL = {
             local found = false
             for i, r in pairs(self.path) do
               if r.rail == behind then
-                found = true
+                found = i
               end
               if found then
                 --local status, err = pcall(function() r.rail.order_deconstruction(self.locomotive.force) end)
@@ -486,18 +487,22 @@ FARL = {
                 --else
                   --r.rail.cancel_deconstruction(self.locomotive.force)
                 --end
-              else
-                if self.settings.root then
-                  self:flyingText("b", RED,true,r.rail.position)
-                  local name = r.rail.name
-                  if r.rail.destroy() then
-                    self:addItemToCargo(name, 1, true)
-                  else
-                    self:deactivate({"msg-cant-remove"})
-                    return
-                  end
-                end
               end
+            end
+            if self.settings.root and found and found > 1 then
+              local start = found-1
+              for i=start,1,-1 do
+                local r = self.path[i]
+                self:flyingText("b", RED,true,r.rail.position)
+                local name = r.rail.name
+                if r.rail.destroy() then
+                  self:addItemToCargo(name, 1, true)
+                  table.remove(self.path,i)
+                else
+                  self:deactivate({"msg-cant-remove"})
+                  return
+                end              
+              end 
             end
             --debugLog("Tmp: "..#tmp)
             if #tmp > 50 then
@@ -882,9 +887,11 @@ FARL = {
           end
           table.insert(tiles,{name="grass", position={pos.x, pos.y}})
           table.insert(pave[name], entity)
+          self:protect_tile({x=pos.x,y=pos.y})
         end
       elseif tileName ~= name then
         table.insert(pave[name], entity)
+        self:protect_tile({x=pos.x,y=pos.y})
       end
     end
     if self.settings.bridge then
@@ -904,6 +911,37 @@ FARL = {
         self:print({"msg-not-enough-concrete", {"item-name."..get_item_name(name)}})
       end
     end
+  end,
+  
+  removeConcrete = function(self, area)
+    local status, err = pcall(function()
+      local tiles = {}
+      local st, ft = area[1],area[2]
+      if not st[1] then
+        st = fixPos(st)
+        ft = fixPos(ft)
+      end
+      local counts = {}
+      for x = st[1], ft[1], 1 do
+        for y = st[2], ft[2], 1 do
+          local tileName = self.surface.get_tile(x, y).name
+          -- check that tile is placeable by the player
+          if global.tiles[tileName] and not self:is_protected_tile({x=x,y=y}) then
+            counts[tileName] = counts[tileName] or 0
+            table.insert(tiles,{name="grass", position={x, y}})
+            counts[tileName] = counts[tileName] + 1
+          end
+        end
+      end
+      self.surface.set_tiles(tiles)
+      for name, c in pairs(counts) do
+        self:addItemToCargo(name, c, true)
+      end
+      end)
+    if not status then
+      debugDump(area,true)
+      error(err, 3)
+    end  
   end,
 
   pickupItems = function(self, area)
@@ -928,6 +966,7 @@ FARL = {
     if rtype == "straight" then
       local area = self:createBoundingBox(rail, travel_dir)
       self:prepareArea(rail, area)
+      self:removeConcrete(area)
       for _, t in pairs(types) do
         self:removeEntitiesFiltered({area=area, type=t}, self.protected)
       end
@@ -938,6 +977,7 @@ FARL = {
         self:removeTrees(area)
         self:pickupItems(area)
         self:removeStone(area)
+        self:removeConcrete(area)
         for _, t in pairs(types) do
           self:removeEntitiesFiltered({area=area, type=t}, self.protected)
         end
@@ -1126,6 +1166,8 @@ FARL = {
       self.protected = {}
       self.protected_index = 1
       self.protected[self.protected_index] = {}
+      self.protected_tiles = {}
+      self.protected_tiles[self.protected_index] = {}
       self.frontmover = false
       self.lastCurve = {dist=20, input=false, direction=0, blocked={}, curveblock = 0}
       for i,l in pairs(self.train.locomotives.front_movers) do
@@ -1166,7 +1208,7 @@ FARL = {
         end
       end
       debugLog("--Path length:"..#self.path)
-      --self:show_path()
+      self:show_path()
 
       self:findLastPole(self.lastrail)
       self:protect(self.lastPole)
@@ -1812,12 +1854,44 @@ FARL = {
       self.protected[self.protected_index][protectedKey(ent)] = ent
     end
   end,
+  
+  protect_tile = function(self, pos)
+    if self.maintenance or self.bulldozer then
+      local pos = {x=pos.x,y=pos.y}
+      if pos.x - round(pos.x) == 0 then
+        pos.x = pos.x+0.5
+      end
+      if pos.y - round(pos.y) == 0 then
+        pos.y = pos.y+0.5
+      end  
+      self.protected_tiles = self.protected_tiles or {}
+      self.protected_tiles[self.protected_index] = self.protected_tiles[self.protected_index] or {}
+      self.protected_tiles[self.protected_index][pos.x..":"..pos.y] = true
+    end
+  end,
 
   isProtected = function(self, ent)
     local key = protectedKey(ent)
     if not self.protected then return false end
     for index, protected in pairs(self.protected) do
       if protected[key] == ent then
+        return true
+      end
+    end
+    return false
+  end,
+  
+  is_protected_tile = function(self, pos)
+    local pos = {x=pos.x,y=pos.y}
+    if pos.x - round(pos.x) == 0 then
+      pos.x = pos.x+0.5
+    end
+    if pos.y - round(pos.y) == 0 then
+      pos.y = pos.y+0.5
+    end  
+    local k = pos.x..":"..pos.y
+    for index, protected in pairs(self.protected_tiles) do
+      if protected[k] then
         return true
       end
     end
