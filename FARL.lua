@@ -479,14 +479,7 @@ FARL = {
                 found = i
               end
               if found then
-                --local status, err = pcall(function() r.rail.order_deconstruction(self.locomotive.force) end)
-                --debugDump({s=status,e=err},true)
-                --if not status then
                   table.insert(tmp, r)
-                  --found=false
-                --else
-                  --r.rail.cancel_deconstruction(self.locomotive.force)
-                --end
               end
             end
             if self.settings.root and found and found > 1 then
@@ -586,13 +579,7 @@ FARL = {
                 if last.type == "curved-rail" then
                   local traveldir = newTravelDir
                   local block = self:placeParallelCurve(newTravelDir, last, i)
-                  local lane = self.lanes["d"..traveldir%2]["i0"]["l"..i]
-                  local lag = math.abs(math.min(lane.lag, self.lanes["d"..traveldir%2]["i2"]["l"..i].lag))+block
-
-                  --subtract forward movement of next curve if positive
-                  local nextCurveForward = self.lanes["d"..(traveldir+1)%2]["i"..self.input]["l"..i].forward
-                  lag = nextCurveForward < 0 and lag + nextCurveForward or lag
-
+                  local lag = math.abs(self.lanes["d"..traveldir%2]["i"..self.input]["l"..i].lag)+block-1
                   max = lag > max and lag or max
                   self.lastCurve.curveblock = max
                 else
@@ -1695,10 +1682,19 @@ FARL = {
               table.sort(lanes)
             end
             local signals = {}
-            for _, l in pairs(offsets.signals) do
+            for index, l in pairs(offsets.signals) do
+              local pos = subPos(l.position, offsets.chain.position)
+              local reverse = (l.direction ~= offsets.chain.direction)
+              if bpType == "straight" then
+                if pos.x % 2 == 0 then
+                  reverse = false
+                else
+                  reverse = true
+                end
+              end
               table.insert(signals,
-                {name=l.name, position=subPos(l.position, offsets.chain.position),
-                  direction = l.direction, reverse = (l.direction ~= offsets.chain.direction)})
+                {name=l.name, position=pos,
+                  direction = l.direction, reverse = reverse})
             end
             local tl = subPos(box.tl, diagonal_to_real_pos(mainRail))
             local br = subPos(box.br, diagonal_to_real_pos(mainRail))
@@ -2104,7 +2100,7 @@ FARL = {
         local signal_data = signals[lane_index]
         local rail = rail
         local end_of_rail = signal_data.reverse
-        local traveldir = signal_data.reverse and (traveldir+4)%8 or traveldir
+        local traveldir = signal_data.reverse and oppositedirection(traveldir) or traveldir
         local signal = get_signal_for_rail(rail,traveldir,end_of_rail)
         signal.force = self.locomotive.force
   
