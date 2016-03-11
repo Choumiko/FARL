@@ -1009,25 +1009,14 @@ FARL = {
     local decc = self.frontmover and defines.riding.acceleration.reversing or defines.riding.acceleration.accelerating
     local speed = math.abs(self.train.speed)
     local limit = self.active and self.settings.cruiseSpeed or 0.9
-    local limit = self.settings.cruiseSpeed
-    if self.active then
-      if speed > limit + 0.01 then
-        self.driver.riding_state = {acceleration = decc, direction = self.driver.riding_state.direction}
-      else
-        self.driver.riding_state = {acceleration = self.driver.riding_state.acceleration, direction = self.driver.riding_state.direction}
-      end
-      if not self.cruise then
-        return
-      end
-    end
     if self.cruise then
-      if self.cruiseInterrupt == defines.riding.braking then
+      if self.cruiseInterrupt == 2 then
         self:toggleCruiseControl()
         return
       end
-      if speed < limit then
+      if self.train.speed < limit then
         self.driver.riding_state = {acceleration = acc, direction = self.driver.riding_state.direction}
-      elseif self.active and speed > limit + 0.1 then
+      elseif self.active and self.train.speed > limit + 0.1 then
         self.driver.riding_state = {acceleration = decc, direction = self.driver.riding_state.direction}
       else
         self.driver.riding_state = {acceleration = 0, direction = self.driver.riding_state.direction}
