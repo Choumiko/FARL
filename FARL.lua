@@ -954,8 +954,10 @@ FARL = {
       local area = self:createBoundingBox(rail, travel_dir)
       self:prepareArea(rail, area)
       self:removeConcrete(area)
+      local area2 = expandPos(diagonal_to_real_pos(rail),1.5)
       for _, t in pairs(types) do
         self:removeEntitiesFiltered({area=area, type=t}, self.protected)
+        self:removeEntitiesFiltered({area=area2,type=t}, self.protected)
       end
     else
       for i,p in pairs(bp.clearance_points) do
@@ -1004,22 +1006,33 @@ FARL = {
 
   cruiseControl = function(self)
     local acc = self.frontmover and defines.riding.acceleration.accelerating or defines.riding.acceleration.reversing
+    local decc = self.frontmover and defines.riding.acceleration.reversing or defines.riding.acceleration.accelerating
+    local speed = math.abs(self.train.speed)
+    local limit = self.active and self.settings.cruiseSpeed or 0.9
+    local limit = self.settings.cruiseSpeed
+    if self.active then
+      if speed > limit + 0.01 then
+        self.driver.riding_state = {acceleration = decc, direction = self.driver.riding_state.direction}
+      else
+        self.driver.riding_state = {acceleration = self.driver.riding_state.acceleration, direction = self.driver.riding_state.direction}
+      end
+      if not self.cruise then
+        return
+      end
+    end
     if self.cruise then
-      local limit = self.active and self.settings.cruiseSpeed or 0.9
-      local limit = self.settings.cruiseSpeed
-      if self.cruiseInterrupt == 2 then
+      if self.cruiseInterrupt == defines.riding.braking then
         self:toggleCruiseControl()
         return
       end
-      if self.train.speed < limit then
+      if speed < limit then
         self.driver.riding_state = {acceleration = acc, direction = self.driver.riding_state.direction}
-      elseif self.active and self.train.speed > limit + 0.1 then
-        self.driver.riding_state = {acceleration = 2, direction = self.driver.riding_state.direction}
+      elseif self.active and speed > limit + 0.1 then
+        self.driver.riding_state = {acceleration = decc, direction = self.driver.riding_state.direction}
       else
         self.driver.riding_state = {acceleration = 0, direction = self.driver.riding_state.direction}
       end
-    end
-    if not self.cruise then
+    else
       self.driver.riding_state = {acceleration = self.driver.riding_state.acceleration, direction = self.driver.riding_state.direction}
     end
   end,
@@ -1767,6 +1780,9 @@ FARL = {
     local removeItem, removeAmount = newRail.name, 1
     local canplace = false
     local area = false
+    if self.bulldozer and newRail.name ~= self.settings.rail.curved then
+      self:bulldoze_area(newRail, newTravelDir)
+    end
     if newRail.direction % 2 == 0 and newRail.name ~= self.settings.rail.curved then
       area = self:createBoundingBox(newRail, newTravelDir)
       canplace = self:prepareArea(newRail, area)

@@ -496,6 +496,7 @@ GUI.callbacks = {
   settings = GUI.toggleSettingsWindow,
   debug = GUI.debugInfo,
   root = GUI.toggleRootMode,
+  bulldozer = GUI.toggleBulldozer,
   maintenance = GUI.toggleMaintenance,
   ccNetWires = GUI.toggleWires,
   blueprint = GUI.readBlueprint,
