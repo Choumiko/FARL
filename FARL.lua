@@ -922,7 +922,7 @@ FARL = {
       end
       self.surface.set_tiles(tiles)
       for name, c in pairs(counts) do
-        self:addItemToCargo(name, c, true)
+        self:addItemToCargo(global.tiles[name], c, true)
       end
       end)
     if not status then
@@ -1197,7 +1197,7 @@ FARL = {
         end
       end
       debugLog("--Path length:"..#self.path)
-      self:show_path()
+      --self:show_path()
 
       self:findLastPole(self.lastrail)
       self:protect(self.lastPole)
