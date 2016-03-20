@@ -165,7 +165,7 @@ end
 
 function expandPos(pos, range)
   local range = range or 0.5
-  if not pos or not pos.x then error("invalid pos",3) end
+  if not pos or not pos.x then error("expandPos: invalid pos",3) end
   return {{pos.x - range, pos.y - range}, {pos.x + range, pos.y + range}}
 end
 
@@ -915,14 +915,18 @@ FARL = {
           -- check that tile is placeable by the player
           if global.tiles[tileName] and not self:is_protected_tile({x=x,y=y}) then
             counts[tileName] = counts[tileName] or 0
-            table.insert(tiles,{name="grass", position={x, y}})
+            table.insert(tiles,{name=self.replace_tile, position={x, y}})
             counts[tileName] = counts[tileName] + 1
           end
         end
       end
       self.surface.set_tiles(tiles)
+
       for name, c in pairs(counts) do
-        self:addItemToCargo(global.tiles[name], c, true)
+        local item = global.tiles[name]
+        self:addItemToCargo(item, c, true)
+        local stat = global.statistics[self.locomotive.force.name].removed[item] or 0
+        global.statistics[self.locomotive.force.name].removed[item] = stat+c
       end
       end)
     if not status then
@@ -950,8 +954,37 @@ FARL = {
     local types = {"straight-rail", "curved-rail", "rail-signal", "rail-chain-signal", "electric-pole", "lamp", "wall"}
     local rtype = travel_dir % 2 == 0 and "straight" or "diagonal"
     local bp =  self.settings.activeBP[rtype]
+
     if rtype == "straight" then
       local area = self:createBoundingBox(rail, travel_dir)
+      local sarea1 = (travel_dir == 0 or travel_dir == 2) and area[1] or area[2]
+      local sarea2 = (travel_dir == 0 or travel_dir == 2) and area[2] or area[1]
+      local tpos1 = move_right_forward(pos12toXY(fixPos(sarea1)),travel_dir,-1,0)
+      local tpos2 = move_right_forward(pos12toXY(fixPos(sarea2)),travel_dir, 1,0)
+      local tile1 = self.surface.get_tile(tpos1.x,tpos1.y)
+      local tile2 = self.surface.get_tile(tpos2.x,tpos2.y)
+      local found = false
+      local count = 0
+      while count < 20 and not found do
+        self:flyingText2("1", RED,true,tpos1)
+        self:flyingText2("2", RED,true,tpos2)
+        if tile1.name ~= "water" and tile1.name ~= "deepwater" and not global.tiles[tile1.name] then
+          found = tile1.name
+          break
+        end
+        if tile2.name ~= "water" and tile2.name ~= "deepwater" and not global.tiles[tile2.name] then
+          found = tile2.name
+          break
+        end
+        tpos1 = move_right_forward(tpos1,travel_dir,-1,0)
+        tpos2 = move_right_forward(tpos2,travel_dir, 1,0)
+        tile1 = self.surface.get_tile(tpos1.x,tpos1.y)
+        tile2 = self.surface.get_tile(tpos2.x,tpos2.y)
+        count = count+1
+      end
+      if found then
+        self.replace_tile = found
+      end
       self:prepareArea(rail, area)
       self:removeConcrete(area)
       local area2 = expandPos(diagonal_to_real_pos(rail),1.5)
@@ -960,9 +993,53 @@ FARL = {
         self:removeEntitiesFiltered({area=area2,type=t}, self.protected)
       end
     else
+      local lastPoint = bp.clearance_points[#bp.clearance_points]
       for i,p in pairs(bp.clearance_points) do
         local pos = move_right_forward(rail.position,travel_dir,p.x,0)
         local area = expandPos(pos, 1.5)
+        if i == 1 then
+          --local tpos = move_right_forward(pos12toXY(area[1]),travel_dir,-1,0)
+          local sarea1 = area[1]
+          local sarea2 = expandPos(move_right_forward(rail.position,travel_dir,lastPoint.x,0))[2]
+          local tpos1 = move_right_forward(pos12toXY(sarea1),travel_dir,-1,0)
+          local tpos2 = move_right_forward(pos12toXY(sarea2),travel_dir, 1,0)
+          local tile1 = self.surface.get_tile(tpos1.x,tpos1.y)
+          local tile2 = self.surface.get_tile(tpos2.x,tpos2.y)
+          local found = false
+          local count = 0
+          while count < 20 and not found do
+            self:flyingText2("1", RED,true,tpos1)
+            self:flyingText2("2", RED,true,tpos2)
+            if tile1.name ~= "water" and tile1.name ~= "deepwater" and not global.tiles[tile1.name] then
+              found = tile1.name
+              break
+            end
+            if tile2.name ~= "water" and tile2.name ~= "deepwater" and not global.tiles[tile2.name] then
+              found = tile2.name
+              break
+            end
+            tpos1 = move_right_forward(tpos1,travel_dir,-1,0)
+            tpos2 = move_right_forward(tpos2,travel_dir, 1,0)
+            tile1 = self.surface.get_tile(tpos1.x,tpos1.y)
+            tile2 = self.surface.get_tile(tpos2.x,tpos2.y)
+            count = count+1
+          end
+          if found then
+            self.replace_tile = found
+          end
+          if not global.tiles[tile1.name] and tile1.name ~= "water" and tile1.name ~= "deepwater" then
+            self.replace_tile = tile1.name
+          else
+            if not global.tiles[tile2.name] and tile2.name ~= "water" and tile2.name ~= "deepwater" then
+              self.replace_tile = tile2.name  
+            end
+          end
+        end
+
+        
+        
+        
+        
         self:removeTrees(area)
         self:pickupItems(area)
         self:removeStone(area)
@@ -1158,6 +1235,7 @@ FARL = {
       self.protected_tiles = {}
       self.protected_tiles[self.protected_index] = {}
       self.frontmover = false
+      self.replace_tile = "grass"
       self.lastCurve = {dist=20, input=false, direction=0, blocked={}, curveblock = 0}
       for i,l in pairs(self.train.locomotives.front_movers) do
         if l == self.locomotive then

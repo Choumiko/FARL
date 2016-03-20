@@ -335,28 +335,12 @@ script.on_event(defines.events.on_force_created, on_force_created)
 
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event(defines.events.on_gui_click, on_gui_click)
---script.on_event(defines.events.on_train_changed_state, ontrainchangedstate)
+
 script.on_event(defines.events.on_player_mined_item, on_player_mined_item)
 script.on_event(defines.events.on_preplayer_mined_item, on_preplayer_mined_item)
---script.on_event(defines.events.on_built_entity, onbuiltentity)
+
 script.on_event(defines.events.on_entity_died, on_entity_died)
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
-
---  driverNextDir = 1
---
---  function setGhostDriver(locomotive)
---    local ghost = newGhostDriverEntity(game.player.position)
---    locomotive.passenger = ghost
---    return ghost
---  end
---
---  function newGhostDriverEntity(position)
---    game.createentity({name="farl_player", position=position, force=game.forces.player})
---    local entities = game.findentitiesfiltered({area={{position.x, position.y},{position.x, position.y}}, name="farl_player"})
---    if entities[1] ~= nil then
---      return entities[1]
---    end
---  end
 
 remote.add_interface("farl",
   {
