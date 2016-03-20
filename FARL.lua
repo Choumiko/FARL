@@ -148,6 +148,9 @@ function fixPos(pos)
   if not pos then
     error("Position is nil", 2)
   end
+  if pos[1] and pos[2] then 
+    return pos
+  end
   if pos.x then ret[1] = pos.x end
   if pos.y then ret[2] = pos.y end
   return ret
@@ -945,6 +948,31 @@ FARL = {
       end
     end
   end,
+  
+  find_tile = function(self, sarea1, sarea2, travel_dir)
+    local tpos1 = move_right_forward(pos12toXY(fixPos(sarea1)),travel_dir,-1,0)
+    local tpos2 = move_right_forward(pos12toXY(fixPos(sarea2)),travel_dir, 1,0)
+    local tile1 = self.surface.get_tile(tpos1.x,tpos1.y)
+    local tile2 = self.surface.get_tile(tpos2.x,tpos2.y)
+    local found = false
+    local count = 0
+    while count < 20 and not found do
+      self:flyingText2("1", RED,true,tpos1)
+      self:flyingText2("2", RED,true,tpos2)
+      if tile1.name ~= "water" and tile1.name ~= "deepwater" and not global.tiles[tile1.name] then
+        return tile1.name
+      end
+      if tile2.name ~= "water" and tile2.name ~= "deepwater" and not global.tiles[tile2.name] then
+        return tile2.name
+      end
+      tpos1 = move_right_forward(tpos1,travel_dir,-1,0)
+      tpos2 = move_right_forward(tpos2,travel_dir, 1,0)
+      tile1 = self.surface.get_tile(tpos1.x,tpos1.y)
+      tile2 = self.surface.get_tile(tpos2.x,tpos2.y)
+      count = count+1
+    end
+    return found
+  end, 
 
   bulldoze_area = function(self, rail, travel_dir)
     if rail.name == self.settings.rail.curved then
@@ -959,29 +987,7 @@ FARL = {
       local area = self:createBoundingBox(rail, travel_dir)
       local sarea1 = (travel_dir == 0 or travel_dir == 2) and area[1] or area[2]
       local sarea2 = (travel_dir == 0 or travel_dir == 2) and area[2] or area[1]
-      local tpos1 = move_right_forward(pos12toXY(fixPos(sarea1)),travel_dir,-1,0)
-      local tpos2 = move_right_forward(pos12toXY(fixPos(sarea2)),travel_dir, 1,0)
-      local tile1 = self.surface.get_tile(tpos1.x,tpos1.y)
-      local tile2 = self.surface.get_tile(tpos2.x,tpos2.y)
-      local found = false
-      local count = 0
-      while count < 20 and not found do
-        self:flyingText2("1", RED,true,tpos1)
-        self:flyingText2("2", RED,true,tpos2)
-        if tile1.name ~= "water" and tile1.name ~= "deepwater" and not global.tiles[tile1.name] then
-          found = tile1.name
-          break
-        end
-        if tile2.name ~= "water" and tile2.name ~= "deepwater" and not global.tiles[tile2.name] then
-          found = tile2.name
-          break
-        end
-        tpos1 = move_right_forward(tpos1,travel_dir,-1,0)
-        tpos2 = move_right_forward(tpos2,travel_dir, 1,0)
-        tile1 = self.surface.get_tile(tpos1.x,tpos1.y)
-        tile2 = self.surface.get_tile(tpos2.x,tpos2.y)
-        count = count+1
-      end
+      local found = self:find_tile(sarea1, sarea2, travel_dir)
       if found then
         self.replace_tile = found
       end
@@ -1001,44 +1007,11 @@ FARL = {
           --local tpos = move_right_forward(pos12toXY(area[1]),travel_dir,-1,0)
           local sarea1 = area[1]
           local sarea2 = expandPos(move_right_forward(rail.position,travel_dir,lastPoint.x,0))[2]
-          local tpos1 = move_right_forward(pos12toXY(sarea1),travel_dir,-1,0)
-          local tpos2 = move_right_forward(pos12toXY(sarea2),travel_dir, 1,0)
-          local tile1 = self.surface.get_tile(tpos1.x,tpos1.y)
-          local tile2 = self.surface.get_tile(tpos2.x,tpos2.y)
-          local found = false
-          local count = 0
-          while count < 20 and not found do
-            self:flyingText2("1", RED,true,tpos1)
-            self:flyingText2("2", RED,true,tpos2)
-            if tile1.name ~= "water" and tile1.name ~= "deepwater" and not global.tiles[tile1.name] then
-              found = tile1.name
-              break
-            end
-            if tile2.name ~= "water" and tile2.name ~= "deepwater" and not global.tiles[tile2.name] then
-              found = tile2.name
-              break
-            end
-            tpos1 = move_right_forward(tpos1,travel_dir,-1,0)
-            tpos2 = move_right_forward(tpos2,travel_dir, 1,0)
-            tile1 = self.surface.get_tile(tpos1.x,tpos1.y)
-            tile2 = self.surface.get_tile(tpos2.x,tpos2.y)
-            count = count+1
-          end
+          local found = self:find_tile(sarea1, sarea2, travel_dir)
           if found then
             self.replace_tile = found
           end
-          if not global.tiles[tile1.name] and tile1.name ~= "water" and tile1.name ~= "deepwater" then
-            self.replace_tile = tile1.name
-          else
-            if not global.tiles[tile2.name] and tile2.name ~= "water" and tile2.name ~= "deepwater" then
-              self.replace_tile = tile2.name  
-            end
-          end
         end
-
-        
-        
-        
         
         self:removeTrees(area)
         self:pickupItems(area)
