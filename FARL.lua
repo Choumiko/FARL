@@ -1,6 +1,11 @@
 require "util"
 
-trigger_event = {["concrete-lamppost"] = true}
+trigger_event = { ["concrete-lamppost"] = true
+                  --["curved-power-rail"] = true,
+                  --["straight-power-rail"] = true,
+                  --["5d-power-rail-water"] = true,
+                  --["5d-curved-power-rail-water"] = true                  
+}
 
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 input2dir = {[0]=-1,[1]=0,[2]=1}
@@ -627,7 +632,7 @@ FARL = {
             self:bulldoze_area(next, self.direction)
           end
         end
-      
+
         if self.settings.concrete and #self.concrete_queue > 0 then
           for i, queue in pairs(self.concrete_queue) do
             self:placeConcrete(queue.travelDir, queue.rail)
@@ -640,12 +645,6 @@ FARL = {
           end
           self.rail_queue = {}
         end
---        if self.fake_signals then
---          for i,s in pairs(self.fake_signals) do
---            if s.valid then s.destroy() end
---          end
---          self.fake_signals = nil
---        end
       end
     end
   end,
@@ -863,6 +862,7 @@ FARL = {
       local offset = c.position
       offset = rotate(offset, rad)
       local pos = addPos(railpos, offset)
+      self:protect_tile({x=pos.x,y=pos.y})
       entity.position = pos
       pave[name] = pave[name] or {}
       --self:flyingText2(".", GREEN,true,entity.position)
@@ -877,11 +877,9 @@ FARL = {
           end
           table.insert(tiles,{name="grass", position={pos.x, pos.y}})
           table.insert(pave[name], entity)
-          self:protect_tile({x=pos.x,y=pos.y})
         end
       elseif tileName ~= name then
         table.insert(pave[name], entity)
-        self:protect_tile({x=pos.x,y=pos.y})
       end
     end
     if self.settings.bridge then
@@ -1291,11 +1289,8 @@ FARL = {
       if last_signal and signal_rail then
         self:protect(last_signal)
         --self:flyingText2( "SR", GREEN, true, signal_rail.position)
-        --self:print(self.signalCount.main)
-        --self:flyingText(self.signalCount.main, YELLOW, true, last_signal.position)
       end
       --self:flyingText2( {"text-behind"}, RED, true, self:rail_behind_train().position)
-      --debugLog("--SignalCount: "..self.signalCount.main)
       local bps = self.settings.activeBP
       local diag_lanes = bps.diagonal.lanes
       local straight_lanes = bps.straight.lanes
@@ -1337,6 +1332,12 @@ FARL = {
       end
       self.curveBP = bp_entities
       self.lanerails ={}
+      if self.bulldozer and self.settings.concrete then
+        local d = self.path[#self.path]
+        self:flyingText2(self.direction, RED,true,d.rail.position)
+        self:placeConcrete(self.direction, 
+            {direction=d.rail.direction,type=d.rail.type,name=d.rail.name,position=addPos(d.rail.position)})
+      end
       self.active = true
     end)
     if not status then

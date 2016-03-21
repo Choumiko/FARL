@@ -493,4 +493,22 @@ remote.add_interface("farl",
         entity.revive()
       end
     end,
+    
+    tile_properties = function(player)
+      local x = player.position.x
+      local y = player.position.y
+      local tile = player.surface.get_tile(x,y)
+      local tprops = player.surface.get_tileproperties(x,y)
+      player.print(tile.name)
+      properties = {
+        tierFromStart = tprops.tier_from_start,
+        roughness = tprops.roughness,
+        elevation = tprops.elevation,
+        availableWater = tprops.available_water,
+        temperature = tprops.temperature
+        }
+      for k,v in pairs(properties) do
+        player.print(k.." "..v)
+      end
+    end,
     })
