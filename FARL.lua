@@ -1344,7 +1344,7 @@ FARL = {
       self.lanerails ={}
       if self.settings.bulldozer and self.settings.concrete then
         local d = self.path[#self.path]
-        self:flyingText2(self.direction, RED,true,d.rail.position)
+        --self:flyingText2(self.direction, RED,true,d.rail.position)
         self:placeConcrete(self.direction, 
             {direction=d.rail.direction,type=d.rail.type,name=d.rail.name,position=addPos(d.rail.position)})
       end
@@ -1378,13 +1378,13 @@ FARL = {
     local path = {}
     --self:flyingText2("f", RED, true, addPos(front.position,{x=0,y=-1}))
     --self:flyingText2("b", RED, true, behind.position)
-    self:flyingText2("n", RED, true, self.lastrail.position)
+    --self:flyingText2("n", RED, true, self.lastrail.position)
     local count = 0
     dir = oppositedirection(dir)    
     count = 0
     local limit = no_limit and 1000 or 30
     while next and (count < limit) do
-      self:flyingText2(count, RED, true, next.position)
+      --self:flyingText2(count, RED, true, next.position)
       table.insert(path, {rail = next, travel_dir = oppositedirection(dir)})
       self:protect(next)
       if next == behind then
