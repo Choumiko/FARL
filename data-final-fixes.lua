@@ -4,6 +4,9 @@ local metarecipe = copyPrototype("recipe", "deconstruction-planner", "farl-meta"
 metarecipe.ingredients = {}
 metarecipe.enabled = false
 metarecipe.hidden = true
+--local metaitem = copyPrototype("deconstruction-item", "deconstruction-planner", "farl-meta")
+--table.insert(metaitem.flags, "hidden")
+--metarecipe.result = "farl-meta"
 local vanilla = {["small-electric-pole"]=true, ["medium-electric-pole"]=true, ["big-electric-pole"]=true, ["substation"]=true}
 
 for name, _ in pairs(vanilla) do
@@ -38,8 +41,11 @@ end
 
 local meta_concrete = copyPrototype("recipe", "deconstruction-planner", "farl-meta-concrete")
 meta_concrete.ingredients = {}
-meta_concrete.enabled = true
-meta_concrete.hidden = false
+meta_concrete.enabled = false
+meta_concrete.hidden = true
+--local metaitem_concrete = copyPrototype("deconstruction-item", "deconstruction-planner", "farl-meta-concrete")
+--meta_concrete.result = "farl-meta-concrete"
+--table.insert(metaitem_concrete.flags, "hidden")
 
 for _, ent in pairs(data.raw["item"]) do
   if ent.place_as_tile and ent.place_as_tile.result and type(ent.place_as_tile.result) == "string" then

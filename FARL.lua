@@ -332,7 +332,7 @@ FARL = {
     local new = {
       locomotive = vehicle, train=vehicle.train,
       driver=driver, active=false, lastrail=false,
-      direction = false, input = 1, name = vehicle.backer_name,
+      direction = false, input = 1,
       signalCount = {main=0}, cruise = false, cruiseInterrupt = 0,
       lastposition = false, surface = vehicle.surface,
       destroy = false, concrete_queue = {}, rail_queue = {}
@@ -697,7 +697,7 @@ FARL = {
       self:removeTrees(area)
       self:pickupItems(area)
       self:removeStone(area)
-      if self.settings.bulldozer then
+      if self.settings.bulldozer or self.settings.maintenance then
         local types = {"straight-rail", "curved-rail", "rail-signal", "rail-chain-signal", "electric-pole", "lamp", "wall"}
         for _, t in pairs(types) do
           self:removeEntitiesFiltered({area=area, type=t}, self.protected)
@@ -1417,6 +1417,7 @@ FARL = {
       self:print({"", {"msg-deactivated"}, ": ", reason})
     end
     self.lastrail = nil
+    self.already_prepared = nil
     self.lastCurve = 0
     self.direction = nil
     self.lastPole, self.lastCheckPole = nil,nil
@@ -1424,7 +1425,7 @@ FARL = {
     self.ccNetPole = nil
     self.protected = {}
     self.protected_tiles = {}
-    self.protected_index = nil
+    self.protected_index = {}
     self.concrete_queue = {}
     self.rail_queue = {}
   end,

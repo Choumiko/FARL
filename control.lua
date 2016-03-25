@@ -199,10 +199,11 @@ local function on_configuration_changed(data)
           if farl.maintenance ~= nil then
             farl.maintenance = nil
           end
+          farl.protected_tiles = {}
+          farl.curveBP = nil
+          farl.name = nil
+          farl:deactivate()
           if farl.driver and farl.driver.valid then
-            if farl.active then
-              farl.deactivate()
-            end
             GUI.destroyGui(farl.driver)
             GUI.createGui(farl.driver)
           end
