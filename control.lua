@@ -45,6 +45,7 @@ local function getMetaItemData()
       global.tiles[ent.name] = ent.name
     end
   end
+  global.item_names = {}
 end
 
 local function on_tick(event)
@@ -109,6 +110,7 @@ local function init_global()
   global.electric_poles = global.electric_poles or {}
   global.concrete = global.concrete or {}
   global.tiles = global.tiles or {}
+  global.item_names = global.item_names or {}
   global.version = global.version or "0.5.16"
   if global.debug_log == nil then
     global.debug_log = false
