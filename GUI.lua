@@ -45,15 +45,11 @@ GUI = {
       GUI.bindings = {
         signals = settings.signals,
         poles = settings.poles,
-        flipSignals = settings.flipSignals,
         medium = settings.medium,
-        minPoles = settings.minPoles,
         ccNet = settings.ccNet,
         bridge = settings.bridge,
         collectWood = settings.collectWood,
         dropWood = settings.dropWood,
-        root = settings.root
-
       }
     end,
 
@@ -138,8 +134,7 @@ GUI = {
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
       GUI.add(rows, {type="checkbox", name="concrete", caption={"tgl-concrete"}}, "concrete")
       GUI.add(rows,{type="checkbox", name="bulldozer", caption={"tgl-bulldozer"}, state=psettings.bulldozer},GUI.toggleBulldozer)
-      GUI.add(rows, {type="checkbox", name="root", caption={"tgl-root"}, state=psettings.root}, GUI.toggleRootMode)
-      --GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance},GUI.toggleMaintenance)
+      GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance},GUI.toggleMaintenance)
       GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
     end,
 
@@ -165,8 +160,7 @@ GUI = {
       elseif startsWith(event.element.name,"save_bp_") then
         local i = event.element.name:match("save_bp_(%w*)")
         GUI.save_bp(event,farl, player,tonumber(i))
-      elseif name == "signals" or name == "poles" or name == "flipSignals" or name == "minPoles"
-        or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
+      elseif name == "signals" or name == "poles" or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
         or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" then
         psettings[name] = not psettings[name]
         if name == "poles" then
@@ -203,9 +197,10 @@ GUI = {
       farl:toggleBulldozer()
       GUI.updateGui(farl)
     end,
-
+    
     toggleMaintenance = function(event, farl, player)
       farl:toggleMaintenance()
+      GUI.updateGui(farl)
     end,
 
     load_bp = function(event, farl, player, i)
@@ -259,11 +254,6 @@ GUI = {
       farl:toggleCruiseControl()
     end,
 
-    toggleRootMode = function(event, farl, player)
-      farl:toggleRootMode()
-      GUI.updateGui(farl)
-    end,
-
     toggleSettingsWindow = function(event, farl, player)
       local row = player.gui.left.farl.rows
       local psettings = Settings.loadByPlayer(player)
@@ -291,9 +281,6 @@ GUI = {
 
         GUI.add(settings, {type="label", caption={"stg-poleSide"}})
         GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=psettings.flipPoles})
-
-        --GUI.add(settings, {type="checkbox", name="minPoles", caption={"stg-minPoles"}}, "minPoles")
-        --GUI.addPlaceHolder(settings)
 
         GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}},"poleEntities")
         GUI.addPlaceHolder(settings)
@@ -479,13 +466,8 @@ GUI = {
         if not farl.settings then
           farl.settings = Settings.loadByPlayer(farl.driver)
         end
-        farl.driver.gui.left.farl.rows.root.state = farl.settings.root
-        farl.driver.gui.left.farl.rows.bulldozer.state = farl.bulldozer
-        --if not farl.driver.gui.left.farl.rows.maintenance then
-          --GUI.destroyGui(farl.driver)
-          --GUI.createGui(farl.driver)
-        --end
-        --farl.driver.gui.left.farl.rows.maintenance.state = farl.maintenance
+        farl.driver.gui.left.farl.rows.bulldozer.state = farl.settings.bulldozer
+        farl.driver.gui.left.farl.rows.maintenance.state = farl.settings.maintenance
       end
     end,
 }
@@ -495,7 +477,6 @@ GUI.callbacks = {
   cc = GUI.toggleCC,
   settings = GUI.toggleSettingsWindow,
   debug = GUI.debugInfo,
-  root = GUI.toggleRootMode,
   bulldozer = GUI.toggleBulldozer,
   maintenance = GUI.toggleMaintenance,
   ccNetWires = GUI.toggleWires,

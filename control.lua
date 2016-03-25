@@ -177,19 +177,34 @@ local function on_configuration_changed(data)
       if oldVersion < "0.5.13" then
         debugDump("Reset settings",true)
         global = nil
-      elseif oldVersion < "0.5.16" then
+      elseif oldVersion < "0.5.19" then
         for name, p_settings in pairs(global.players) do
           if p_settings.bulldozer == nil then
             p_settings.bulldozer = false
           end
+          if p_settings.maintenance == nil then
+            p_settings.maintenance = false
+          end
+          if p_settings.root ~= nil then
+            p_settings.root = nil
+          end
+          if p_settings.flipSignals ~= nil then
+            p_settings.flipSignals = nil
+          end
         end
         for i, farl in pairs(global.farl) do
-          if farl.bulldozer == nil then
-            farl.bulldozer = false
-            if farl.driver and farl.driver.valid then
-              GUI.destroyGui(farl.driver)
-              GUI.createGui(farl.driver)
+          if farl.bulldozer ~= nil then
+            farl.bulldozer = nil
+          end
+          if farl.maintenance ~= nil then
+            farl.maintenance = nil
+          end
+          if farl.driver and farl.driver.valid then
+            if farl.active then
+              farl.deactivate()
             end
+            GUI.destroyGui(farl.driver)
+            GUI.createGui(farl.driver)
           end
         end
       end
@@ -502,7 +517,7 @@ remote.add_interface("farl",
       local tile = player.surface.get_tile(x,y)
       local tprops = player.surface.get_tileproperties(x,y)
       player.print(tile.name)
-      properties = {
+      local properties = {
         tierFromStart = tprops.tier_from_start,
         roughness = tprops.roughness,
         elevation = tprops.elevation,
