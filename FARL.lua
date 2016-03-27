@@ -515,7 +515,6 @@ FARL = {
               self.lastCurve.dist = self.lastCurve.dist + 1
             end
 
-
             if not self.settings.bulldozer then
               --add concrete to the queue to be placed in a tick without track placement (probably the next one)
               if self.settings.concrete then
@@ -1294,8 +1293,11 @@ FARL = {
       if not signal_index then
         self.signalCount.main = self.settings.signalDistance
       end
+      --debugDump(signal_index,true)
+      
       if signal_index and self.settings.signals and not self.settings.bulldozer then
-        local c = self.settings.maintenance and front_rail_index+1 or #self.path
+        --local c = self.settings.maintenance and front_rail_index+1 or #self.path
+        local c = #self.path
         for i=signal_index+1,c do
           local rail = self.path[i].rail
           local dir = self.path[i].travel_dir
@@ -1307,6 +1309,7 @@ FARL = {
           self.signalCount.main = self.signalCount.main + get_signal_weight(rail,self.settings)
         end
       end
+      --debugDump(self.signalCount,true)
       if last_signal and signal_rail then
         self:protect(last_signal)
         --self:flyingText2( "SR", GREEN, true, signal_rail.position)
@@ -1684,7 +1687,7 @@ FARL = {
             end
             local railPos = mainRail.position
             if bpType == "diagonal" then
-              railPos = self:fixDiagonalPos(mainRail)
+              railPos = diagonal_to_real_pos(mainRail)
             end
             offsets.pole.position = subPos(offsets.pole.position,railPos)
             local railEntities = {}
@@ -1959,57 +1962,6 @@ FARL = {
     return true
   end,
 
-  prepareMaintenance = function(self, traveldir, lastRail)
-    local rtype = traveldir % 2 == 0 and "straight" or "diagonal"
-    local bp =  self.settings.activeBP[rtype]
-    local mainRail = bp.mainRail
-    local bb = bp.boundingBox
-    local tl, br
-    if bb then
-      tl = addPos(bb.tl)
-      br = addPos(bb.br)
-      local tl1, br1 = {x=tl.x,y=tl.y},{x=br.x,y=br.y}
-      if traveldir == 2 or traveldir == 3 then
-        tl1.x, br1.x = -br.y, -tl.y
-        tl1.y, br1.y = tl.x, br.x
-      elseif traveldir == 4 or traveldir == 5 then
-        tl1, br1 = {x=-br.x,y=-br.y}, {x=-tl.x,y=-tl.y}
-      elseif traveldir == 6 or traveldir == 7 then
-        tl1.x, br1.x = -br.y, -tl.y
-        tl1.y, br1.y = -br.x, -tl.x
-      end
-      if traveldir == 7 then
-        tl1.y = tl1.y-2
-        tl1.x = tl1.x+1
-        br1.y = br1.y - 2
-        br1.x = br1.x + 1
-      end
-      --debugDump({tl=tl1,br=br1},true)
-      tl = addPos(lastRail.position, tl1)
-      br = addPos(lastRail.position, br1)
-
-      --      local tiles = {}
-      --      for x = tl.x,br.x do
-      --        for y = tl.y,br.y do
-      --          table.insert(tiles, {name="concrete", position={x,y}})
-      --          --table.insert(tiles, {name="stone-path", position={x,y}})
-      --        end
-      --      end
-      --      self.surface.set_tiles(tiles)
-
-      self:removeTrees({tl,br})
-      self:pickupItems({tl,br})
-      self:removeStone({tl,br})
-
-      local types = {"straight-rail", "curved-rail", "rail-signal", "rail-chain-signal", "electric-pole", "lamp"}
-      for _, t in pairs(types) do
-        self:removeEntitiesFiltered({area={tl,br}, type=t}, self.protected)
-      end
-    else
-
-    end
-  end,
-
   placeParallelCurve = function(self, traveldir, rail, lane_index)
     local direction = self.direction
     local original_dir = direction
@@ -2170,28 +2122,6 @@ FARL = {
     ret.x = pos.x * r[1].x + pos.y * r[1].y
     ret.y = pos.x * r[2].x + pos.y * r[2].y
     return ret
-  end,
-
-  fixDiagonalPos = function(self, rail, mul)
-    local x,y = 0,0
-    -- 1 +x -y
-    if rail.direction == 1 then
-      x, y = 0.5, - 0.5
-    elseif rail.direction == 3 then
-      x, y = 0.5, 0.5
-      -- 5 -x +y
-    elseif rail.direction == 5 then
-      x, y = - 0.5, 0.5
-    elseif rail.direction == 7 then
-      x, y = - 0.5, - 0.5
-    else
-      x, y = 0, 0
-    end
-    if mul then
-      x = x*mul
-      y = y*mul
-    end
-    return addPos({x=x,y=y}, rail.position)
   end,
 
   calcPole = function(self,lastrail, traveldir)
@@ -2570,7 +2500,7 @@ FARL = {
     if rail then
       --self:flyingText2("B", GREEN, true, rail.position)
       self:print("Rail@"..pos2Str(rail.position).." dir:"..rail.direction)
-      local fixed = self:fixDiagonalPos(rail)
+      local fixed = diagonal_to_real_pos(rail)
       if rail.direction % 2 == 1 then
         --self:flyingText2("F", GREEN, true, fixed)
         self:print("Fixed: "..pos2Str(fixed).." dir:"..rail.direction)
