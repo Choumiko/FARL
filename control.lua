@@ -529,4 +529,8 @@ remote.add_interface("farl",
         player.print(k.." "..v)
       end
     end,
+
+    fake_signals = function(bool)
+      global.fake_signals = bool
+    end
     })

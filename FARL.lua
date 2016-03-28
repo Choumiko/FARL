@@ -566,6 +566,7 @@ FARL = {
                   end
                 end
               end
+              
               if self.settings.signals then
                 self.signalCount.main = self.signalCount.main + get_signal_weight(last,self.settings)
                 if last.type == "curved-rail" then
@@ -580,7 +581,25 @@ FARL = {
                   self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
                 end
               end
-  
+--            if global.fake_signals then
+--              self.fake_signalCount.main = self.fake_signalCount.main + get_signal_weight(last,self.settings)
+--              if last.type == "curved-rail" then
+--                  self.fake_signalCount.main = self.fake_signalCount.main - self.lanes.max_lag[newTravelDir%2]-get_signal_weight(last,self.settings)
+--              end
+--              --debugDump(self.fake_signalCount, true)
+--              if self.fake_signalCount.main > 10 and last.name ~= self.settings.rail.curved then
+--                if self:place_fake_signal(newTravelDir,nextRail) then
+--                  self.fake_signalCount.main = 0
+--                   --reset lane counter, so that it lines up
+--                  self.fake_signal_in = self.fake_signal_in or {}
+--                  local bptype = last.direction%2==1 and "diagonal" or "straight"
+--                  for i,l in pairs(self.settings.activeBP[bptype].lanes) do
+--                    local lane_data = self.lanes["d"..self.direction%2]["i0"]["l"..i]
+--                    self.fake_signal_in[i] = math.abs(lane_data.lag) + 1
+--                  end
+--                end
+--              end
+--            end
               if self.settings.parallelTracks and #self.settings.activeBP.straight.lanes > 0 then
                 local max = -1
                 local all_placed = 0
@@ -606,7 +625,6 @@ FARL = {
                   end
                 end
               end
-              --self:place_fake_signal(newTravelDir, nextRail)
             end            
             self.direction = newTravelDir
             self.lastrail = last
@@ -1202,6 +1220,9 @@ FARL = {
       self.protected_tiles = {}
       self.protected_tiles[self.protected_index] = {}
       self.frontmover = false
+--      self.last_signal = {}
+--      self.fake_signal_in = false
+--      self.fake_signalCount = {main=0}
       self.replace_tile = "grass"
       self.lastCurve = {dist=20, input=false, direction=0, blocked={}, curveblock = 0}
       for i,l in pairs(self.train.locomotives.front_movers) do
@@ -1416,6 +1437,14 @@ FARL = {
     self.input = nil
     self.cruise = false
     self.path = nil
+--    if self.last_signal then
+--      for i, signal in pairs(self.last_signal) do
+--        if signal and signal.valid then
+--          signal.destroy()
+--        end
+--      end
+--      self.last_signal = nil
+--    end
     if reason then
       self:print({"", {"msg-deactivated"}, ": ", reason})
     end
@@ -1984,6 +2013,9 @@ FARL = {
           if self.signal_in[lane_index] then
             self.signal_in[lane_index] = self.signal_in[lane_index] - 1
           end
+--          if self.fake_signal_in and self.fake_signal_in[lane_index] then
+--            self.fake_signal_in[lane_index] = self.fake_signal_in[lane_index] - 1
+--          end
           if self.settings.signals then
             if self:getCargoCount("rail-signal") > 0 then
               if self:placeParallelSignals(dir, last, lane_index) then self.signalCount[lane_index] = 0 end
@@ -1991,6 +2023,11 @@ FARL = {
               self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
             end
           end
+--          if global.fake_signals then
+--            if self.fake_signal_in and self.fake_signal_in[lane_index] and self.fake_signal_in[lane_index] < 1 and rail.name ~= self.settings.rail.curved then
+--              if self:place_fake_signal(dir, last, lane_index) then self.fake_signalCount[lane_index] = 0 end
+--            end
+--          end
           if not ent then
             self:print("Failed to create track @"..pos2Str(last.position))
             self:flyingText2("E",RED,true, last.position)
@@ -2053,6 +2090,9 @@ FARL = {
     if self.signal_in[lane_index] then
       self.signal_in[lane_index] = self.signal_in[lane_index] - 1
     end
+--    if self.fake_signal_in and self.fake_signal_in[lane_index] then
+--      self.fake_signal_in[lane_index] = self.fake_signal_in[lane_index] - 1
+--    end
     if not blocked then
       self:prepareArea(new_rail)
       local success, ent = self:genericPlace(new_rail)
@@ -2065,12 +2105,16 @@ FARL = {
           self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
         end
       end
+--      if global.fake_signals then
+--        if self.fake_signal_in and self.fake_signal_in[lane_index] and self.fake_signal_in[lane_index] < 1 and rail.name ~= self.settings.rail.curved then
+--          if self:place_fake_signal(traveldir, new_rail, lane_index) then self.fake_signalCount[lane_index] = 0 end
+--        end
+--      end
       if not ent then
         self:print("Failed to create track @"..pos2Str(new_rail.position))
         self:flyingText2("E",RED,true, new_rail.position)
         return new_rail
       else
-        --self:place_fake_signal(traveldir, new_rail, lane_index)
         self:removeItemFromCargo(ent.name, 1)
         return ent
       end
@@ -2416,21 +2460,18 @@ FARL = {
       end
     end
     local li = lane_index and lane_index or "main"
-    self.fake_signals = self.fake_signals or {}
-    self.fake_signals[li] = self.fake_signals[li] or {}
-    if #self.fake_signals[li] > 1 then
-            debugDump(self.fake_signals[li][1].valid,true)
-        if self.fake_signals[li][1].valid then
-          self.fake_signals[li][1].destroy()
-        end
-        table.remove(self.fake_signals[li],1)
-      end
     local signal = get_signal_for_rail(rail, traveldir)
+    signal.name = "fake-signal"
     signal.force = self.locomotive.force
-    self:prepareArea(signal)
     local success, entity = self:genericPlace(signal)
     if entity then
-      table.insert(self.fake_signals[li], entity)
+      if lane_index and self.fake_signal_in then
+        self.fake_signal_in[lane_index] = false
+      end
+      if self.last_signal[li] and self.last_signal[li].valid then
+        self.last_signal[li].destroy()
+      end
+      self.last_signal[li] = entity
       return success, entity
     end
   end,
