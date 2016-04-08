@@ -300,7 +300,7 @@ GUI = {
         local stored_bp = GUI.add(settings,{type="table", colspan=3})
         
         local name = player.name
-        if name == "" then name = "noname" end
+        if name == "" or not name then name = "noname" end
         local bps = global.savedBlueprints[name]
         debugDump("Player: "..player.name)    
         for i=1,3 do
