@@ -18,7 +18,7 @@ defaultsStraight = {
   pole = {name = "big-electric-pole", position = {x = 3, y = -1}},
   rails = {}, signals = {}, lanes = {}, clearance_points = {}, railEntities = {},
   boundingBox = {br = {x = 3, y = 0.5}, tl = {x = -0.5, y = -1}}}
-  
+
 defaults_concrete_diag = {
   entities = {
     {
@@ -102,7 +102,7 @@ defaults_concrete_vert = {
       entity_number = 5,
       name = "straight-rail",
       position = {x = 3,y = 1}},
-      {
+    {
       entity_number = 6,
       name = "stone-wall",
       position = {x = -5.5,y = 1.5}},
@@ -118,7 +118,7 @@ defaults_concrete_vert = {
       entity_number = 9,
       name = "stone-wall",
       position = {x = 5.5,y = 0.5}
-    }      
+    }
   },
   tiles = {
     { name = "concrete",
@@ -194,17 +194,14 @@ defaultSettings.activeBP = defaultSettings.bp
 
 Settings = {
   loadByPlayer = function(player)
-    local name = player.name
-    if name and name == "" then
-      name = "noname"
-    end
+    local index = player.index
     local settings = util.table.deepcopy(defaultSettings)
-    if not global.players[name] then
-      global.players[name] = settings
+    if not global.players[index] then
+      global.players[index] = settings
     end
-    global.players[name].player = player
-    setmetatable(global.players[name], Settings)
-    return global.players[name]
+    global.players[index].player = player
+    setmetatable(global.players[index], Settings)
+    return global.players[index]
   end,
 
   update = function(self, key, value)

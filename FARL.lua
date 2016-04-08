@@ -375,7 +375,7 @@ FARL = {
 
   onPlayerLeave = function(player, tick)
     for i,f in pairs(global.farl) do
-      if f.driver and f.driver.name == player.name then
+      if f.driver and f.driver == player then
         f:deactivate()
         f.driver = false
         f.destroy = tick

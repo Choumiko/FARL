@@ -1,9 +1,3 @@
-Observer = {
-  onNotify = function(self, entity, event)
-
-  end
-}
-
 function startsWith(haystack,needle)
   return string.sub(haystack,1,string.len(needle))==needle
 end
@@ -204,14 +198,13 @@ GUI = {
     end,
 
     load_bp = function(event, farl, player, i)
-      local name = player.name
-      if name == "" then name = "noname" end
-      if global.savedBlueprints[name][i] then
-        local bps = global.savedBlueprints[name][i]
+      local index = player.index
+      if global.savedBlueprints[index][i] then
+        local bps = global.savedBlueprints[index][i]
         local psettings = Settings.loadByPlayer(player)
         local lanes = #bps.straight.lanes + 1
         local pole = game.entity_prototypes[bps.straight.pole.name].localised_name
-        psettings.activeBP = table.deepcopy(global.savedBlueprints[name][i])
+        psettings.activeBP = table.deepcopy(global.savedBlueprints[index][i])
         if farl.active then
           farl:deactivate()
           farl:activate()
@@ -222,10 +215,9 @@ GUI = {
     end,
     
     save_bp = function(event, farl, player, i)
-      local name = player.name
-      if name == "" then name = "noname" end
+      local index = player.index
       local psettings = Settings.loadByPlayer(player)
-      global.savedBlueprints[name][i] = table.deepcopy(psettings.activeBP)
+      global.savedBlueprints[index][i] = table.deepcopy(psettings.activeBP)
       player.print({"text-blueprint-saved"})
       GUI.toggleSettingsWindow(event,farl,player)
       GUI.toggleSettingsWindow(event,farl,player)
@@ -299,12 +291,9 @@ GUI = {
         GUI.addLabel(settings, {caption={"stg-stored-blueprints"}})
         local stored_bp = GUI.add(settings,{type="table", colspan=3})
         
-        local name = player.name
-        if name == "" or not name then name = "noname" end
-        local bps = global.savedBlueprints[name]
-        debugDump("Player: "..player.name)    
+        local bps = global.savedBlueprints[player.index]
         for i=1,3 do
-          if bps[i] then
+          if bps and bps[i] then
             local lanes = #bps[i].straight.lanes + 1
             local pole = game.entity_prototypes[bps[i].straight.pole.name].localised_name
             GUI.addButton(stored_bp,{name="load_bp_"..i, caption="L"})

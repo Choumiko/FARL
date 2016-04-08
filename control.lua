@@ -31,7 +31,7 @@ local function getMetaItemData()
   for i, ent in pairs(metaitem) do
     global.electric_poles[ent.name] = ent.amount/10
   end
-  
+
   game.forces.player.recipes["farl-meta-concrete"].reload()
   local meta_concrete = game.forces.player.recipes["farl-meta-concrete"].ingredients
   global.concrete = {}
@@ -114,15 +114,13 @@ local function init_global()
   global.version = global.version or "0.5.16"
   if global.debug_log == nil then
     global.debug_log = false
-  end 
+  end
   setMetatables()
 end
 
 local function init_player(player)
   Settings.loadByPlayer(player)
-  local name = player.name
-  if name == "" then name = "noname" end
-  global.savedBlueprints[name] = global.savedBlueprints[name] or {} 
+  global.savedBlueprints[player.index] = global.savedBlueprints[player.index] or {}
 end
 
 local function init_players()
@@ -135,7 +133,7 @@ local function init_force(force)
   if not global.statistics then
     init_global()
   end
-  global.statistics[force.name] = global.statistics[force.name] or {created={}, removed={}} 
+  global.statistics[force.name] = global.statistics[force.name] or {created={}, removed={}}
 end
 
 local function init_forces()
@@ -208,6 +206,22 @@ local function on_configuration_changed(data)
             GUI.createGui(farl.driver)
           end
         end
+      end
+      if oldVersion < "0.5.21" then
+        local tmp = {}
+        local tmpBps = {}
+        for i,player in pairs(game.players) do
+          if global.players[player.name] then
+            tmp[player.index] = global.players[player.name]
+            global.players[player.name] = nil
+          end
+          if global.savedBlueprints[player.name] then
+            tmpBps[player.index] = global.savedBlueprints[player.name]
+            global.savedBlueprints[player.name] = nil
+          end
+        end
+        global.players = tmp
+        global.savedBlueprints = tmpBps
       end
     end
     on_init()
@@ -478,7 +492,7 @@ remote.add_interface("farl",
         debugDump(diff,true)
       end
     end,
-    
+
     timing = function(player)
       local area_large = expandPos(player.position,50)
       local area_small = expandPos(player.position,10)
@@ -493,25 +507,25 @@ remote.add_interface("farl",
       end
       log("small finished")
     end,
-    
+
     place_signal = function(rail, travel_dir, end_of_rail)
       local signal = get_signal_for_rail(rail, travel_dir, end_of_rail)
       signal.force  = rail.force
       rail.surface.create_entity(signal)
     end,
-    
+
     debuglog = function()
       global.debug_log = not global.debug_log
       local state = global.debug_log and "on" or "off"
       debugDump("Debug: "..state,true)
     end,
-    
+
     revive = function(player)
       for _, entity in pairs(player.surface.find_entities_filtered{area = expandPos(player.position,50), type = "entity-ghost"}) do
         entity.revive()
       end
     end,
-    
+
     tile_properties = function(player)
       local x = player.position.x
       local y = player.position.y
@@ -524,7 +538,7 @@ remote.add_interface("farl",
         elevation = tprops.elevation,
         availableWater = tprops.available_water,
         temperature = tprops.temperature
-        }
+      }
       for k,v in pairs(properties) do
         player.print(k.." "..v)
       end
@@ -533,4 +547,4 @@ remote.add_interface("farl",
     fake_signals = function(bool)
       global.fake_signals = bool
     end
-    })
+  })
