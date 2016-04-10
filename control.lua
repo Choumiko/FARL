@@ -374,6 +374,30 @@ script.on_event(defines.events.on_preplayer_mined_item, on_preplayer_mined_item)
 script.on_event(defines.events.on_entity_died, on_entity_died)
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
 
+
+function on_player_switched(event)
+  local status, err = pcall(function()
+    if event.carriage.name == "farl" then
+      local i = FARL.findByLocomotive(event.carriage)
+      if i then
+        local farl = global.farl[i]
+        if farl then
+          farl:deactivate()
+        end
+      end
+    end
+  end)
+  if not status then
+    debugDump("Unexpected error:",true)
+    debugDump(err,true)
+  end
+end
+
+if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then
+  script.on_event(remote.call("fat", "get_player_switched_event"), on_player_switched)
+end
+
+
 remote.add_interface("farl",
   {
     railInfo = function(rail)
