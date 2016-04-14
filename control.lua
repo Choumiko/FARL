@@ -174,7 +174,7 @@ local function on_configuration_changed(data)
     if oldVersion then
       if oldVersion < "0.5.13" then
         debugDump("Reset settings",true)
-        global = nil
+        global = {}
       elseif oldVersion < "0.5.19" then
         for name, p_settings in pairs(global.players) do
           if p_settings.bulldozer == nil then
@@ -206,8 +206,7 @@ local function on_configuration_changed(data)
             GUI.createGui(farl.driver)
           end
         end
-      end
-      if oldVersion < "0.5.21" then
+      elseif oldVersion < "0.5.21" then
         local tmp = {}
         local tmpBps = {}
         for i,player in pairs(game.players) do
