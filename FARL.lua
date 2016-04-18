@@ -607,11 +607,14 @@ FARL = {
                   if last.type == "curved-rail" then
                     local traveldir = newTravelDir
                     local block = self:placeParallelCurve(newTravelDir, last, i)
+                    if not block then return end
                     local lag = math.abs(self.lanes["d"..traveldir%2]["i"..self.input]["l"..i].lag)+block-1
                     max = lag > max and lag or max
                     self.lastCurve.curveblock = max
                   else
-                    self.lanerails[i] = self:placeParallelTrack(newTravelDir, last, i)
+                    local placed = self:placeParallelTrack(newTravelDir, last, i)
+                    if not placed then return end
+                    self.lanerails[i] = placed
                     all_placed = self.lanerails[i] and all_placed+1 or all_placed
                   end
                 end
@@ -2009,32 +2012,37 @@ FARL = {
         for i=1,catchup do
           dir, last = self:getRail(last, dir, 1)
           if not last then break end
-          self:prepareArea(last)
-          local success, ent = self:genericPlace(last)
-          self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(last,self.settings)
-          if self.signal_in[lane_index] then
-            self.signal_in[lane_index] = self.signal_in[lane_index] - 1
-          end
-          --          if self.fake_signal_in and self.fake_signal_in[lane_index] then
-          --            self.fake_signal_in[lane_index] = self.fake_signal_in[lane_index] - 1
-          --          end
-          if self.settings.signals then
-            if self:getCargoCount("rail-signal") > 0 then
-              if self:placeParallelSignals(dir, last, lane_index) then self.signalCount[lane_index] = 0 end
-            else
-              self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
+          if self:getCargoCount(last.name) > 0 then
+            self:prepareArea(last)
+            local success, ent = self:genericPlace(last)
+            self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(last,self.settings)
+            if self.signal_in[lane_index] then
+              self.signal_in[lane_index] = self.signal_in[lane_index] - 1
             end
-          end
-          --          if global.fake_signals then
-          --            if self.fake_signal_in and self.fake_signal_in[lane_index] and self.fake_signal_in[lane_index] < 1 and rail.name ~= self.settings.rail.curved then
-          --              if self:place_fake_signal(dir, last, lane_index) then self.fake_signalCount[lane_index] = 0 end
-          --            end
-          --          end
-          if not ent then
-            self:print("Failed to create track @"..pos2Str(last.position))
-            self:flyingText2("E",RED,true, last.position)
+            --          if self.fake_signal_in and self.fake_signal_in[lane_index] then
+            --            self.fake_signal_in[lane_index] = self.fake_signal_in[lane_index] - 1
+            --          end
+            if self.settings.signals then
+              if self:getCargoCount("rail-signal") > 0 then
+                if self:placeParallelSignals(dir, last, lane_index) then self.signalCount[lane_index] = 0 end
+              else
+                self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
+              end
+            end
+            --          if global.fake_signals then
+            --            if self.fake_signal_in and self.fake_signal_in[lane_index] and self.fake_signal_in[lane_index] < 1 and rail.name ~= self.settings.rail.curved then
+            --              if self:place_fake_signal(dir, last, lane_index) then self.fake_signalCount[lane_index] = 0 end
+            --            end
+            --          end
+            if not ent then
+              self:print("Failed to create track @"..pos2Str(last.position))
+              self:flyingText2("E",RED,true, last.position)
+            else
+              self:removeItemFromCargo(ent.name, 1)
+            end
           else
-            self:removeItemFromCargo(ent.name, 1)
+            self:deactivate({"msg-out-of-rails"})
+            return false
           end
         end
       end
@@ -2059,13 +2067,25 @@ FARL = {
     new_curve.position = move_right_forward(rail.position, direction, right, forward)
     self.lastCurve.blocked[lane_index] = self.lanes["d"..traveldir%2]["i"..bi]["l"..lane_index].lag
 
+    local hasRail = self:getCargoCount(new_curve.name) > 0
+    local remove_item, remove_amount = new_curve.name, 1
+    if not hasRail and new_curve.name == self.settings.rail.curved then
+      hasRail = self:getCargoCount(self.settings.rail.straight) >= 4
+      remove_item = self.settings.rail.straight
+      remove_amount = 4
+    end
+    if not hasRail then
+      self:deactivate({"msg-out-of-rails"})
+      return false
+    end
+
     self:prepareAreaForCurve(new_curve)
     local success, ent = self:genericPlace(new_curve)
     if not ent then
       self:print("Failed to create curve @"..pos2Str(new_curve.position))
     else
       self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(ent,self.settings)
-      self:removeItemFromCargo(ent.name, 1)
+      self:removeItemFromCargo(remove_item, remove_amount)
     end
     return self.lastCurve.blocked[lane_index]
   end,
@@ -2082,8 +2102,13 @@ FARL = {
     new_rail = moveRail(new_rail,traveldir,lag)
     new_rail = moveRail(new_rail,(traveldir+2)%8,right)
 
+    local hasRail = self:getCargoCount(new_rail.name) > 0
     local blocked = false
     local block = 0
+    if not hasRail then
+      self:deactivate({"msg-out-of-rails"})
+      return false
+    end
     if self.lastCurve.input then
       block = self.lastCurve.blocked[lane_index] + math.abs(lag)
       blocked = self.lastCurve.dist < block
@@ -2095,7 +2120,7 @@ FARL = {
     --    if self.fake_signal_in and self.fake_signal_in[lane_index] then
     --      self.fake_signal_in[lane_index] = self.fake_signal_in[lane_index] - 1
     --    end
-    if not blocked then
+    if not blocked and hasRail then
       self:prepareArea(new_rail)
       local success, ent = self:genericPlace(new_rail)
       self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(new_rail,self.settings)

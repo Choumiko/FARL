@@ -166,66 +166,59 @@ local function on_configuration_changed(data)
       debugDump("FARL version changed from "..oldVersion.." to "..newVersion,true)
       if oldVersion > newVersion then
         debugDump("Downgrading FARL, reset settings",true)
-        global = nil
+        global = {}
+        on_init()
+      else
+        if oldVersion < "0.5.13" then
+          debugDump("Reset settings",true)
+          global = {}
+        end
+        on_init()
+        if oldVersion > "0.5.13" then
+          if oldVersion < "0.5.19" then
+            for name, p_settings in pairs(global.players) do
+              if p_settings.bulldozer == nil then p_settings.bulldozer = false end
+              if p_settings.maintenance == nil then p_settings.maintenance = false end
+              if p_settings.root ~= nil then p_settings.root = nil end
+              if p_settings.flipSignals ~= nil then p_settings.flipSignals = nil end
+            end
+            for i, farl in pairs(global.farl) do
+              if farl.bulldozer ~= nil then farl.bulldozer = nil end
+              if farl.maintenance ~= nil then farl.maintenance = nil end
+              farl.protected_tiles = {}
+              farl.curveBP = nil
+              farl.name = nil
+              farl:deactivate()
+              if farl.driver and farl.driver.valid then
+                GUI.destroyGui(farl.driver)
+                GUI.createGui(farl.driver)
+              end
+            end
+          end
+          if oldVersion < "0.5.21" then
+            local tmp = {}
+            local tmpBps = {}
+            for i,player in pairs(game.players) do
+              if global.players[player.name] then
+                tmp[player.index] = global.players[player.name]
+                global.players[player.name] = nil
+              end
+              if global.savedBlueprints[player.name] then
+                tmpBps[player.index] = global.savedBlueprints[player.name]
+                global.savedBlueprints[player.name] = nil
+              end
+            end
+            global.players = tmp
+            global.savedBlueprints = tmpBps
+          end
+        end
       end
     else
       debugDump("FARL version: "..newVersion,true)
     end
-    if oldVersion then
-      if oldVersion < "0.5.13" then
-        debugDump("Reset settings",true)
-        global = {}
-      elseif oldVersion < "0.5.19" then
-        for name, p_settings in pairs(global.players) do
-          if p_settings.bulldozer == nil then
-            p_settings.bulldozer = false
-          end
-          if p_settings.maintenance == nil then
-            p_settings.maintenance = false
-          end
-          if p_settings.root ~= nil then
-            p_settings.root = nil
-          end
-          if p_settings.flipSignals ~= nil then
-            p_settings.flipSignals = nil
-          end
-        end
-        for i, farl in pairs(global.farl) do
-          if farl.bulldozer ~= nil then
-            farl.bulldozer = nil
-          end
-          if farl.maintenance ~= nil then
-            farl.maintenance = nil
-          end
-          farl.protected_tiles = {}
-          farl.curveBP = nil
-          farl.name = nil
-          farl:deactivate()
-          if farl.driver and farl.driver.valid then
-            GUI.destroyGui(farl.driver)
-            GUI.createGui(farl.driver)
-          end
-        end
-      elseif oldVersion < "0.5.21" then
-        local tmp = {}
-        local tmpBps = {}
-        for i,player in pairs(game.players) do
-          if global.players[player.name] then
-            tmp[player.index] = global.players[player.name]
-            global.players[player.name] = nil
-          end
-          if global.savedBlueprints[player.name] then
-            tmpBps[player.index] = global.savedBlueprints[player.name]
-            global.savedBlueprints[player.name] = nil
-          end
-        end
-        global.players = tmp
-        global.savedBlueprints = tmpBps
-      end
-    end
     on_init()
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
-    global.version = "0.5.11"
+    global.version = newVersion
   end
   if data.mod_changes["5dim_trains"] then
     --5dims_trains was added/updated
