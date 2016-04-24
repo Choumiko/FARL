@@ -209,7 +209,6 @@ function moveLeft(pos, direction, distance)
 end
 
 function diagonal_to_real_pos(rail)
-  local pos = rail.position
   local data = {
     [1] = {x=0.5,y=-0.5},
     [3] = {x=0.5,y=0.5},
@@ -225,7 +224,6 @@ function diagonal_to_real_pos(rail)
 end
 
 function moveRail(rail, direction,distance)
-  local pos = rail.position
   local data = {
     [1] = {x=0.5,y=-0.5},
     [3] = {x=0.5,y=0.5},
@@ -322,7 +320,8 @@ FARL = {
     [7] = {straight={dir=2, off={x=3,y=1}}, diagonal = {dir=1, off={x=-3,y=-1}}}
   },
   new = function(player, ent)
-    local vehicle, driver = nil, false
+    local vehicle
+    local driver = false
     if ent then
       vehicle = ent
     else
@@ -483,7 +482,6 @@ FARL = {
             table.insert(self.path, {rail=last, travel_dir=newTravelDir, input = self.input})
             -- remove rails behind train from path
             local behind = self:rail_behind_train()
-            local tmp = {}
             local found = false
             local max = #self.path
             for i=max,1,-1 do
@@ -560,9 +558,6 @@ FARL = {
                     if not status then
                       error(err, 2)
                     end
-                  else
-                  --debugLog("--Should be placing pole, but no valid position found")
-                  --debugLog(self.lastCheckPole)
                   end
                 end
               end
@@ -741,10 +736,6 @@ FARL = {
         self:addItemToCargo("raw-wood", 1)
       end
     end
-
-    if found then
-    --apiCalls.find.tree = apiCalls.find.tree + 1
-    end
   end,
 
   removeStone = function(self, area)
@@ -757,10 +748,6 @@ FARL = {
         entity.die()
         local stat = global.statistics[self.locomotive.force.name].removed["stone-rock"] or 0
         global.statistics[self.locomotive.force.name].removed["stone-rock"] = stat+1
-      end
-
-      if found then
-      --apiCalls.find.stone = apiCalls.find.stone + 1
       end
     end
   end,
@@ -1198,7 +1185,7 @@ FARL = {
           end
           catchup = catchup > 0 and catchup or 0
 
-          local block = 0
+          local block
           if original_dir == 0 then
             block = forward/2
           else
@@ -1249,18 +1236,10 @@ FARL = {
       if debugButton then
         self:print("TrainDir: "..self.direction)
       end
-      local bps = self.settings.activeBP
-      local bb = self.lastrail.direction%2==0 and bps.straight.boundingBox or bps.diagonal.boundingBox
-      --debugDump(bb,true)
-      --self:showArea(self:rail_below_train(), self.direction, {bb.tl,bb.br}, 4)
-      local front_rail_index = false
 
-      local last_carriage = false
-      local first_carriage = false
-      local bulldoze_rail = false
+      local first_carriage, bulldoze_rail
       local same_orientation = false
 
-      last_carriage = self.frontmover and self.train.carriages[#self.train.carriages] or self.train.carriages[1]
       first_carriage = not self.frontmover and self.train.carriages[#self.train.carriages] or self.train.carriages[1]
       local orientation = first_carriage.orientation
       for i, carriage in pairs(self.train.carriages) do
@@ -1271,7 +1250,8 @@ FARL = {
           break
         end
       end
-
+      
+      local front_rail_index
       self.path, front_rail_index = self:get_rails_below_train(same_orientation)
       --debugDump(#self.path,true)
       if self.settings.bulldozer then
@@ -1301,17 +1281,14 @@ FARL = {
       --self:show_path()
       local last_signal, signal_rail = false, false
       local signal_index = false
-      local found_signal = false
-      local bulldoze_index = false
       for i=#self.path,1,-1 do
         local rail = self.path[i].rail
         local dir = self.path[i].travel_dir
         last_signal, signal_rail = self:find_signal_rail(rail, dir)
-        if not found_signal and last_signal then
+        if last_signal then
           self.signalCount = {main=0}
           self:flyingText2( "S", GREEN, true, last_signal.position)
           signal_index = i
-          found_signal = true
           break
         end
       end
@@ -1410,7 +1387,6 @@ FARL = {
     --self:flyingText2("n", RED, true, self.lastrail.position)
     local count = 0
     dir = oppositedirection(dir)
-    count = 0
     local limit = no_limit and 1000 or 30
     while next and (count < limit) do
       --self:flyingText2(count, RED, true, next.position)
@@ -1519,7 +1495,6 @@ FARL = {
   end,
 
   findLastRail = function(self)
-    local trainDir = self:calcTrainDir()
     local test = self:rail_below_train()
     local last = test
     local count = 1
@@ -1589,7 +1564,6 @@ FARL = {
     end
     local entity
     if canPlace then
-      local direction = arg.direction or 0
       local force = arg.force or self.locomotive.force
       arg.force = force
       entity = self.surface.create_entity(arg)
@@ -1691,7 +1665,6 @@ FARL = {
         end
         if offsets.chain and offsets.pole and bpType then
           local mainRail = false
-          local moved_main_rail = false
           for i,rail in pairs(offsets.rails) do
             local traveldir = bpType == "straight" and 0 or 1
             local signalOff = signalOffset[traveldir][rail.direction]
@@ -1704,10 +1677,8 @@ FARL = {
               --if not mainRail and mainPos.x == 0 and mainPos.y == 0 and signalDir == offsets.chain.direction then
               rail.main = true
               mainRail = rail
-              local d
               if rail.direction == 3 then
                 rail = self:getRail(mainRail, 1, 1)
-                moved_main_rail = true
               end
               offsets.mainRail = rail
             end
@@ -1746,7 +1717,7 @@ FARL = {
             local known_rails = {}
             for _, l in pairs(offsets.rails) do
               if not l.main then
-                local lane_distance = false
+                local lane_distance
                 local tmp =
                   {name=l.name, position=subPos(l.position, mainRail.position),
                     direction = l.direction, type=l.name}
@@ -1852,11 +1823,9 @@ FARL = {
     end
     local rtype = newDir % 2 == 0 and "straight" or "diagonal"
     local bp =  self.settings.activeBP[rtype]
-    local mainRail = bp.mainRail
-    local bb = bp.boundingBox
     local removeItem, removeAmount = newRail.name, 1
-    local canplace = false
-    local area = false
+    local canplace
+    local area
     if self.settings.bulldozer and newRail.name ~= self.settings.rail.curved then
       self:bulldoze_area(newRail, newTravelDir)
     end
@@ -1998,13 +1967,11 @@ FARL = {
 
   placeParallelCurve = function(self, traveldir, rail, lane_index)
     local direction = self.direction
-    local original_dir = direction
     local input = self.input
     local s_lane = self.settings.activeBP.straight.lanes[lane_index]
     local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
     local catchup = self.lanes["d"..direction%2]["i"..input]["l"..lane_index].catchup
     local bi = self.input == 0 and 2 or 0
-    local block = self.lanes["d"..traveldir%2]["i"..bi]["l"..lane_index].lag
 
     if catchup > 0 then
       local dir, last = direction, self.lanerails[lane_index]
@@ -2091,7 +2058,6 @@ FARL = {
   end,
 
   placeParallelTrack = function(self, traveldir, lastRail, lane_index)
-    local rail = lastRail
     local s_lane = self.settings.activeBP.straight.lanes[lane_index]
     local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
     local new_rail = {name=lastRail.name, type=lastRail.type,direction=lastRail.direction, force=lastRail.force, position=lastRail.position}
@@ -2104,7 +2070,7 @@ FARL = {
 
     local hasRail = self:getCargoCount(new_rail.name) > 0
     local blocked = false
-    local block = 0
+    local block
     if not hasRail then
       self:deactivate({"msg-out-of-rails"})
       return false
@@ -2300,8 +2266,8 @@ FARL = {
       if (self.settings.ccWires == 1 and self:getCargoCount("red-wire") > 0)
         or (self.settings.ccWires == 2 and self:getCargoCount("green-wire") > 0)
         or (self.settings.ccWires == 3 and (self:getCargoCount("red-wire") > 0 or self:getCargoCount("green-wire") > 0)) then
-        local c = {}
-        local items = {}
+        local c
+        local items
         if self.settings.ccWires == 1 then
           c = {defines.circuitconnector.red}
           items = {"red-wire"}
@@ -2330,7 +2296,6 @@ FARL = {
     for i,p in pairs(self.surface.find_entities_filtered{area=expandPos(tmp, reach), name=name}) do
       local dist = distance(p.position, tmp)
       --debugDump({dist=dist, minPos=minPos, p=p.position},true)
-      local diff = subPos(p.position,self.lastPole.position)
       if dist < minDist and (p.position.x ~= minPos.x and p.position.y ~= minPos.y) then
         minDist = dist
         ret = p
@@ -2357,8 +2322,8 @@ FARL = {
     local reach = global.electric_poles[name]
     --local reach = self.settings.medium and 9 or 30
     --local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
-    local min, max = 100, -1
-    local minPole, maxPole, maxRail
+    local max = -1
+    local maxPole, maxRail
     local points = {}
     if not rails then error("no rail",2) end
     if type(rails)~="table" then error("no table3", 3)end
@@ -2381,7 +2346,7 @@ FARL = {
   end,
 
   getPoleRails = function(self, rail, newDir, oldDir)
-    local rails = {}
+    local rails
     if rail.name == self.settings.rail.curved then
       --range[1][2] = 0
       --debugDump({old=ptraveldir,new=pnewDir},true)
@@ -2407,7 +2372,6 @@ FARL = {
   placePole = function(self, polePos, poleDir)
     local name = self.settings.activeBP.diagonal.pole.name
     --local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
-    local lastPole = self.lastPole
     local pole = {name = name, position = polePos}
     --debugDump(util.distance(pole.position, self.lastPole.position),true)
     local canPlace = self:prepareArea(pole)
@@ -2482,7 +2446,6 @@ FARL = {
       local signals = traveldir % 2 == 0 and self.settings.activeBP.straight.signals or self.settings.activeBP.diagonal.signals
       if signals and type(signals) == "table" and signals[lane_index] then
         local signal_data = signals[lane_index]
-        local end_of_rail = signal_data.reverse
         traveldir = signal_data.reverse and (traveldir+4)%8 or traveldir
       end
     end
@@ -2555,7 +2518,6 @@ FARL = {
 
   debugInfo = function(self)
     local locomotive = self.locomotive
-    local player = self.driver
     --if not self.active then self:activate() end
     self:print("Train@"..pos2Str(locomotive.position).." dir:"..self:calcTrainDir().." orient:"..locomotive.orientation)
     self:print("Frontmover: "..tostring(self.frontmover))
@@ -2603,7 +2565,6 @@ FARL = {
   end,
 
   get_connected_rail = function(self, rail, straight_only, travelDir)
-    local dir = self.frontmover and self.train.rail_direction_from_front_rail or self.train.rail_direction_from_back_rail
     local dirs = {1,0,2}
     local ret = false
     if straight_only then
