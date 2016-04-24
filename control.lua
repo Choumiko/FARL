@@ -146,13 +146,13 @@ local function on_init()
   init_global()
   init_forces()
   init_players()
+  setMetatables()
   getMetaItemData()
 end
 
 local function on_load()
   setMetatables()
   godmode = global.godmode
-  global.overlayStack = global.overlayStack or {}
 end
 
 local function on_configuration_changed(data)
@@ -211,6 +211,19 @@ local function on_configuration_changed(data)
             global.players = tmp
             global.savedBlueprints = tmpBps
           end
+          if oldVersion < "0.5.24" then
+            global.overlayStack = global.overlayStack or {}
+            for i=#global.farl, 1, -1 do
+              local farl = global.farl[i]
+              if not farl.train or (farl.train and not farl.train.valid) then
+                if farl.driver and farl.driver.valid then
+                  GUI.destroyGui(farl.driver)
+                end
+                farl:deactivate()
+                table.remove(global.farl, i)
+              end 
+            end
+          end
         end
       end
     else
@@ -267,20 +280,10 @@ end
 
 function on_preplayer_mined_item(event)
   local ent = event.entity
-  local cname = ent.name
-  if ent.type == "locomotive" and cname == "farl" then
-    for i=1,#global.farl do
-      if global.farl[i].name == ent.backer_name then
-        global.farl[i].delete = true
-      end
-    end
-  end
-end
-
-function on_player_mined_item(event)
-  if event.item_stack.name == "farl" then
-    for i=#global.farl,1,-1 do
-      if global.farl[i].delete then
+  if ent.type == "locomotive" or ent.type == "cargo-wagon" then
+    for i=#global.farl, 1, -1 do
+      if (global.farl[i].train.valid and global.farl[i].train == ent.train) or not global.farl[i].train.valid then
+        global.farl[i]:deactivate()
         table.remove(global.farl, i)
       end
     end
@@ -288,13 +291,7 @@ function on_player_mined_item(event)
 end
 
 function on_entity_died(event)
-  local ent = event.entity
-  if ent.type == "locomotive" and ent.name == "farl" then
-    local i = FARL.findByLocomotive(event.entity)
-    if i then
-      table.remove(global.farl, i)
-    end
-  end
+  on_preplayer_mined_item(event)
 end
 
 function on_player_driving_changed_state(event)
@@ -360,10 +357,9 @@ script.on_event(defines.events.on_force_created, on_force_created)
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event(defines.events.on_gui_click, on_gui_click)
 
-script.on_event(defines.events.on_player_mined_item, on_player_mined_item)
 script.on_event(defines.events.on_preplayer_mined_item, on_preplayer_mined_item)
-
 script.on_event(defines.events.on_entity_died, on_entity_died)
+
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
 
 
@@ -450,12 +446,13 @@ remote.add_interface("farl",
       debugDump(game.get_tile(x, y).name,true)
     end,
 
-    quickstart = function()
+    quickstart = function(player)
       local items = {"farl", "curved-rail", "straight-rail", "medium-electric-pole", "big-electric-pole",
         "small-lamp", "solid-fuel", "rail-signal", "blueprint", "cargo-wagon"}
       local count = {5,50,50,50,50,50,50,50,10,5}
+      local player = player or game.players[1]
       for i=1,#items do
-        game.player.insert{name=items[i], count=count[i]}
+        player.insert{name=items[i], count=count[i]}
       end
     end,
     quickstart2 = function()

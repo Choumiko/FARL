@@ -420,7 +420,7 @@ FARL = {
       if self.locomotive.valid then
         self.train = self.locomotive.train
       else
-        self.deactivate("Error (invalid train)")
+        self:deactivate("Error (invalid train)")
         return
       end
     end
