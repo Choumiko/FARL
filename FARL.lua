@@ -1,4 +1,5 @@
 require "util"
+require "Blueprint"
 
 trigger_event = { ["concrete-lamppost"] = true
   --["curved-power-rail"] = true,
@@ -456,7 +457,7 @@ FARL = {
 
           local newTravelDir, nextRail = self:getRail(self.lastrail, self.direction, self.input)
           if not nextRail then
-            --self:print("Need extra rail")
+            --log("Need extra rail "..serpent.block(self.lastrail))
             newTravelDir, nextRail = self:getRail(self.lastrail, self.direction, 1)
             if not nextRail then
               --self:print("What happened?")
@@ -602,13 +603,17 @@ FARL = {
                   if last.type == "curved-rail" then
                     local traveldir = newTravelDir
                     local block = self:placeParallelCurve(newTravelDir, last, i)
-                    if not block then return end
+                    if not block then
+                      break
+                    end
                     local lag = math.abs(self.lanes["d"..traveldir%2]["i"..self.input]["l"..i].lag)+block-1
                     max = lag > max and lag or max
                     self.lastCurve.curveblock = max
                   else
                     local placed = self:placeParallelTrack(newTravelDir, last, i)
-                    if not placed then return end
+                    if not placed then
+                      break
+                    end
                     self.lanerails[i] = placed
                     all_placed = self.lanerails[i] and all_placed+1 or all_placed
                   end
@@ -1250,7 +1255,7 @@ FARL = {
           break
         end
       end
-      
+
       local front_rail_index
       self.path, front_rail_index = self:get_rails_below_train(same_orientation)
       --debugDump(#self.path,true)
@@ -1586,77 +1591,22 @@ FARL = {
     return canPlace, entity
   end,
 
-  --parese blueprints
+  --parse blueprints
   -- chain signal: needs direction == 4, defines track that FARL drives on
   --normal signals: define signal position for other tracks
   parseBlueprints = function(self, bp)
     for j=1,#bp do
       local e = bp[j].get_blueprint_entities()
-      local concrete = bp[j].get_blueprint_tiles()
       if e then
-        local offsets = {
-          pole=false, chain=false, poleEntities={}, railEntities={},
-          rails={}, signals={}, concrete={}, lanes={}}
-        local bpType = false
-        local rails = 0
-        local poles = {}
-        local box = {tl={x=0,y=0}, br={x=0,y=0}}
-        for i=1,#e do
-          local position = diagonal_to_real_pos(e[i])
-          if box.tl.x > position.x then box.tl.x = position.x end
-          if box.tl.y > position.y then box.tl.y = position.y end
-
-          if box.br.x < position.x then box.br.x = position.x end
-          if box.br.y < position.y then box.br.y = position.y end
-
-          local dir = e[i].direction or 0
-          if e[i].name == "rail-chain-signal" and not offsets.chain then
-            offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
-            -- collect all poles in bp
-          elseif global.electric_poles[e[i].name] then
-            table.insert(poles, {name = e[i].name, direction = dir, position = e[i].position})
-          elseif e[i].name == "straight-rail" then
-            rails = rails + 1
-            if not bpType then
-              if e[i].name == "straight-rail" then
-                bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
-              end
-            end
-            if  (bpType == "diagonal" and (dir == 3 or dir == 7)) or
-              (bpType == "straight" and (dir == 0 or dir == 4)) then
-              table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position, type=e[i].name})
-            else
-              self:print({"msg-bp-rail-direction"})
-              break
-            end
-          elseif e[i].name == "rail-signal" then
-            table.insert(offsets.signals, {name = e[i].name, direction = dir, position = e[i].position})
-          else
-            local e_type = game.entity_prototypes[e[i].name].type
-            local rail_entities = {["wall"]=true}
-            if not rail_entities[e_type] then
-              table.insert(offsets.poleEntities, {name = e[i].name, direction = dir, position = e[i].position})
-            else
-              table.insert(offsets.railEntities, {name = e[i].name, direction = dir, position = e[i].position})
-            end
-          end
-        end
+        Blueprint.group_entities(e)
+        local bpType, rails, poles, box, offsets = Blueprint.group_entities(e)
         if #poles > 0 then
-          local max = 0
-          local max_index
-          for i,p in pairs(poles) do
-            if global.electric_poles[p.name] > max then
-              max = global.electric_poles[p.name]
-              max_index = i
-            end
-          end
-          offsets.pole = poles[max_index]
-          for i,p in pairs(poles) do
-            if i ~= max_index then
-              table.insert(offsets.poleEntities, p)
-            end
-          end
+          Blueprint.get_max_pole(poles, offsets)
         end
+        log("bpType"..serpent.line(bpType))
+        log("rails"..serpent.line(rails))
+        log("poles"..serpent.block(poles))
+        log("offsets"..serpent.block(offsets))
         if rails == 1 and not offsets.chain then
           local rail = offsets.rails[1]
           local traveldir = bpType == "straight" and 0 or 1
@@ -1699,6 +1649,7 @@ FARL = {
             for _, re in pairs(offsets.railEntities) do
               table.insert(railEntities, {name=re.name, position=subPos(re.position, railPos), direction = re.direction})
             end
+            local concrete = bp[j].get_blueprint_tiles()
             if concrete then
               local off = {x=0.5,y=0.5}
               local pos = subPos(railPos, off)
