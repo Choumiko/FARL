@@ -603,19 +603,17 @@ FARL = {
                   if last.type == "curved-rail" then
                     local traveldir = newTravelDir
                     local block = self:placeParallelCurve(newTravelDir, last, i)
-                    if not block then
-                      break
+                    if block then
+                      local lag = math.abs(self.lanes["d"..traveldir%2]["i"..self.input]["l"..i].lag)+block-1
+                      max = lag > max and lag or max
+                      self.lastCurve.curveblock = max
                     end
-                    local lag = math.abs(self.lanes["d"..traveldir%2]["i"..self.input]["l"..i].lag)+block-1
-                    max = lag > max and lag or max
-                    self.lastCurve.curveblock = max
                   else
                     local placed = self:placeParallelTrack(newTravelDir, last, i)
-                    if not placed then
-                      break
+                    if placed then
+                      self.lanerails[i] = placed
+                      all_placed = self.lanerails[i] and all_placed+1 or all_placed
                     end
-                    self.lanerails[i] = placed
-                    all_placed = self.lanerails[i] and all_placed+1 or all_placed
                   end
                 end
                 if self.settings.railEntities and all_placed == #self.settings.activeBP.straight.lanes then
@@ -1603,10 +1601,6 @@ FARL = {
         if #poles > 0 then
           Blueprint.get_max_pole(poles, offsets)
         end
-        log("bpType"..serpent.line(bpType))
-        log("rails"..serpent.line(rails))
-        log("poles"..serpent.block(poles))
-        log("offsets"..serpent.block(offsets))
         if rails == 1 and not offsets.chain then
           local rail = offsets.rails[1]
           local traveldir = bpType == "straight" and 0 or 1
