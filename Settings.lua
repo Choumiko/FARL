@@ -187,7 +187,8 @@ defaultSettings =
     bridge = false,
     parallelTracks = true,
     concrete = true,
-    railEntities = true
+    railEntities = true,
+    mirrorConcrete = true
   }
 
 defaultSettings.activeBP = defaultSettings.bp

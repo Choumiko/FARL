@@ -852,18 +852,19 @@ FARL = {
     local railpos = rail.position
     local off = {x=0,y=0}
 
+    --mirror directional concrete from color-coding
+    local textured = {}
+    textured["concrete-hazard-left"] = "concrete-hazard-right"
+    textured["concrete-hazard-right"] = "concrete-hazard-left"
+    textured["concrete-fire-left"] = "concrete-fire-right"
+    textured["concrete-fire-right"] = "concrete-fire-left"
+
     railpos = diagonal_to_real_pos(rail)
     for _, c in pairs(concrete) do
       local name = c.name
-      --mirror directional concrete from color-coding
-      local textured = {}
-      textured["concrete-hazard-left"] = "concrete-hazard-right"
-      textured["concrete-hazard-right"] = "concrete-hazard-left"
-      textured["concrete-fire-left"] = "concrete-fire-right"
-      textured["concrete-fire-right"] = "concrete-fire-left"
-      if endsWith(name, "-left") or endsWith(name, "-right") then
+      if self.settings.mirrorConcrete and endsWith(name, "-left") or endsWith(name, "-right") then
         if (type == "straight" and dir % 4 == 2) or  (type == "diagonal" and (dir == 3 or dir == 7)) then
-          name = textured[name]
+          name = textured[name] or name
         end
       end
 

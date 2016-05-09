@@ -221,7 +221,14 @@ local function on_configuration_changed(data)
                 end
                 farl:deactivate()
                 table.remove(global.farl, i)
-              end 
+              end
+            end
+          end
+          if oldVersion < "0.5.26" then
+            for _, psettings in pairs(global.players) do
+              if psettings.mirrorConcrete == nil then
+                psettings.mirrorConcrete = true
+              end
             end
           end
         end
@@ -450,17 +457,18 @@ remote.add_interface("farl",
       local items = {"farl", "curved-rail", "straight-rail", "medium-electric-pole", "big-electric-pole",
         "small-lamp", "solid-fuel", "rail-signal", "blueprint", "cargo-wagon"}
       local count = {5,50,50,50,50,50,50,50,10,5}
-      local player = player or game.players[1]
+      player = player or game.players[1]
       for i=1,#items do
         player.insert{name=items[i], count=count[i]}
       end
     end,
-    quickstart2 = function()
+    quickstart2 = function(player)
       local items = {"power-armor-mk2", "personal-roboport-equipment", "fusion-reactor-equipment",
         "blueprint", "deconstruction-planner", "construction-robot", "basic-exoskeleton-equipment"}
       local count = {1,5,3,1,1,50,2}
+      player = player or game.players[1]
       for i=1,#items do
-        game.player.insert{name=items[i], count=count[i]}
+        player.insert{name=items[i], count=count[i]}
       end
     end,
 
@@ -471,54 +479,6 @@ remote.add_interface("farl",
       for i=1,#items do
         game.player.insert{name=items[i], count=count[i]}
       end
-    end,
-
-    createCurve = function(direction, input, curve, s_lane, d_lane)
-      local player = game.players[1]
-      local surface = player.surface
-
-      local original_dir = direction
-      -- invert direction, input, distances for diagonal rails
-      if direction%2 == 1 then
-        local input2dir = {[0]=-1,[1]=0,[2]=1}
-        direction = oppositedirection((direction+input2dir[input]) % 8)
-        input = input == 2 and 0 or 2
-        s_lane = -1*s_lane
-        d_lane = -1*d_lane
-      end
-
-      local new_curve = {name=curve.name, type=curve.type, direction=curve.direction, force=curve.force}
-      local right = s_lane*2
-
-      --left hand turns need to go back, moving right already moves the diagonal rail part
-      local forward = input == 2 and (s_lane-d_lane)*2 or (d_lane-s_lane)*2
-      debugDump("r:"..right.."f:"..forward,true)
-      new_curve.position = move_right_forward(curve.position, direction, right, forward)
-      local s_lag = forward/2
-      local d_lag = original_dir % 2 == 0 and forward+right or (forward+right)/2
-      local data = {s_lag=s_lag, d_lag=d_lag}
-      debugDump(data,true)
-      local ent = surface.create_entity(new_curve)
-      local diff = subPos(ent.position,new_curve.position)
-      if diff.x~=0 or diff.y~=0 then
-        debugDump("Placement mismatch:",true)
-        debugDump(diff,true)
-      end
-    end,
-
-    timing = function(player)
-      local area_large = expandPos(player.position,50)
-      local area_small = expandPos(player.position,10)
-      log("find_entities large")
-      for i=1,1000 do
-        player.surface.find_entities_filtered{area = area_large, type = "tree"}
-      end
-      log("large finished")
-      log("find_entities small")
-      for i=1,1000 do
-        player.surface.find_entities_filtered{area = area_small, type = "tree"}
-      end
-      log("small finished")
     end,
 
     place_signal = function(rail, travel_dir, end_of_rail)
@@ -559,5 +519,13 @@ remote.add_interface("farl",
 
     fake_signals = function(bool)
       global.fake_signals = bool
-    end
+    end,
+
+    init_players = function()
+      for _, psettings in pairs(global.players) do
+        if psettings.mirrorConcrete == nil then
+          psettings.mirrorConcrete = true
+        end
+      end
+    end,
   })

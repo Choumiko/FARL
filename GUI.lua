@@ -155,7 +155,7 @@ GUI = {
         local i = event.element.name:match("save_bp_(%w*)")
         GUI.save_bp(event,farl, player,tonumber(i))
       elseif name == "signals" or name == "poles" or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
-        or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" then
+        or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" or name == "mirrorConcrete" then
         psettings[name] = not psettings[name]
         if name == "poles" then
           if psettings[name] and farl.active then
@@ -186,12 +186,12 @@ GUI = {
     debugInfo = function(event, farl, player)
       farl:debugInfo()
     end,
-    
+
     toggleBulldozer = function(event, farl, player)
       farl:toggleBulldozer()
       GUI.updateGui(farl)
     end,
-    
+
     toggleMaintenance = function(event, farl, player)
       farl:toggleMaintenance()
       GUI.updateGui(farl)
@@ -213,7 +213,7 @@ GUI = {
         GUI.toggleSettingsWindow(event,farl,player)
       end
     end,
-    
+
     save_bp = function(event, farl, player, i)
       local index = player.index
       local psettings = Settings.loadByPlayer(player)
@@ -276,8 +276,11 @@ GUI = {
 
         GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}},"poleEntities")
         GUI.addPlaceHolder(settings)
-        
+
         GUI.add(settings,{type="checkbox", name="railEntities", caption={"stg-rail-entities"}}, "railEntities")
+        GUI.addPlaceHolder(settings)
+
+        GUI.add(settings, {type="checkbox", name="mirrorConcrete", caption="Mirror concrete"}, "mirrorConcrete")
         GUI.addPlaceHolder(settings)
 
         --GUI.add(settings,{type="checkbox", name="parallelTracks", caption={"stg-parallel-tracks"}}, "parallelTracks")
@@ -290,7 +293,7 @@ GUI = {
 
         GUI.addLabel(settings, {caption={"stg-stored-blueprints"}})
         local stored_bp = GUI.add(settings,{type="table", colspan=3})
-        
+
         local bps = global.savedBlueprints[player.index]
         for i=1,3 do
           if bps and bps[i] then
@@ -305,7 +308,7 @@ GUI = {
             GUI.addLabel(stored_bp, {caption="--"})
           end
         end
-        
+
         GUI.add(settings, {type="label", caption={"stg-blueprint"}})
         local row3 = GUI.add(settings, {type="table", name="row4", colspan=2})
         GUI.addButton(row3, {name="blueprint", caption={"stg-blueprint-read"}}, GUI.readBlueprint)
@@ -386,11 +389,11 @@ GUI = {
     create_concrete_vertical = function(event, farl, player)
       GUI.createBlueprint(defaults_concrete_vert,farl,player)
     end,
-    
+
     create_concrete_diagonal = function(event, farl, player)
       GUI.createBlueprint(defaults_concrete_diag,farl,player)
     end,
-    
+
     print_statistics = function(event, farl, player)
       if player.valid then
         local stats = global.statistics[player.force.name]
@@ -437,7 +440,7 @@ GUI = {
         end
       end
     end,
-    
+
     saveSettings = function(s, player)
       local psettings = Settings.loadByPlayer(player)
       for i,p in pairs(s) do
