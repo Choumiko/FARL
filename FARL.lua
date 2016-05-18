@@ -734,10 +734,28 @@ FARL = {
       found = true
       local stat = global.statistics[self.locomotive.force.name].removed["tree-01"] or 0
       global.statistics[self.locomotive.force.name].removed["tree-01"] = stat+1
-      entity.die()
       if not godmode and self.settings.collectWood then
-        self:addItemToCargo("raw-wood", 1)
+        local products=entity.prototype.mineable_properties.products --get the products of this tree
+        for k,v in pairs(products) do
+          if v.type=="item" then
+            local rounded_probability=1
+            local rounded_random=1
+            if v.probability~=nil and v.probability<1 then --determine whether or not we are adding this item to inventory based on it's drop probability
+              math.randomseed(game.tick+math.floor(math.random(1,100))) --make sure that randomizer results really are random
+              rounded_probability=math.floor(v.probability*10^2+0.5)/10^2 -- rounding the probability to 2 decimal places
+              rounded_random=math.floor(math.random()*10^2+0.5)/10^2 -- rounding the random result to 2 decimal places (ex. 0.73 which
+            end
+            if rounded_probability>=rounded_random then -- if the random result is less than or equal to the probability
+              if v.amount_min~=nil and v.amount_max~=nil then --if the item does not have a fixed number (ie, random amount)
+                self:addItemToCargo(v.name, math.floor(math.random(v.amount_min, v.amount_max))) --add a random number between the min and max to cargo
+              else --otherwise
+                self:addItemToCargo(v.name, v.amount)
+              end
+            end
+          end
+        end
       end
+      entity.die()
     end
   end,
 
