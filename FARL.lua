@@ -75,7 +75,7 @@ real_signalOffset =
     },
   }
 -- [traveldir%2][raildir]
-signalOffsetCurves =
+local signalOffsetCurves =
   {
     [0] = {
       [0] = {pos={x=2.5,y=3.5}, dir=4},
@@ -199,12 +199,12 @@ function moveposition(pos, direction, distance)
   end
 end
 
-function moveRight(pos, direction, distance)
+local function moveRight(pos, direction, distance)
   local dir = (direction + 2) % 8
   return pos12toXY(moveposition(fixPos(pos), dir, distance))
 end
 
-function moveLeft(pos, direction, distance)
+local function moveLeft(pos, direction, distance)
   local dir = (direction + 6) % 8
   return pos12toXY(moveposition(fixPos(pos), dir, distance))
 end
@@ -285,10 +285,8 @@ function get_item_name(some_name)
       name = game.item_prototypes[some_name].name
     elseif game.entity_prototypes[some_name] then
       local items = game.entity_prototypes[some_name].items_to_place_this
-      for n, item in pairs(items) do
-        name = item.name
-        break
-      end
+      local _, item = next(items)
+      name = item.name
     else
       --it's a tile?!
       if some_name == "stone-path" then
@@ -640,7 +638,7 @@ FARL = {
       else
         -- if bulldoze mode is on, prepare the area for the next rail after self.lastrail according to input
         if self.settings.bulldozer or self.settings.maintenance then
-          local dir, next = self:getRail(self.lastrail, self.direction, 1)
+          local _, next = self:getRail(self.lastrail, self.direction, 1)
           if next and self.already_prepared ~= pos2Str(next.position) then
             --self:flyingText2("R", RED,true, next.position)
             self.already_prepared = pos2Str(next.position)
@@ -729,27 +727,35 @@ FARL = {
 
   removeTrees = function(self, area)
     --apiCalls.count.tree = apiCalls.count.tree + 1
-    local found = false
     for _, entity in pairs(self.surface.find_entities_filtered{area = area, type = "tree"}) do
-      found = true
       local stat = global.statistics[self.locomotive.force.name].removed["tree-01"] or 0
       global.statistics[self.locomotive.force.name].removed["tree-01"] = stat+1
       if not godmode and self.settings.collectWood then
         local products=entity.prototype.mineable_properties.products --get the products of this tree
-        for k,v in pairs(products) do
-          if v.type=="item" then
-            local rounded_probability=1
-            local rounded_random=1
-            if v.probability~=nil and v.probability<1 then --determine whether or not we are adding this item to inventory based on it's drop probability
-              math.randomseed(game.tick+math.floor(math.random(1,100))) --make sure that randomizer results really are random
-              rounded_probability=math.floor(v.probability*10^2+0.5)/10^2 -- rounding the probability to 2 decimal places
-              rounded_random=math.floor(math.random()*10^2+0.5)/10^2 -- rounding the random result to 2 decimal places (ex. 0.73 which
-            end
-            if rounded_probability>=rounded_random then -- if the random result is less than or equal to the probability
-              if v.amount_min~=nil and v.amount_max~=nil then --if the item does not have a fixed number (ie, random amount)
-                self:addItemToCargo(v.name, math.floor(math.random(v.amount_min, v.amount_max))) --add a random number between the min and max to cargo
-              else --otherwise
-                self:addItemToCargo(v.name, v.amount)
+        if #products == 1 and products[1].name == "raw-wood" then
+          self:addItemToCargo("raw-wood", 1)
+        else
+          local floor, round, random = math.floor, round, math.random
+          for k,v in pairs(products) do
+            if v.type == "item" then
+              local name = v.name
+              local amount
+              if v.amount then
+                amount = v.amount
+              else
+                local rounded_probability = 1
+                local rounded_random = 1
+                if v.probability < 1 then --determine whether or not we are adding this item to inventory based on it's drop probability
+                  math.randomseed( game.tick + random( 1, 100 ) )
+                  rounded_probability = floor( round( v.probability, 2 ) )
+                  rounded_random = floor( round( random(), 2 ) )
+                end
+                if rounded_probability >= rounded_random then
+                  amount = floor( random( v.amount_min, v.amount_max ) )
+                end
+              end
+              if amount then
+                self:addItemToCargo( v.name, math.ceil( amount / 2 ) )
               end
             end
           end
@@ -763,9 +769,7 @@ FARL = {
     --apiCalls.count.stone = apiCalls.count.stone + 1
 
     if removeStone then
-      local found = false
       for _, entity in pairs(self.surface.find_entities_filtered{area = area, name = "stone-rock"}) do
-        found = true
         entity.die()
         local stat = global.statistics[self.locomotive.force.name].removed["stone-rock"] or 0
         global.statistics[self.locomotive.force.name].removed["stone-rock"] = stat+1
@@ -776,8 +780,6 @@ FARL = {
   -- args = {area=area, name="name"} or {area=area,type="type"}
   -- exclude: table with entities as keys
   removeEntitiesFiltered = function(self, args, exclude)
-    --apiCalls.count.other = apiCalls.count.other + 1
-    local exclude = exclude or {}
     local force = self.locomotive.force
     local neutral_force = game.forces.neutral
     for _, entity in pairs(self.surface.find_entities_filtered(args)) do
@@ -785,10 +787,8 @@ FARL = {
         local item = false
         local name = entity.name
         if entity.prototype.items_to_place_this then
-          for k, v in pairs(entity.prototype.items_to_place_this) do
-            item = k
-            break
-          end
+          local k, _ = next(entity.prototype.items_to_place_this)
+          item = k
         end
         if not entity.destroy() then
           self:deactivate({"msg-cant-remove"})
@@ -866,9 +866,7 @@ FARL = {
     local tiles = {}
     local pave = {}
     local w,dw = 0,0
-    local data = {}
-    local railpos = rail.position
-    local off = {x=0,y=0}
+    local railpos = diagonal_to_real_pos(rail)
 
     --mirror directional concrete from color-coding
     local textured = {}
@@ -877,7 +875,6 @@ FARL = {
     textured["concrete-fire-left"] = "concrete-fire-right"
     textured["concrete-fire-right"] = "concrete-fire-left"
 
-    railpos = diagonal_to_real_pos(rail)
     for _, c in pairs(concrete) do
       local name = c.name
       if self.settings.mirrorConcrete and endsWith(name, "-left") or endsWith(name, "-right") then
@@ -1083,7 +1080,7 @@ FARL = {
   cruiseControl = function(self)
     local acc = self.frontmover and defines.riding.acceleration.accelerating or defines.riding.acceleration.reversing
     local decc = self.frontmover and defines.riding.acceleration.reversing or defines.riding.acceleration.accelerating
-    local speed = math.abs(self.train.speed)
+    --local speed = math.abs(self.train.speed)
     local limit = self.active and self.settings.cruiseSpeed or 0.9
     if self.cruise then
       if self.cruiseInterrupt == 2 then
@@ -1127,7 +1124,7 @@ FARL = {
 
   findNeighbour = function(self, rail, travelDir, input)
     local neighbour = false
-    local newTravel, nrail = self:getRail(rail, travelDir, input)
+    local _, nrail = self:getRail(rail, travelDir, input)
     if nrail then
       local railEnt = self:findRail(nrail)
       if railEnt then
@@ -1185,8 +1182,8 @@ FARL = {
 
           new_curve.position = move_right_forward(rail.position, direction, right, forward)
           local lag = forward/2
-          local catchup = 0
-          local l,f,r = lag, forward, right
+          local catchup
+          local l,f,r = lag, forward
 
           if original_dir == 1 then
             right = -1*right
@@ -1202,8 +1199,6 @@ FARL = {
             catchup = l+f+r
           else
             catchup = l < 0 and l or f
-            f = f/-2
-            r= r/2
           end
           catchup = catchup > 0 and catchup or 0
 
@@ -1697,9 +1692,9 @@ FARL = {
                   table.insert(lanes, lane_distance)
                   known_rails[lane_distance] = true
                 end
-                local altRail, dir
+                local altRail, _
                 if l.direction % 2 == 1 and mainRail.direction == l.direction then
-                  dir, altRail = self:getRail(tmp, move_dir, 1)
+                  _, altRail = self:getRail(tmp, move_dir, 1)
                   tmp = altRail
                 end
                 table.insert(rails, tmp)
@@ -1945,7 +1940,7 @@ FARL = {
           if not last then break end
           if self:getCargoCount(last.name) > 0 then
             self:prepareArea(last)
-            local success, ent = self:genericPlace(last)
+            local _, ent = self:genericPlace(last)
             self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(last,self.settings)
             if self.signal_in[lane_index] then
               self.signal_in[lane_index] = self.signal_in[lane_index] - 1
@@ -2011,7 +2006,7 @@ FARL = {
     end
 
     self:prepareAreaForCurve(new_curve)
-    local success, ent = self:genericPlace(new_curve)
+    local _, ent = self:genericPlace(new_curve)
     if not ent then
       self:print("Failed to create curve @"..pos2Str(new_curve.position))
     else
@@ -2052,7 +2047,7 @@ FARL = {
     --    end
     if not blocked and hasRail then
       self:prepareArea(new_rail)
-      local success, ent = self:genericPlace(new_rail)
+      local _, ent = self:genericPlace(new_rail)
       self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(new_rail,self.settings)
       --self.lanes[lane_index].lastrail = ent or new_rail
       if self.settings.signals then
@@ -2345,7 +2340,7 @@ FARL = {
     end
     local hasPole = self:getCargoCount(name) > 0
     if canPlace and hasPole then
-      local success, pole = self:genericPlace{name = name, position = polePos, force = self.locomotive.force}
+      local _, pole = self:genericPlace{name = name, position = polePos, force = self.locomotive.force}
       if pole then
         debugLog("--Placed pole@"..pos2Str(polePos))
         if not pole.neighbours.copper[1] then
