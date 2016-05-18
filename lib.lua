@@ -15,3 +15,4 @@ function copyPrototype(type, name, newName, change_results)
   end
   return p
 end
+return copyPrototype

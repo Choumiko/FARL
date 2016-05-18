@@ -406,10 +406,6 @@ remote.add_interface("farl",
         debugDump("Distance (util): "..util.distance(pos, rail.position),true)
         --debugDump("lag for diag: "..(diff.x-diff.y),true)
         --debugDump("lag for straight: "..(diff.y+diff.x),true)
-        if AStar then
-          local max = AStar.heuristic(global.railInfoLast, rail)
-          debugDump("Distance (heuristic): "..max, true)
-        end
         global.railInfoLast = false
       else
         global.railInfoLast = rail
