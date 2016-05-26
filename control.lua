@@ -350,7 +350,7 @@ function debugLog(var, prepend)
 end
 
 function saveVar(var, name)
-  local var = var or global
+  var = var or global
   local n = name or ""
   game.write_file("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
 end

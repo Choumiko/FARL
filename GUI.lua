@@ -87,7 +87,6 @@ GUI = {
     end,
 
     addLabel = function(parent, e, bind)
-      local e = e
       if type(e) == "string" or type(e) == "number" or (type(e) == "table" and e[1]) then
         e = {caption=e}
       end

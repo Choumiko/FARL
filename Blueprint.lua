@@ -43,8 +43,7 @@ Blueprint.group_entities = function(e)
         (bpType == "straight" and (dir == 0 or dir == 4)) then
         table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position, type=e[i].name})
       else
-        debugDump({"msg-bp-rail-direction"})
-        break
+        return false, {"msg-bp-rail-direction"}
       end
     elseif e[i].name == "rail-signal" then
       table.insert(offsets.signals, {name = e[i].name, direction = dir, position = e[i].position})

@@ -463,9 +463,9 @@ FARL = {
             end
           end
           --log("start placeRails")
-          local dir, last = self:placeRails(nextRail, newTravelDir)
+          local dir_, last = self:placeRails(nextRail, newTravelDir)
           --log("end placeRails")
-          if dir then
+          if dir_ then
             if not last.position and not last.name then
               self:deactivate({"msg-no-entity"})
               return
@@ -575,27 +575,9 @@ FARL = {
                   self:flyingText({"", "Out of ","rail-signal"}, YELLOW, true)
                 end
               end
-              --            if global.fake_signals then
-              --              self.fake_signalCount.main = self.fake_signalCount.main + get_signal_weight(last,self.settings)
-              --              if last.type == "curved-rail" then
-              --                  self.fake_signalCount.main = self.fake_signalCount.main - self.lanes.max_lag[newTravelDir%2]-get_signal_weight(last,self.settings)
-              --              end
-              --              --debugDump(self.fake_signalCount, true)
-              --              if self.fake_signalCount.main > 10 and last.name ~= self.settings.rail.curved then
-              --                if self:place_fake_signal(newTravelDir,nextRail) then
-              --                  self.fake_signalCount.main = 0
-              --                   --reset lane counter, so that it lines up
-              --                  self.fake_signal_in = self.fake_signal_in or {}
-              --                  local bptype = last.direction%2==1 and "diagonal" or "straight"
-              --                  for i,l in pairs(self.settings.activeBP[bptype].lanes) do
-              --                    local lane_data = self.lanes["d"..self.direction%2]["i0"]["l"..i]
-              --                    self.fake_signal_in[i] = math.abs(lane_data.lag) + 1
-              --                  end
-              --                end
-              --              end
-              --            end
+
               if self.settings.parallelTracks and #self.settings.activeBP.straight.lanes > 0 then
-                local max = -1
+                max = -1
                 local all_placed = 0
                 for i, l in pairs(self.settings.activeBP.straight.lanes) do
                   if last.type == "curved-rail" then
@@ -738,7 +720,6 @@ FARL = {
           local floor, round, random = math.floor, round, math.random
           for k,v in pairs(products) do
             if v.type == "item" then
-              local name = v.name
               local amount
               if v.amount then
                 amount = v.amount
@@ -844,7 +825,7 @@ FARL = {
     if #tiles ~= 0 then
       -- if they were calculate the minimum number of landfills to fill them in ( quick and dirty at the moment may need tweeking to prevent overusage)
       local lfills = math.ceil(w/2 + dw*1.5)
-      local lfills = lfills > 20 and 20 or lfills
+      lfills = lfills > 20 and 20 or lfills
       -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
       if self:getCargoCount("concrete") >= lfills then
         self.surface.set_tiles(tiles)
@@ -1048,10 +1029,6 @@ FARL = {
   end,
 
   getRail = function(self, lastRail, travelDir, input)
-    -- [traveldir][rail_type][rail_dir][input] = offset, new rail dir, new rail type
-    --input_to_next_rail =
-
-    local lastRail, travelDir, input = lastRail, travelDir, input
     if not travelDir or not input then error("no traveldir or input", 2) end
     if travelDir > 7 or travelDir < 0 then
       self:deactivate("Traveldir wrong: "..travelDir)
@@ -1268,8 +1245,8 @@ FARL = {
         end
       end
 
-      local front_rail_index
-      self.path, front_rail_index = self:get_rails_below_train(same_orientation)
+      local _
+      self.path, _ = self:get_rails_below_train(same_orientation)
       --debugDump(#self.path,true)
       if self.settings.bulldozer then
         bulldoze_rail = self.frontmover and self.train.back_rail or self.train.front_rail
@@ -1533,7 +1510,7 @@ FARL = {
   end,
 
   addItemToCargo = function(self,item, count, place_result)
-    local count = count or 1
+    count = count or 1
     local remaining = count - self.train.insert({name=item, count=count})
 
     if remaining > 0 and (self.settings.dropWood or place_result) then
@@ -1543,7 +1520,7 @@ FARL = {
   end,
 
   removeItemFromCargo = function(self,item, count)
-    local count = count or 1
+    count = count or 1
     if godmode then
       return count
     end
@@ -1610,8 +1587,11 @@ FARL = {
     for j=1,#bp do
       local e = bp[j].get_blueprint_entities()
       if e then
-        Blueprint.group_entities(e)
         local bpType, rails, poles, box, offsets = Blueprint.group_entities(e)
+        if not bpType then
+          self:print(rails)
+          return
+        end
         if #poles > 0 then
           Blueprint.get_max_pole(poles, offsets)
         end
@@ -1671,7 +1651,7 @@ FARL = {
                 if box.br.y < position.y then box.br.y = position.y end
               end
             end
-            local rails = {}
+            local bp_rails = {}
             local lanes = {}
             local known_rails = {}
             for _, l in pairs(offsets.rails) do
@@ -1697,7 +1677,7 @@ FARL = {
                   _, altRail = self:getRail(tmp, move_dir, 1)
                   tmp = altRail
                 end
-                table.insert(rails, tmp)
+                table.insert(bp_rails, tmp)
               end
               table.sort(lanes)
             end
@@ -1744,18 +1724,18 @@ FARL = {
               end
             end
             --debugDump({tl=tl,br=br},true)
-            local bp = {
+            local blueprint = {
               mainRail = mainRail, direction=mainRail.direction, pole = offsets.pole, poleEntities = lamps,
-              rails = rails, signals = signals, concrete = offsets.concrete, lanes = lanes,
+              rails = bp_rails, signals = signals, concrete = offsets.concrete, lanes = lanes,
               clearance_points = clearance_points, railEntities = railEntities}
-            bp.boundingBox = {tl = tl,
+            blueprint.boundingBox = {tl = tl,
               br = br}
-            self.settings.activeBP[bpType] = bp
-            if #rails > 0 then
+            self.settings.activeBP[bpType] = blueprint
+            if #bp_rails > 0 then
               self.settings.flipPoles = false
             end
-            saveBlueprint(self.driver, bpType, bp)
-            self:print({"msg-bp-saved", bpType, {"entity-name."..bp.pole.name}})
+            saveBlueprint(self.driver, bpType, blueprint)
+            self:print({"msg-bp-saved", bpType, {"entity-name."..blueprint.pole.name}})
           else
             self:print({"msg-bp-chain-direction"})
           end
@@ -1784,12 +1764,11 @@ FARL = {
     local bp =  self.settings.activeBP[rtype]
     local removeItem, removeAmount = newRail.name, 1
     local canplace
-    local area
     if self.settings.bulldozer and newRail.name ~= self.settings.rail.curved then
       self:bulldoze_area(newRail, newTravelDir)
     end
     if newRail.direction % 2 == 0 and newRail.name ~= self.settings.rail.curved then
-      area = self:createBoundingBox(newRail, newTravelDir)
+      local area = self:createBoundingBox(newRail, newTravelDir)
       canplace = self:prepareArea(newRail, area)
       if not canplace then
         canplace = self:prepareArea(newRail)
@@ -1844,9 +1823,9 @@ FARL = {
     end
   end,
 
-  protect_tile = function(self, pos)
+  protect_tile = function(self, pos_)
     if self.settings.maintenance or self.settings.bulldozer then
-      local pos = {x=pos.x,y=pos.y}
+      local pos = {x=pos_.x,y=pos_.y}
       if pos.x - round(pos.x) == 0 then
         pos.x = pos.x+0.5
       end
@@ -1875,8 +1854,8 @@ FARL = {
     return false
   end,
 
-  is_protected_tile = function(self, pos)
-    local pos = {x=pos.x,y=pos.y}
+  is_protected_tile = function(self, pos_)
+    local pos = {x=pos_.x,y=pos_.y}
     if pos.x - round(pos.x) == 0 then
       pos.x = pos.x+0.5
     end
@@ -1892,8 +1871,8 @@ FARL = {
     return false
   end,
 
-  protectRails = function(self, last, dir, limit)
-    local last, dir = last, dir
+  protectRails = function(self, last_, dir_, limit)
+    local last, dir = last_, dir_
     local found, c = 0, 0
     while found and c < limit do
       found = 0
@@ -2079,10 +2058,9 @@ FARL = {
       local signals = traveldir % 2 == 0 and self.settings.activeBP.straight.signals or self.settings.activeBP.diagonal.signals
       if signals and type(signals) == "table" and signals[lane_index] then
         local signal_data = signals[lane_index]
-        local rail = rail
         local end_of_rail = signal_data.reverse
-        local traveldir = signal_data.reverse and oppositedirection(traveldir) or traveldir
-        local signal = get_signal_for_rail(rail,traveldir,end_of_rail)
+        local signal_traveldir = signal_data.reverse and oppositedirection(traveldir) or traveldir
+        local signal = get_signal_for_rail(rail,signal_traveldir,end_of_rail)
         signal.force = self.locomotive.force
 
         self:prepareArea(signal)
@@ -2331,9 +2309,8 @@ FARL = {
   placePole = function(self, polePos, poleDir)
     local name = self.settings.activeBP.diagonal.pole.name
     --local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
-    local pole = {name = name, position = polePos}
     --debugDump(util.distance(pole.position, self.lastPole.position),true)
-    local canPlace = self:prepareArea(pole)
+    local canPlace = self:prepareArea({name = name, position = polePos})
     if not canPlace and self.surface.count_entities_filtered{area=expandPos(polePos,0.6),name=name} > 1 then
       canPlace = true
       debugLog("--found pole@"..pos2Str(polePos))
@@ -2375,7 +2352,6 @@ FARL = {
   placeSignal = function(self,traveldir, rail)
     if self.signalCount.main > self.settings.signalDistance and rail.name ~= self.settings.rail.curved then
       --debugDump(self.signalCount,true)
-      local rail = rail
       local signal = get_signal_for_rail(rail,traveldir)
       signal.force = self.locomotive.force
       self:prepareArea(signal)
@@ -2555,7 +2531,7 @@ FARL = {
 
   flyingText = function(self, line, color, show, pos)
     if show then
-      local pos = pos or addPos(self.locomotive.position, {x=0,y=-1})
+      pos = pos or addPos(self.locomotive.position, {x=0,y=-1})
       color = color or RED
       self.surface.create_entity({name="flying-text", position=pos, text=line, color=color})
     end
@@ -2563,7 +2539,7 @@ FARL = {
 
   flyingText2 = function(self, line, color, show, pos)
     if show then
-      local pos = pos and addPos(pos,{x=-0.5,y=-0.5}) or addPos(self.locomotive.position, {x=0,y=-1})
+      pos = pos and addPos(pos,{x=-0.5,y=-0.5}) or addPos(self.locomotive.position, {x=0,y=-1})
       color = color or RED
       self.surface.create_entity({name="flying-text2", position=pos, text=line, color=color})
     end
