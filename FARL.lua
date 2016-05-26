@@ -727,9 +727,8 @@ FARL = {
                 local rounded_probability = 1
                 local rounded_random = 1
                 if v.probability < 1 then --determine whether or not we are adding this item to inventory based on it's drop probability
-                  math.randomseed( game.tick + random( 1, 100 ) )
                   rounded_probability = floor( round( v.probability, 2 ) )
-                  rounded_random = floor( round( random(), 2 ) )
+                  rounded_random = round( random(), 2 )
                 end
                 if rounded_probability >= rounded_random then
                   amount = floor( random( v.amount_min, v.amount_max ) )
@@ -1623,7 +1622,7 @@ FARL = {
           end
           if mainRail then
             local lamps = {}
-            for _, l in ipairs(offsets.poleEntities) do
+            for _, l in pairs(offsets.poleEntities) do
               if l.name ~= "wooden-chest" then
                 table.insert(lamps, {name=l.name, position=subPos(l.position, offsets.pole.position), direction = l.direction})
               end
@@ -2149,7 +2148,7 @@ FARL = {
     local rad = diff * (math.pi/4)
     if type(poleEntities) == "table" then
       for i=1,#poleEntities do
-        if self:getCargoCount(poleEntities[i].name) > 1 then
+        if self:getCargoCount(poleEntities[i].name) > 0 then
           local offset = poleEntities[i].position
           offset = rotate(offset, rad)
           if self.settings.flipPoles then

@@ -322,7 +322,7 @@ end
 
 function debugDump(var, force)
   if false or force then
-    for i,player in ipairs(game.players) do
+    for i,player in pairs(game.players) do
       local msg
       if type(var) == "string" then
         msg = var
@@ -337,7 +337,7 @@ end
 function debugLog(var, prepend)
   if not global.debug_log then return end
   local str = prepend or ""
-  for i,player in ipairs(game.players) do
+  for i,player in pairs(game.players) do
     local msg
     if type(var) == "string" then
       msg = var
@@ -421,7 +421,7 @@ remote.add_interface("farl",
       if game.forces.player.technologies["rail-signals"].researched then
         game.forces.player.recipes["farl"].enabled = true
       end
-      for i,p in ipairs(game.players) do
+      for i,p in pairs(game.players) do
         if p.gui.left.farl then p.gui.left.farl.destroy() end
         if p.gui.top.farl then p.gui.top.farl.destroy() end
       end

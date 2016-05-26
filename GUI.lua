@@ -347,7 +347,7 @@ GUI = {
       local blueprints = GUI.findBlueprintsInHotbar(player)
       if blueprints ~= nil then
         local ret = {}
-        for i, blueprint in ipairs(blueprints) do
+        for i, blueprint in pairs(blueprints) do
           if blueprint.is_blueprint_setup() then
             table.insert(ret, blueprint)
           end
@@ -423,7 +423,7 @@ GUI = {
       local blueprints = GUI.findBlueprintsInHotbar(player)
       local bp = false
       if blueprints ~= nil then
-        for i, blueprint in ipairs(blueprints) do
+        for i, blueprint in pairs(blueprints) do
           if not blueprint.is_blueprint_setup() then
             bp = blueprint
             break
