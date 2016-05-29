@@ -1,12 +1,14 @@
 require "util"
 require "Blueprint"
 
-trigger_event = { ["concrete-lamppost"] = true
-  --["curved-power-rail"] = true,
-  --["straight-power-rail"] = true,
-  --["5d-power-rail-water"] = true,
-  --["5d-curved-power-rail-water"] = true
-  }
+trigger_event = {
+  ["concrete-lamppost"] = true,
+  ["big-electric-pole"] = true,
+--["curved-power-rail"] = true,
+--["straight-power-rail"] = true,
+--["5d-power-rail-water"] = true,
+--["5d-curved-power-rail-water"] = true
+}
 
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 input2dir = {[0]=-1,[1]=0,[2]=1}
