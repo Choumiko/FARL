@@ -772,6 +772,9 @@ FARL = {
           local k, _ = next(entity.prototype.items_to_place_this)
           item = k
         end
+        if trigger_event[name] then
+          game.raise_event(defines.events.on_robot_pre_mined, {entity = entity})
+        end
         if not entity.destroy() then
           self:deactivate({"msg-cant-remove"})
           return
