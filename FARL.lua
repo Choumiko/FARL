@@ -464,6 +464,36 @@ FARL = {
               return
             end
           end
+          --TODO add preview for direction change
+
+--          for i, pi in pairs( {0, 2} ) do
+--            if self.previews[i] then
+--              for _, r in pairs(self.previews[i]) do
+--                if r and r.valid then
+--                  r.destroy()
+--                end
+--              end
+--            end
+--            self.previews[i] = {}
+--            local d, r = self:getRail(nextRail, newTravelDir, pi)
+--            if r.name == self.settings.rail.straight then
+--              d, r = self:getRail(r, newTravelDir, pi)
+--            end
+--            local entity = r
+--            local new_entity = {
+--              name = "entity-ghost",
+--              inner_name = "farl-" .. entity.name,
+--              position = entity.position,
+--              direction = entity.direction,
+--              force = self.locomotive.force
+--            }
+--            r = self.surface.create_entity(new_entity)
+--            if r.valid then
+--              r.time_to_live = 60 * 5
+--              table.insert(self.previews[i], r)
+--            end
+--          end
+
           --log("start placeRails")
           local dir_, last = self:placeRails(nextRail, newTravelDir)
           --log("end placeRails")
@@ -1210,6 +1240,7 @@ FARL = {
       self.protected_tiles = {}
       self.protected_tiles[self.protected_index] = {}
       self.frontmover = false
+      --self.previews = {}
       --      self.last_signal = {}
       --      self.fake_signal_in = false
       --      self.fake_signalCount = {main=0}
@@ -1439,6 +1470,17 @@ FARL = {
     self.protected_index = {}
     self.concrete_queue = {}
     self.rail_queue = {}
+--    self.previews = self.previews or {}
+--    for _, p in pairs(self.previews) do
+--      if p then
+--        for _, r in pairs(p) do
+--          if r and r.valid then
+--            r.destroy()
+--          end
+--        end
+--      end
+--    end
+--    self.previews = {}
   end,
 
   toggleActive = function(self)
@@ -2210,18 +2252,18 @@ FARL = {
         local c
         local items
         if self.settings.ccWires == 1 then
-          c = {defines.circuitconnector.red}
+          c = {defines.wire_type.red}
           items = {"red-wire"}
         elseif self.settings.ccWires == 2 then
-          c = {defines.circuitconnector.green}
+          c = {defines.wire_type.green}
           items = {"green-wire"}
         else
-          c = {defines.circuitconnector.red, defines.circuitconnector.green}
+          c = {defines.wire_type.red, defines.wire_type.green}
           items = {"red-wire", "green-wire"}
         end
         for i=1,#c do
           if self:getCargoCount(items[i]) > 0 then
-            pole.connect_neighbour({target_entity = self.ccNetPole, wire=c[i]})
+            pole.connect_neighbour({target_entity = self.ccNetPole, wire=c[i]}) --TODO check 0.13
             self:removeItemFromCargo(items[i], 1)
           end
         end

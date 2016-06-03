@@ -1,4 +1,9 @@
-require "defines"
+if not defines then
+  require "defines"
+  defines.train_state = defines.trainstate
+  defines.wire_type =defines.circuitconnector
+end
+
 require "Settings"
 require "FARL"
 require "GUI"
