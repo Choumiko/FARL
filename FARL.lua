@@ -997,10 +997,10 @@ FARL = {
     while count < 20 and not found do
       --self:flyingText2("1", RED,true,tpos1)
       --self:flyingText2("2", RED,true,tpos2)
-      if tile1.name ~= "water" and tile1.name ~= "deepwater" and not global.tiles[tile1.name] then
+      if not string.find(tile1.name, "water") and tile1.name ~= "out-of-map" and not global.tiles[tile1.name] then
         return tile1.name
       end
-      if tile2.name ~= "water" and tile2.name ~= "deepwater" and not global.tiles[tile2.name] then
+      if not string.find(tile2.name, "water") and tile2.name ~= "out-of-map" and not global.tiles[tile2.name] then
         return tile2.name
       end
       tpos1 = move_right_forward(tpos1,travel_dir,-1,0)
