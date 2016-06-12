@@ -235,7 +235,7 @@ function moveRail(rail, direction,distance)
   }
   local distance = (rail.type == "straight-rail" and rail.direction % 2 == 1) and distance or distance*2
   local off = data[rail.direction] and data[rail.direction] or {x=0,y=0}
-  pos =  addPos(off, rail.position)
+  local pos =  addPos(off, rail.position)
   pos = pos12toXY(moveposition(fixPos(pos), direction, distance))
   local newRail = {name=rail.name, type=rail.type, direction=rail.direction, position=pos, force=game.players[1].force}
   if rail.type == "straight-rail" and rail.direction%2 == 1 and distance % 2 == 1 then
@@ -918,7 +918,7 @@ FARL = {
           table.insert(tiles,{name="grass", position={pos.x, pos.y}})
           table.insert(pave[name], entity)
         end
-      elseif tileName ~= name then
+      elseif tileName ~= name and tileName ~= "out-of-map" then
         table.insert(pave[name], entity)
       end
     end
@@ -1194,7 +1194,7 @@ FARL = {
           new_curve.position = move_right_forward(rail.position, direction, right, forward)
           local lag = forward/2
           local catchup
-          local l,f,r = lag, forward
+          local l,f,r = lag, forward, 0
 
           if original_dir == 1 then
             right = -1*right
@@ -2470,7 +2470,7 @@ FARL = {
       else
         self:print("calcPole with curved2")
       end
-      local tmp = moveposition(fixPos(offset), trainDir, 50)
+      local tmp = moveposition(fixPos(offset), trainDir, reach + 20)
       tmp.x, tmp.y = tmp[1],tmp[2]
       self.lastPole = {position=addPos(lastrail.position, tmp), name=name}
       self.lastCheckDir = trainDir
