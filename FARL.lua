@@ -786,6 +786,7 @@ FARL.removeStone = function(self, area)
     if removeStone then
         for _, entity in pairs(self.surface.find_entities_filtered { area = area, name = "stone-rock" }) do
             entity.die()
+            self:addItemToCargo("stone", 15)
             local stat = global.statistics[self.locomotive.force.name].removed["stone-rock"] or 0
             global.statistics[self.locomotive.force.name].removed["stone-rock"] = stat + 1
         end
@@ -865,11 +866,11 @@ FARL.replaceWater = function(self, tiles, w, dw)
         local lfills = math.ceil(w / 2 + dw * 1.5)
         lfills = lfills > 20 and 20 or lfills
         -- check to make sure there is enough landfill in the FARL and if there is apply the changes, remove landfill.  if not then show error message
-        if self:getCargoCount("concrete") >= lfills then
+        if self:getCargoCount("landfill") >= lfills then
             self.surface.set_tiles(tiles)
-            self:removeItemFromCargo("concrete", lfills)
+            self:removeItemFromCargo("landfill", lfills)
         else
-            self:print({ "msg-not-enough-concrete", { "item-name.concrete" } })
+            self:print({ "msg-not-enough-concrete", { "item-name.landfill" } })
         end
     end
 end
@@ -1598,11 +1599,30 @@ FARL.genericCanPlace = function(self, arg)
     end
     local name = arg.type == "entity-ghost" and arg.ghost_name or arg.name
     --apiCalls.canplace = apiCalls.canplace + 1
+    local can_place = false;
     if not arg.direction then
-        return self.surface.can_place_entity { name = name, position = arg.position }
+        can_place = self.surface.can_place_entity { name = name, position = arg.position }
     else
-        return self.surface.can_place_entity { name = name, position = arg.position, direction = arg.direction }
+        can_place = self.surface.can_place_entity { name = name, position = arg.position, direction = arg.direction }
     end
+    --TODO remove once can_place_entity is fixed
+    if can_place then
+      local area = game.entity_prototypes[name].collision_box
+      local st, ft = area.left_top, area.right_bottom
+      st = addPos(st, arg.position)
+      ft = addPos(ft, arg.position)
+      for x = st.x, ft.x, 1 do
+          for y = st.y, ft.y, 1 do
+              local tileName = self.surface.get_tile(x, y).name
+              -- check that tile is water, if it is add it to a list of tiles to be changed to grass
+              if tileName == "water" or tileName == "deepwater" then
+                  return false
+              end
+          end
+      end
+    end
+    
+    return can_place
 end
 
 FARL.genericPlace = function(self, arg, ignore)
@@ -1628,7 +1648,7 @@ FARL.genericPlace = function(self, arg, ignore)
         self:protect(entity)
         --local diff = subPos(arg.position, entity.position)
         --if diff.x ~= 0 or diff.y~= 0 then
-        --self:flyingText2("x", RED,true,entity.position)
+        --self:flyingText2(serpent.line(canPlace, {comment=false}), RED,true,entity.position)
         --self:print("Misplaced entity: "..entity.name)
         --self:print("arg:"..pos2Str(arg.position).." ent:"..pos2Str(entity.position))
         --end
@@ -1861,12 +1881,9 @@ FARL.placeRails = function(self, nextRail, newTravelDir)
         end
     end
 
-    local hasRail = self:getCargoCount(newRail.name) > 0
-    if not hasRail and newRail.name == self.settings.rail.curved then
-        hasRail = self:getCargoCount(self.settings.rail.straight) >= 4
-        removeItem = self.settings.rail.straight
-        removeAmount = 4
-    end
+    removeAmount = newRail.name == self.settings.rail.curved and 4 or 1
+    removeItem = self.settings.rail.straight
+    local hasRail = self:getCargoCount(newRail.name) > removeAmount
 
     if canplace and hasRail then
         newRail.force = self.locomotive.force
@@ -2045,13 +2062,9 @@ FARL.placeParallelCurve = function(self, traveldir, rail, lane_index)
     new_curve.position = move_right_forward(rail.position, direction, right, forward)
     self.lastCurve.blocked[lane_index] = self.lanes["d" .. traveldir % 2]["i" .. bi]["l" .. lane_index].lag
 
-    local hasRail = self:getCargoCount(new_curve.name) > 0
-    local remove_item, remove_amount = new_curve.name, 1
-    if not hasRail and new_curve.name == self.settings.rail.curved then
-        hasRail = self:getCargoCount(self.settings.rail.straight) >= 4
-        remove_item = self.settings.rail.straight
-        remove_amount = 4
-    end
+    local remove_item, remove_amount = self.settings.rail.straight, 4
+    local hasRail = self:getCargoCount(self.settings.rail.straight) > remove_amount
+    
     if not hasRail then
         self:deactivate({ "msg-out-of-rails" })
         return false

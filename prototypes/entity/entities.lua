@@ -2,17 +2,8 @@ local farl = copyPrototype("locomotive", "diesel-locomotive", "farl")
 farl.icon = "__FARL__/graphics/icons/farl.png"
 farl.max_speed = 0.8
 farl.energy_source.fuel_inventory_size = 4
-farl.pictures.filenames =
-  {
-    "__FARL__/graphics/entity/farl/farl-01.png",
-    "__FARL__/graphics/entity/farl/farl-02.png",
-    "__FARL__/graphics/entity/farl/farl-03.png",
-    "__FARL__/graphics/entity/farl/farl-04.png",
-    "__FARL__/graphics/entity/farl/farl-05.png",
-    "__FARL__/graphics/entity/farl/farl-06.png",
-    "__FARL__/graphics/entity/farl/farl-07.png",
-    "__FARL__/graphics/entity/farl/farl-08.png"
-  }
+
+farl.color = {r = 1, g = 0.80, b = 0, a = 0.5},
 data:extend({farl})
 
 --local c_i = copyPrototype("item", "curved-rail", "farl-curved-rail", true)

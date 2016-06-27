@@ -455,9 +455,9 @@ remote.add_interface("farl",
     end,
 
     quickstart = function(player)
-      local items = {"farl", "curved-rail", "straight-rail", "medium-electric-pole", "big-electric-pole",
+      local items = {"farl", "straight-rail", "medium-electric-pole", "big-electric-pole",
         "small-lamp", "solid-fuel", "rail-signal", "blueprint", "cargo-wagon"}
-      local count = {5,50,50,50,50,50,50,50,10,5}
+      local count = {5,100,50,50,50,50,50,10,5}
       player = player or game.players[1]
       for i=1,#items do
         player.insert{name=items[i], count=count[i]}
@@ -465,7 +465,7 @@ remote.add_interface("farl",
     end,
     quickstart2 = function(player)
       local items = {"power-armor-mk2", "personal-roboport-equipment", "fusion-reactor-equipment",
-        "blueprint", "deconstruction-planner", "construction-robot", "basic-exoskeleton-equipment"}
+        "blueprint", "deconstruction-planner", "construction-robot", "exoskeleton-equipment"}
       local count = {1,5,3,1,1,50,2}
       player = player or game.players[1]
       for i=1,#items do

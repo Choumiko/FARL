@@ -48,7 +48,7 @@ meta_concrete.hidden = true
 --table.insert(metaitem_concrete.flags, "hidden")
 
 for _, ent in pairs(data.raw["item"]) do
-  if ent.place_as_tile and ent.place_as_tile.result and type(ent.place_as_tile.result) == "string" then
+  if ent.name ~= "landfill" and ent.place_as_tile and ent.place_as_tile.result and type(ent.place_as_tile.result) == "string" then
     local item_name = false
     local amount = 1
     local tile = data.raw["tile"][ent.place_as_tile.result]
