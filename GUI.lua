@@ -430,7 +430,7 @@ GUI = {
           end
         end
         if bp then
-          local icons = {{index = 2, name = "farl"},[0] = {index = 1, name = "straight-rail"}}
+          local icons = {{index = 2, signal={name = "farl", type="item"}},[0] = {index = 1, signal={name = "rail", type="item"}}}
           bp.set_blueprint_entities(util.table.deepcopy(bp_table.entities))
           bp.set_blueprint_tiles(util.table.deepcopy(bp_table.tiles))
           bp.blueprint_icons = icons

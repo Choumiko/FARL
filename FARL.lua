@@ -1568,6 +1568,12 @@ end
 
 FARL.addItemToCargo = function(self, item, count, place_result)
     count = count or 1
+    if item == "straight-rail" or item == "curved-rail" then
+      item = "rail"
+          if item == "curved-rail" then
+      count = 4
+    end     
+    end
     local remaining = count - self.train.insert({ name = item, count = count })
 
     if remaining > 0 and (self.settings.dropWood or place_result) then
