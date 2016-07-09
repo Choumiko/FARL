@@ -93,13 +93,9 @@ function round(num, idp)
 end
 
 function get_signal_weight(rail, settings)
-    local weight = rail.name == settings.rail.curved and settings.curvedWeight or 1
-    if rail.name ~= settings.rail.curved then
-        if rail.direction % 2 == 1 then
-            weight = 0.75
-        elseif rail.direction == 0 then
-            weight = 1.26
-        end
+    local weight = rail.name == settings.rail.curved and 3 or 1
+    if rail.name ~= settings.rail.curved and rail.direction % 2 == 1 then
+      return 0.75
     end
     return weight
 end
@@ -600,7 +596,6 @@ FARL.update = function(self, _)
                             if last.type == "curved-rail" then
                                 self.signalCount.main = self.signalCount.main - self.lanes.max_lag[newTravelDir % 2] - get_signal_weight(last, self.settings)
                             end
-                            debugLog(self.signalCount, "signal count: ")
                             if self:getCargoCount("rail-signal") > 0 then
                                 if self:placeSignal(newTravelDir, nextRail) then
                                     self.signalCount.main = 0
