@@ -1600,30 +1600,11 @@ FARL.genericCanPlace = function(self, arg)
   end
   local name = arg.type == "entity-ghost" and arg.ghost_name or arg.name
   --apiCalls.canplace = apiCalls.canplace + 1
-  local can_place = false;
   if not arg.direction then
-    can_place = self.surface.can_place_entity { name = name, position = arg.position }
+    return self.surface.can_place_entity { name = name, position = arg.position }
   else
-    can_place = self.surface.can_place_entity { name = name, position = arg.position, direction = arg.direction }
+    return self.surface.can_place_entity { name = name, position = arg.position, direction = arg.direction }
   end
-  --TODO remove once can_place_entity is fixed
-  if can_place then
-    local area = game.entity_prototypes[name].collision_box
-    local st, ft = area.left_top, area.right_bottom
-    st = addPos(st, arg.position)
-    ft = addPos(ft, arg.position)
-    for x = st.x, ft.x, 1 do
-      for y = st.y, ft.y, 1 do
-        local tileName = self.surface.get_tile(x, y).name
-        -- check that tile is water, if it is add it to a list of tiles to be changed to grass
-        if tileName == "water" or tileName == "deepwater" then
-          return false
-        end
-      end
-    end
-  end
-
-  return can_place
 end
 
 FARL.genericPlace = function(self, arg, ignore)
