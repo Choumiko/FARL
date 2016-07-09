@@ -30,8 +30,8 @@ farl_railpictures = function()
     local dashkey = key[1]:gsub("_", "-")
     for _ , elem in ipairs(elems) do
       part[elem[1]] = {
-        filename = (elem[1] == "metals") and string.format("__FARL__/graphics/entity/rail/%s-%s-%s.png", dashkey, key[2], elem[2]) 
-                                                              or string.format("__FARL__/graphics/entity/rail/%s-%s-blank.png", dashkey, key[2]),
+        filename = (elem[1] == "metals") and string.format("__FARL__/graphics/entity/rail/%s-%s-%s.png", dashkey, key[2], elem[2])
+        or string.format("__FARL__/graphics/entity/rail/%s-%s-blank.png", dashkey, key[2]),
         priority = "extra-high",
         width = key[3],
         height = key[4]

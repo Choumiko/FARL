@@ -324,7 +324,7 @@ GUI = {
     findBlueprintsInHotbar = function(player)
       local blueprints = {}
       if player ~= nil then
-        local hotbar = player.get_inventory(defines.inventory.player_quickbar) --TODO 0.13 use inventory.god_quickbar 
+        local hotbar = player.get_inventory(defines.inventory.player_quickbar) --TODO 0.13 use inventory.god_quickbar
         if hotbar ~= nil then
           local i = 1
           while (i < 30) do
