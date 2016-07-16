@@ -4,7 +4,7 @@
   "factorio_version": "0.13",
   "title": "Fully Automated Rail Layer",
   "author": "Choumiko",
-  "contact": "www.factorioforums.com",
+  "homepage": "https://forums.factorio.com/viewforum.php?f=61",
   "description": "Fully automated rail-layer",
   "dependencies": ["base >= 0.13.0", "? 5dim_trains", "? TheFatController"]
 } 

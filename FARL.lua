@@ -517,8 +517,9 @@ FARL.update = function(self, _)
               self:protect(rail)
               if self.settings.bulldozer then
                 self:bulldoze_area(rail, self.path[i].travel_dir)
+                local addAmount = self.path[i].rail.type == "straight-rail" and 1 or 4
                 if self.path[i].rail.destroy() then
-                  self:addItemToCargo(name, 1, true)
+                  self:addItemToCargo(name, addAmount, true)
                 else
                   self:deactivate({ "msg-cant-remove" })
                   return
