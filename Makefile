@@ -1,5 +1,5 @@
-PACKAGE_NAME := FARL
-VERSION_STRING := 0.5.34
+PACKAGE_NAME := $(shell cat info.json|jq -r .name)
+VERSION_STRING := $(shell cat info.json|jq -r .version)
 
 OUTPUT_NAME := $(PACKAGE_NAME)_$(VERSION_STRING)
 OUTPUT_DIR := build/$(OUTPUT_NAME)
@@ -28,7 +28,7 @@ $(OUTPUT_DIR)/%.lua: %.lua
 $(OUTPUT_DIR)/%: %
 	mkdir -p $(@D)
 	sed $(SED_EXPRS) $< > $@
-
+	
 package: package-copy $(OUT_FILES)
 	cd build && zip -r $(OUTPUT_NAME).zip $(OUTPUT_NAME)
 

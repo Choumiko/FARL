@@ -1,6 +1,6 @@
 {
   "name": "FARL",
-  "version": "{{VERSION}}",
+  "version": "0.5.34",
   "factorio_version": "0.13",
   "title": "Fully Automated Rail Layer",
   "author": "Choumiko",
