@@ -15,6 +15,10 @@
 [Look at the forums](https://forums.factorio.com/viewforum.php?f=61)
 
 #Changelog
+0.5.35
+
+ - fixed error with hazard-concrete
+
 0.5.34:
 
 - fixed bulldozer mode eating rails when removing curved track

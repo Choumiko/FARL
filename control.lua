@@ -36,21 +36,6 @@ local function getMetaItemData()
   for i, ent in pairs(metaitem) do
     global.electric_poles[ent.name] = ent.amount/10
   end
-
-  game.forces.player.recipes["farl-meta-concrete"].reload()
-  local meta_concrete = game.forces.player.recipes["farl-meta-concrete"].ingredients
-  global.concrete = {}
-  global.tiles = {}
-  for i, ent in pairs(meta_concrete) do
-    if concrete_lookup[ent.name] then
-      global.concrete[ent.name] = concrete_lookup[ent.name]
-      global.tiles[concrete_lookup[ent.name]] = ent.name
-    else
-      global.concrete[ent.name] = ent.name
-      global.tiles[ent.name] = ent.name
-    end
-  end
-  global.item_names = {}
 end
 
 local function on_tick(event)
@@ -113,10 +98,8 @@ local function init_global()
   global.overlayStack = global.overlayStack or {}
   global.statistics = global.statistics or {}
   global.electric_poles = global.electric_poles or {}
-  global.concrete = global.concrete or {}
-  global.tiles = global.tiles or {}
-  global.item_names = global.item_names or {}
-  global.version = global.version or "0.5.16"
+
+  global.version = global.version or "0.5.35"
   if global.debug_log == nil then
     global.debug_log = false
   end
@@ -216,6 +199,7 @@ local function on_configuration_changed(data)
             global.players = tmp
             global.savedBlueprints = tmpBps
           end
+          
           if oldVersion < "0.5.24" then
             global.overlayStack = global.overlayStack or {}
             for i=#global.farl, 1, -1 do
@@ -229,12 +213,18 @@ local function on_configuration_changed(data)
               end
             end
           end
+          
           if oldVersion < "0.5.26" then
             for _, psettings in pairs(global.players) do
               if psettings.mirrorConcrete == nil then
                 psettings.mirrorConcrete = true
               end
             end
+          end
+          
+          if oldVersion < "0.5.35" then
+            global.concrete = nil
+            global.tiles = nil
           end
         end
       end
@@ -526,6 +516,14 @@ remote.add_interface("farl",
       for _, psettings in pairs(global.players) do
         if psettings.mirrorConcrete == nil then
           psettings.mirrorConcrete = true
+        end
+      end
+    end,
+    
+    tiles = function()
+      for tileName, prototype in pairs(game.tile_prototypes) do
+        if prototype.items_to_place_this then
+          log("Tile: " .. tileName .." item: " .. next(prototype.items_to_place_this))
         end
       end
     end,

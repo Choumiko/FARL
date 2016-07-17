@@ -263,28 +263,20 @@ function protectedKey(ent)
 end
 
 function get_item_name(some_name)
-  if not global.item_names[some_name] then
-    local name = false
-    if game.item_prototypes[some_name] then
-      name = game.item_prototypes[some_name].name
-    elseif game.entity_prototypes[some_name] then
-      local items = game.entity_prototypes[some_name].items_to_place_this
-      local _, item = next(items)
-      name = item.name
-    else
-      --it's a tile?!
-      if some_name == "stone-path" then
-        name = "stone-brick"
-      end
-    end
-    if name then
-      global.item_names[some_name] = name
-    else
-      error("Couldn't find item for:" .. some_name, 2)
-      return nil
+  local name = false
+  if game.item_prototypes[some_name] then
+    name = game.item_prototypes[some_name].name
+  elseif game.entity_prototypes[some_name] then
+    local items = game.entity_prototypes[some_name].items_to_place_this
+    local _, item = next(items)
+    name = item.name
+  elseif game.tile_prototypes[some_name] then
+    name = game.tile_prototypes[some_name].items_to_place_this and next(game.tile_prototypes[some_name].items_to_place_this)
+    if name == "landfill" then
+      name = false
     end
   end
-  return global.item_names[some_name]
+  return name
 end
 
 --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
@@ -890,6 +882,9 @@ FARL.placeConcrete = function(self, dir, rail)
   textured["concrete-hazard-right"] = "concrete-hazard-left"
   textured["concrete-fire-left"] = "concrete-fire-right"
   textured["concrete-fire-right"] = "concrete-fire-left"
+  --vanilla hazard concrete
+  textured["hazard-concrete-left"] = "hazard-concrete-right"
+  textured["hazard-concrete-right"] = "hazard-concrete-left"
 
   for _, c in pairs(concrete) do
     local name = c.name
@@ -955,7 +950,8 @@ FARL.removeConcrete = function(self, area)
       for y = st[2], ft[2], 1 do
         local tileName = self.surface.get_tile(x, y).name
         -- check that tile is placeable by the player
-        if global.tiles[tileName] and not self:is_protected_tile({ x = x, y = y }) then
+        local itemsToPlace = game.tile_prototypes[tileName].items_to_place_this
+        if (itemsToPlace and next(itemsToPlace) ~= "landfill") and not self:is_protected_tile({ x = x, y = y }) then
           counts[tileName] = counts[tileName] or 0
           table.insert(tiles, { name = self.replace_tile, position = { x, y } })
           counts[tileName] = counts[tileName] + 1
@@ -965,7 +961,7 @@ FARL.removeConcrete = function(self, area)
     self.surface.set_tiles(tiles)
 
     for name, c in pairs(counts) do
-      local item = global.tiles[name]
+      local item = get_item_name(name)
       self:addItemToCargo(item, c, true)
       local stat = global.statistics[self.locomotive.force.name].removed[item] or 0
       global.statistics[self.locomotive.force.name].removed[item] = stat + c
@@ -998,10 +994,10 @@ FARL.find_tile = function(self, sarea1, sarea2, travel_dir)
   while count < 20 and not found do
     --self:flyingText2("1", RED,true,tpos1)
     --self:flyingText2("2", RED,true,tpos2)
-    if not string.find(tile1.name, "water") and tile1.name ~= "out-of-map" and not global.tiles[tile1.name] then
+    if not string.find(tile1.name, "water") and tile1.name ~= "out-of-map" and not get_item_name(tile1.name) then
       return tile1.name
     end
-    if not string.find(tile2.name, "water") and tile2.name ~= "out-of-map" and not global.tiles[tile2.name] then
+    if not string.find(tile2.name, "water") and tile2.name ~= "out-of-map" and not get_item_name(tile2.name) then
       return tile2.name
     end
     tpos1 = move_right_forward(tpos1, travel_dir, -1, 0)
