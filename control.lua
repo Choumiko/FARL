@@ -391,6 +391,7 @@ end
 remote.add_interface("farl",
   {
     railInfo = function(rail)
+      rail = rail or game.player.selected
       debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction.." realPos:"..pos2Str(diagonal_to_real_pos(rail)),true)
       if type(global.railInfoLast) == "table" and global.railInfoLast.valid then
         local pos = global.railInfoLast.position

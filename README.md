@@ -17,21 +17,22 @@
 #Changelog
 0.5.35
 
+ - fixed signals not being found in blueprints if placed in the wrong tile
  - fixed error with hazard-concrete
 
-0.5.34:
+0.5.34
 
 - fixed bulldozer mode eating rails when removing curved track
 
-0.5.33:
+0.5.33
  
 -  removed workaround for [Factorio bug](https://forums.factorio.com/viewtopic.php?f=11&t=27188)
 
-0.5.32:
+0.5.32
 
  - fixed signal distance on vertical tracks
 
-0.5.31:
+0.5.31
 
 - fixed bulldozer mode not working
 - fixed error when creating default blueprints

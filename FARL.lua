@@ -107,12 +107,12 @@ function addPos(p1, p2)
   if p2 and not p2.x then
     error("Invalid position 2", 2)
   end
-  local p2 = p2 or { x = 0, y = 0 }
+  p2 = p2 or { x = 0, y = 0 }
   return { x = p1.x + p2.x, y = p1.y + p2.y }
 end
 
 function subPos(p1, p2)
-  local p2 = p2 or { x = 0, y = 0 }
+  p2 = p2 or { x = 0, y = 0 }
   return { x = p1.x - p2.x, y = p1.y - p2.y }
 end
 
@@ -171,7 +171,7 @@ function distance(pos1, pos2)
 end
 
 function expandPos(pos, range)
-  local range = range or 0.5
+  range = range or 0.5
   if not pos or not pos.x then error("expandPos: invalid pos", 3) end
   return { { pos.x - range, pos.y - range }, { pos.x + range, pos.y + range } }
 end
@@ -221,7 +221,7 @@ function moveRail(rail, direction, distance)
     [5] = { x = -0.5, y = 0.5 },
     [7] = { x = -0.5, y = -0.5 }
   }
-  local distance = (rail.type == "straight-rail" and rail.direction % 2 == 1) and distance or distance * 2
+  distance = (rail.type == "straight-rail" and rail.direction % 2 == 1) and distance or distance * 2
   local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 }
   local pos = addPos(off, rail.position)
   pos = pos12toXY(moveposition(fixPos(pos), direction, distance))
@@ -499,8 +499,7 @@ FARL.update = function(self, _)
           local found = false
           local max = #self.path
           for i = max, 1, -1 do
-            local rail = self.path[i].rail
-            if rail == behind and i > 1 then
+            if self.path[i].rail == behind and i > 1 then
               found = i
             end
             if found and found > i then
@@ -687,10 +686,10 @@ FARL.createBoundingBox = function(self, rail, direction)
 end
 
 --prepare an area for entity so it can be placed
-FARL.prepareArea = function(self, entity, range)
+FARL.prepareArea = function(self, entity, rangeOrArea)
   local pos = entity.position
-  local area = (type(range) == "table") and range or false
-  local range = (type(range) ~= "number") and 1.5 or false
+  local area = (type(rangeOrArea) == "table") and rangeOrArea or false
+  local range = (type(rangeOrArea) ~= "number") and 1.5 or false
   area = area and area or expandPos(pos, range)
   --if force or not self:genericCanPlace(entity) then
   --debugDump(area,true)
@@ -1660,20 +1659,17 @@ FARL.parseBlueprints = function(self, bp)
         local mainRail = false
         for _, rail in pairs(offsets.rails) do
           local traveldir = bpType == "straight" and 0 or 1
-          local signalOff = signalOffset[traveldir][rail.direction]
-          local signalDir = signalOff.dir
-          signalOff = signalOff.pos
-          --local relChain = subPos(offsets.chain.position,rail.position)
-          --local mainPos = subPos(relChain, signalOff)
-          local pos = addPos(rail.position, signalOff)
-          if not mainRail and pos.x == offsets.chain.position.x and pos.y == offsets.chain.position.y and signalDir == offsets.chain.direction then
-            --if not mainRail and mainPos.x == 0 and mainPos.y == 0 and signalDir == offsets.chain.direction then
-            rail.main = true
-            mainRail = rail
-            if rail.direction == 3 then
-              rail = self:getRail(mainRail, 1, 1)
+          local signalPositions = {get_signal_for_rail(rail, traveldir, false), get_signal_for_rail(rail, traveldir, true)}
+          for _, signal in pairs(signalPositions) do
+            if not mainRail and signal.position.x == offsets.chain.position.x and signal.position.y == offsets.chain.position.y and 
+              signal.direction == offsets.chain.direction then
+              rail.main = true
+              mainRail = rail
+              if rail.direction == 3 then
+                rail = self:getRail(mainRail, 1, 1)
+              end
+              offsets.mainRail = rail
             end
-            offsets.mainRail = rail
           end
         end
         if mainRail then
@@ -1834,7 +1830,6 @@ FARL.placeRails = function(self, nextRail, newTravelDir)
   end
   local rtype = newDir % 2 == 0 and "straight" or "diagonal"
   local bp = self.settings.activeBP[rtype]
-  local removeItem, removeAmount = newRail.name, 1
   local canplace
   if self.settings.bulldozer and newRail.name ~= self.settings.rail.curved then
     self:bulldoze_area(newRail, newTravelDir)
@@ -1860,8 +1855,8 @@ FARL.placeRails = function(self, nextRail, newTravelDir)
     end
   end
 
-  removeAmount = newRail.name == self.settings.rail.curved and 4 or 1
-  removeItem = self.settings.rail.straight
+  local removeAmount = newRail.name == self.settings.rail.curved and 4 or 1
+  local removeItem = self.settings.rail.straight
   local hasRail = self:getCargoCount(newRail.name) > removeAmount
 
   if canplace and hasRail then
