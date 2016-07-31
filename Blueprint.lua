@@ -27,33 +27,33 @@ Blueprint.group_entities = function(e)
     if box.br.y < position.y then box.br.y = position.y end
 
     local dir = e[i].direction or 0
-    if e[i].name == "rail-chain-signal" and not offsets.chain then
+    local name = e[i].name
+    
+    if name == "rail-chain-signal" and not offsets.chain then
       offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
       -- collect all poles in bp
     elseif global.electric_poles[e[i].name] then
-      table.insert(poles, {name = e[i].name, direction = dir, position = e[i].position})
-    elseif e[i].name == "straight-rail" then
+      table.insert(poles, {name = name, direction = dir, position = e[i].position})
+    elseif name == "straight-rail" or name == "bi-straight-rail-wood" then
       rails = rails + 1
       if not bpType then
-        if e[i].name == "straight-rail" then
           bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
-        end
       end
       if  (bpType == "diagonal" and (dir == 3 or dir == 7)) or
         (bpType == "straight" and (dir == 0 or dir == 4)) then
-        table.insert(offsets.rails, {name = e[i].name, direction = dir, position = e[i].position, type=e[i].name})
+        table.insert(offsets.rails, {name = name, direction = dir, position = e[i].position, type = game.entity_prototypes[name].type})
       else
         return false, {"msg-bp-rail-direction"}
       end
-    elseif e[i].name == "rail-signal" then
-      table.insert(offsets.signals, {name = e[i].name, direction = dir, position = e[i].position})
+    elseif name == "rail-signal" then
+      table.insert(offsets.signals, {name = name, direction = dir, position = e[i].position})
     else
-      local e_type = game.entity_prototypes[e[i].name].type
+      local e_type = game.entity_prototypes[name].type
       local rail_entities = {["wall"]=true}
       if not rail_entities[e_type] then
-        table.insert(offsets.poleEntities, {name = e[i].name, direction = dir, position = e[i].position})
+        table.insert(offsets.poleEntities, {name = name, direction = dir, position = e[i].position})
       else
-        table.insert(offsets.railEntities, {name = e[i].name, direction = dir, position = e[i].position})
+        table.insert(offsets.railEntities, {name = name, direction = dir, position = e[i].position})
       end
     end
   end

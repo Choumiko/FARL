@@ -2,7 +2,8 @@ require "util"
 
 rails = {
   basic = {curved = "curved-rail", straight = "straight-rail"},
-  electric = {curved = "curved-power-rail", straight = "straight-power-rail"}}
+  electric = {curved = "curved-power-rail", straight = "straight-power-rail"},
+  wooden = {curved = "bi-curved-rail-wood", straight = "bi-straight-rail-wood"}}
 
 --poleDistance = 1, side = right
 defaultsDiagonal = {
@@ -175,6 +176,7 @@ defaultSettings =
     cruiseSpeed = 0.4,
     dropWood = true,
     electric = false,
+    wooden = false,
     flipPoles = false,
     signalDistance = 15,
     minPoles = true,
@@ -218,6 +220,9 @@ Settings = {
   checkMods = function(self)
     if not global.electricInstalled then
       self.electric = false
+    end
+    if not game.entity_prototypes['bi-straight-rail-wood'] then
+      self.wooden = false
     end
   end,
 

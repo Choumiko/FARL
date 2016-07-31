@@ -226,6 +226,14 @@ local function on_configuration_changed(data)
             global.concrete = nil
             global.tiles = nil
           end
+          
+          if oldVersion < "0.5.36" then
+            for _, psettings in pairs(global.players) do
+              if psettings.wooden == nil then
+                psettings.wooden = false
+              end
+            end
+          end
         end
       end
     else

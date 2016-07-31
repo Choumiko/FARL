@@ -175,6 +175,18 @@ GUI = {
           psettings.rail = rails.basic
         end
         farl.lastrail = false
+      elseif name == "woodenRails" then
+        if not game.entity_prototypes["bi-straight-rail-wood"] then
+          psettings.rail = rails.basic
+          return
+        end
+        psettings.wooden = not psettings.wooden
+        if psettings.wooden then
+          psettings.rail = rails.wooden
+        else
+          psettings.rail = rails.basic
+        end
+        farl.lastrail = false
       end
     end,
 
@@ -267,6 +279,11 @@ GUI = {
 
         if remote.interfaces.dim_trains then
           GUI.add(settings,{type="checkbox", name="poweredRails", caption="use powered rails", state=psettings.electric})
+          GUI.add(settings, {type="label", caption=""})
+        end
+
+        if game.entity_prototypes["bi-straight-rail-wood"] then
+          GUI.add(settings,{type="checkbox", name="woodenRails", caption="use wooden rails", state=psettings.wooden})
           GUI.add(settings, {type="label", caption=""})
         end
 

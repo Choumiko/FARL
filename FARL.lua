@@ -225,7 +225,7 @@ function moveRail(rail, direction, distance)
   local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 }
   local pos = addPos(off, rail.position)
   pos = pos12toXY(moveposition(fixPos(pos), direction, distance))
-  local newRail = { name = rail.name, type = rail.type, direction = rail.direction, position = pos, force = game.players[1].force }
+  local newRail = { name = rail.name, type = rail.type, direction = rail.direction, position = pos, force = rail.force }
   if rail.type == "straight-rail" and rail.direction % 2 == 1 and distance % 2 == 1 then
     newRail.direction = (rail.direction + 4) % 8
   end
@@ -786,13 +786,16 @@ FARL.removeEntitiesFiltered = function(self, args)
   local force = self.locomotive.force
   local neutral_force = game.forces.neutral
   for _, entity in pairs(self.surface.find_entities_filtered(args)) do
-    --for _, entity in pairs(self.surface.find_entities(args.area)) do
     if not self:isProtected(entity) and (entity.force == force or entity.force == neutral_force) then
       local item = false
       local name = entity.name
-      if entity.prototype.items_to_place_this then
-        local k, _ = next(entity.prototype.items_to_place_this)
-        item = k
+      if entity.type == "straight-rail" or entity.type == "curved-rail" then
+        item = entity.name
+      else
+        if entity.prototype.items_to_place_this then
+          local k, _ = next(entity.prototype.items_to_place_this)
+          item = k
+        end
       end
       if trigger_event[name] then
         game.raise_event(defines.events.on_robot_pre_mined, { entity = entity })
@@ -950,7 +953,8 @@ FARL.removeConcrete = function(self, area)
         local tileName = self.surface.get_tile(x, y).name
         -- check that tile is placeable by the player
         local itemsToPlace = game.tile_prototypes[tileName].items_to_place_this
-        if (itemsToPlace and next(itemsToPlace) ~= "landfill") and not self:is_protected_tile({ x = x, y = y }) then
+        local toPlace = itemsToPlace and next(itemsToPlace)
+        if (toPlace and toPlace ~= "landfill" and toPlace ~= "bi-adv-fertiliser") and not self:is_protected_tile({ x = x, y = y }) then
           counts[tileName] = counts[tileName] or 0
           table.insert(tiles, { name = self.replace_tile, position = { x, y } })
           counts[tileName] = counts[tileName] + 1
@@ -1559,17 +1563,18 @@ end
 
 FARL.addItemToCargo = function(self, item, count, place_result)
   count = count or 1
-  if item == "straight-rail" or item == "curved-rail" then
-    item = "rail"
-    if item == "curved-rail" then
-      count = 4
-    end
-  end
-  local remaining = count - self.train.insert({ name = item, count = count })
+  local rails = {
+    ["straight-rail"] = {name = "rail", count = 1},
+    ["curved-rail"] = {name = "rail", count = 4},
+    ["bi-straight-rail-wood"] = {name="bi-rail-wood", count = 1},
+    ["bi-curved-rail-wood"] = {name = "bi-rail-wood", count = 4}
+  }
+  local itemStack = rails[item] or {name = item, count = count}
+  local remaining = count - self.train.insert(itemStack)
 
   if remaining > 0 and (self.settings.dropWood or place_result) then
     local position = self.surface.find_non_colliding_position("item-on-ground", self.driver.position, 100, 0.5)
-    self.surface.create_entity { name = "item-on-ground", position = position, stack = { name = item, count = remaining } }
+    self.surface.create_entity { name = "item-on-ground", position = position, stack = { name = itemStack.name, count = remaining } }
   end
 end
 
@@ -1661,7 +1666,7 @@ FARL.parseBlueprints = function(self, bp)
           local traveldir = bpType == "straight" and 0 or 1
           local signalPositions = {get_signal_for_rail(rail, traveldir, false), get_signal_for_rail(rail, traveldir, true)}
           for _, signal in pairs(signalPositions) do
-            if not mainRail and signal.position.x == offsets.chain.position.x and signal.position.y == offsets.chain.position.y and 
+            if not mainRail and signal.position.x == offsets.chain.position.x and signal.position.y == offsets.chain.position.y and
               signal.direction == offsets.chain.direction then
               rail.main = true
               mainRail = rail
@@ -1713,7 +1718,7 @@ FARL.parseBlueprints = function(self, bp)
                   name = l.name,
                   position = subPos(l.position, mainRail.position),
                   direction = l.direction,
-                  type = l.name
+                  type = game.entity_prototypes[l.name].type
                 }
               local move_dir = tmp.position.y < 0 and 1 or 5
               if bpType == "diagonal" then

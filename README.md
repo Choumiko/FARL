@@ -15,6 +15,10 @@
 [Look at the forums](https://forums.factorio.com/viewforum.php?f=61)
 
 #Changelog
+0.5.36
+ - added support for [BioIndustries](https://mods.factorio.com/mods/TheSAguy/Bio_Industries) wooden rails
+ - fixed parallel tracks always having the force of the first player
+
 0.5.35
 
  - fixed signals not being found in blueprints if placed in the wrong tile
