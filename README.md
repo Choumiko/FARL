@@ -10,13 +10,15 @@
 - connects poles with red/green wires
 - Cruise control: keeps the speed at ~87km/h (full speed when not placing rails) without pressing W, deactivate by pressing S
 - Support for powered rails (5dim's mod)
+- Support for [Bio Industries](https://mods.factorio.com/mods/TheSAguy/Bio_Industries) wooden rails
 
 ###Usage
 [Look at the forums](https://forums.factorio.com/viewforum.php?f=61)
 
 #Changelog
 0.5.36
- - added support for [BioIndustries](https://mods.factorio.com/mods/TheSAguy/Bio_Industries) wooden rails
+
+ - added support for [Bio Industries](https://mods.factorio.com/mods/TheSAguy/Bio_Industries) wooden rails
  - fixed parallel tracks always having the force of the first player
 
 0.5.35
