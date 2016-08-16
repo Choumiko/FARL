@@ -318,7 +318,8 @@ FARL.new = function(player, ent)
     surface = vehicle.surface,
     destroy = false,
     concrete_queue = {},
-    rail_queue = {}
+    rail_queue = {},
+    cheat_mode = player.cheat_mode
   }
   new.settings = Settings.loadByPlayer(player)
   setmetatable(new, { __index = FARL })
@@ -332,6 +333,7 @@ FARL.onPlayerEnter = function(player)
     global.farl[i].driver = player
     global.farl[i].settings = Settings.loadByPlayer(player)
     global.farl[i].destroy = false
+    global.farl[i].cheat_mode = player.cheat_mode
     farl = global.farl[i]
   else
     farl = FARL.new(player)
@@ -734,7 +736,7 @@ FARL.removeTrees = function(self, area)
   for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "tree" }) do
     local stat = global.statistics[self.locomotive.force.name].removed["tree-01"] or 0
     global.statistics[self.locomotive.force.name].removed["tree-01"] = stat + 1
-    if not godmode and self.settings.collectWood then
+    if (not godmode or self.cheat_mode) and self.settings.collectWood then
       local products = entity.prototype.mineable_properties.products --get the products of this tree
       if #products == 1 and products[1].name == "raw-wood" then
         self:addItemToCargo("raw-wood", 1)
@@ -1580,7 +1582,7 @@ end
 
 FARL.removeItemFromCargo = function(self, item, count)
   count = count or 1
-  if godmode then
+  if godmode or self.cheat_mode then
     return count
   end
   if count == 0 then return 0 end
@@ -1589,7 +1591,7 @@ end
 
 FARL.getCargoCount = function(self, item)
   local name = get_item_name(item)
-  if godmode then return 9001 end
+  if godmode or self.cheat_mode then return 9001 end
   return self.train.get_item_count(name)
 end
 
