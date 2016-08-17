@@ -11,7 +11,6 @@ require "GUI"
 MOD_NAME = "FARL"
 debugButton = false
 godmode = false
-removeStone = true
 
 function resetMetatable(o, mt)
   setmetatable(o,{__index=mt})

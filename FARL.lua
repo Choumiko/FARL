@@ -736,7 +736,7 @@ FARL.removeTrees = function(self, area)
   for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "tree" }) do
     local stat = global.statistics[self.locomotive.force.name].removed["tree-01"] or 0
     global.statistics[self.locomotive.force.name].removed["tree-01"] = stat + 1
-    if (not godmode or self.cheat_mode) and self.settings.collectWood then
+    if not(godmode or self.cheat_mode) and self.settings.collectWood then
       local products = entity.prototype.mineable_properties.products --get the products of this tree
       if #products == 1 and products[1].name == "raw-wood" then
         self:addItemToCargo("raw-wood", 1)
@@ -770,15 +770,13 @@ FARL.removeTrees = function(self, area)
 end
 
 FARL.removeStone = function(self, area)
-  --apiCalls.count.stone = apiCalls.count.stone + 1
-
-  if removeStone then
-    for _, entity in pairs(self.surface.find_entities_filtered { area = area, name = "stone-rock" }) do
-      entity.die()
+  for _, entity in pairs(self.surface.find_entities_filtered { area = area, name = "stone-rock" }) do
+    entity.die()
+    if not(godmode or self.cheat_mode) and self.settings.collectWood then
       self:addItemToCargo("stone", 15)
-      local stat = global.statistics[self.locomotive.force.name].removed["stone-rock"] or 0
-      global.statistics[self.locomotive.force.name].removed["stone-rock"] = stat + 1
     end
+    local stat = global.statistics[self.locomotive.force.name].removed["stone-rock"] or 0
+    global.statistics[self.locomotive.force.name].removed["stone-rock"] = stat + 1
   end
 end
 
