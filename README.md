@@ -16,6 +16,12 @@
 [Look at the forums](https://forums.factorio.com/viewforum.php?f=61)
 
 #Changelog
+0.5.37
+
+ - collect/drop wood option now also affects stone from rocks
+ - if game.player.cheat_mode is set to true, FARL doesn't use items
+ - cheat_mode/godmode does not drop wood/stone if the train is full 
+ 
 0.5.36
 
  - added support for [Bio Industries](https://mods.factorio.com/mods/TheSAguy/Bio_Industries) wooden rails
