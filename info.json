@@ -1,10 +1,10 @@
 {
   "name": "FARL",
-  "version": "0.5.37",
-  "factorio_version": "0.13",
+  "version": "0.6.0",
+  "factorio_version": "0.14",
   "title": "Fully Automated Rail Layer",
   "author": "Choumiko",
   "homepage": "https://forums.factorio.com/viewforum.php?f=61",
   "description": "Fully automated rail-layer",
-  "dependencies": ["base >= 0.13.0", "? 5dim_trains", "? TheFatController"]
+  "dependencies": ["? 5dim_trains", "? TheFatController"]
 } 

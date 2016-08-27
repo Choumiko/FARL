@@ -16,6 +16,10 @@
 [Look at the forums](https://forums.factorio.com/viewforum.php?f=61)
 
 #Changelog
+0.6.0
+
+ - version for Factorio 0.14.x
+
 0.5.37
 
  - collect/drop wood option now also affects stone from rocks
