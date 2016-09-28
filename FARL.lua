@@ -1681,7 +1681,7 @@ FARL.parseBlueprints = function(self, bp)
           local lamps = {}
           for _, l in pairs(offsets.poleEntities) do
             if l.name ~= "wooden-chest" then
-              table.insert(lamps, { name = l.name, position = subPos(l.position, offsets.pole.position), direction = l.direction })
+              table.insert(lamps, { name = l.name, position = subPos(l.position, offsets.pole.position), direction = l.direction, pickup_position = l.pickup_position, drop_position = l.drop_position, request_filters = l.request_filters, recipe = l.recipe })
             end
           end
           local railPos = mainRail.position
@@ -2217,6 +2217,9 @@ FARL.placePoleEntities = function(self, traveldir, pole)
       if self:getCargoCount(poleEntities[i].name) > 0 then
         local offset = poleEntities[i].position
         offset = rotate(offset, rad)
+        local direction = (poleEntities[i].direction + diff) % 8
+        local pickup_position = poleEntities[i].pickup_position and rotate(poleEntities[i].pickup_position, rad) or nil
+        local drop_position = poleEntities[i].drop_position and rotate(poleEntities[i].drop_position, rad) or nil
         if self.settings.flipPoles then
           offset = FARL.mirrorEntity(offset, traveldir)
         end
@@ -2224,7 +2227,7 @@ FARL.placePoleEntities = function(self, traveldir, pole)
         --debugDump(pos, true)
         local entity = { name = poleEntities[i].name, position = pos }
         if self:prepareArea(entity) then
-          local _, ent = self:genericPlace { name = poleEntities[i].name, position = pos, direction = 0, force = self.locomotive.force }
+          local _, ent = self:genericPlace { name = poleEntities[i].name, position = pos, direction = direction, pickup_position = pickup_position, drop_position = drop_position, request_filters = poleEntities[i].request_filters, recipe  = poleEntities[i].recipe, force = self.locomotive.force }
           if ent then
             self:protect(ent)
             self:removeItemFromCargo(poleEntities[i].name, 1)
