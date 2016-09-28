@@ -198,7 +198,7 @@ local function on_configuration_changed(data)
             global.players = tmp
             global.savedBlueprints = tmpBps
           end
-          
+
           if oldVersion < "0.5.24" then
             global.overlayStack = global.overlayStack or {}
             for i=#global.farl, 1, -1 do
@@ -212,7 +212,7 @@ local function on_configuration_changed(data)
               end
             end
           end
-          
+
           if oldVersion < "0.5.26" then
             for _, psettings in pairs(global.players) do
               if psettings.mirrorConcrete == nil then
@@ -220,12 +220,12 @@ local function on_configuration_changed(data)
               end
             end
           end
-          
+
           if oldVersion < "0.5.35" then
             global.concrete = nil
             global.tiles = nil
           end
-          
+
           if oldVersion < "0.5.36" then
             for _, psettings in pairs(global.players) do
               if psettings.wooden == nil then
@@ -303,9 +303,26 @@ function on_entity_died(event)
   on_preplayer_mined_item(event)
 end
 
+function isFARLLocomotive(loco)
+  if not loco or not loco.valid or not loco.type == "locomotive" then
+    return false
+  end
+  if loco.name == "farl" then
+    return true
+  end
+  if loco.grid then
+    for _, equipment in pairs(loco.grid.equipment) do
+      if equipment.name == "farl-roboport" then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 function on_player_driving_changed_state(event)
   local player = game.players[event.player_index]
-  if (player.vehicle ~= nil and player.vehicle.name == "farl") then
+  if isFARLLocomotive(player.vehicle) then
     if player.gui.left.farl == nil then
       FARL.onPlayerEnter(player)
       GUI.createGui(player)
@@ -321,6 +338,31 @@ function on_player_driving_changed_state(event)
     table.insert(global.destroyNextTick[tick], event.player_index)
   end
 end
+
+--function on_player_placed_equipment(event)
+--  local player = game.players[event.player_index]
+--  if event.equipment.name == "farl-roboport" and isFARLLocomotive(player.vehicle) then
+--    if player.gui.left.farl == nil then
+--      FARL.onPlayerEnter(player)
+--      GUI.createGui(player)
+--    end
+--  end
+--end
+--
+--function on_player_removed_equipment(event)
+--  local player = game.players[event.player_index]
+--  if event.equipment.name == "farl-roboport" and player.gui.left.farl and player.vehicle then
+--    if not isFARLLocomotive(player.vehicle) then
+--      FARL.onPlayerLeave(player, event.tick + 5)
+--      log("onPlayerLeave (equipment changed)")
+--      local tick = event.tick + 5
+--      if not global.destroyNextTick[tick] then
+--        global.destroyNextTick[tick] = {}
+--      end
+--      table.insert(global.destroyNextTick[tick], event.player_index)
+--    end
+--  end
+--end
 
 function debugDump(var, force)
   if false or force then
@@ -371,10 +413,13 @@ script.on_event(defines.events.on_entity_died, on_entity_died)
 
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
 
+--script.on_event(defines.events.on_player_placed_equipment, on_player_placed_equipment)
+--script.on_event(defines.events.on_player_removed_equipment, on_player_removed_equipment)
+
 
 function on_player_switched(event)
   local status, err = pcall(function()
-    if event.carriage.name == "farl" then
+    if isFARLLocomotive(event.carriage) then
       local i = FARL.findByLocomotive(event.carriage)
       if i then
         local farl = global.farl[i]
@@ -423,6 +468,7 @@ remote.add_interface("farl",
       global = {}
       if game.forces.player.technologies["rail-signals"].researched then
         game.forces.player.recipes["farl"].enabled = true
+        game.forces.player.recipes["farl-roboport"].enabled = true
       end
       for i,p in pairs(game.players) do
         if p.gui.left.farl then p.gui.left.farl.destroy() end
@@ -456,7 +502,7 @@ remote.add_interface("farl",
       local items = {"farl", "straight-rail", "medium-electric-pole", "big-electric-pole",
         "small-lamp", "solid-fuel", "rail-signal", "blueprint", "cargo-wagon"}
       local count = {5,100,50,50,50,50,50,10,5}
-      player = player or game.players[1]
+      player = player or game.player
       for i=1,#items do
         player.insert{name=items[i], count=count[i]}
       end
@@ -465,7 +511,7 @@ remote.add_interface("farl",
       local items = {"power-armor-mk2", "personal-roboport-equipment", "fusion-reactor-equipment",
         "blueprint", "deconstruction-planner", "construction-robot", "exoskeleton-equipment"}
       local count = {1,5,3,1,1,50,2}
-      player = player or game.players[1]
+      player = player or game.player
       for i=1,#items do
         player.insert{name=items[i], count=count[i]}
       end
@@ -527,7 +573,7 @@ remote.add_interface("farl",
         end
       end
     end,
-    
+
     tiles = function()
       for tileName, prototype in pairs(game.tile_prototypes) do
         if prototype.items_to_place_this then

@@ -1517,7 +1517,7 @@ FARL.toggleCruiseControl = function(self)
 end
 
 FARL.bulldozerModeAllowed = function(self)
-  return (self.train.carriages[1].name == "farl" and self.train.carriages[#self.train.carriages].name == "farl")
+  return (isFARLLocomotive(self.train.carriages[1]) and isFARLLocomotive(self.train.carriages[#self.train.carriages]))
 end
 
 FARL.toggleBulldozer = function(self)
@@ -2217,7 +2217,7 @@ FARL.placePoleEntities = function(self, traveldir, pole)
       if self:getCargoCount(poleEntities[i].name) > 0 then
         local offset = poleEntities[i].position
         offset = rotate(offset, rad)
-        local direction = (poleEntities[i].direction + diff) % 8
+        local direction = poleEntities[i].direction and (poleEntities[i].direction + diff) % 8 or 0
         local pickup_position = poleEntities[i].pickup_position and rotate(poleEntities[i].pickup_position, rad) or nil
         local drop_position = poleEntities[i].drop_position and rotate(poleEntities[i].drop_position, rad) or nil
         if self.settings.flipPoles then
