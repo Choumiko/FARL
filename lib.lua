@@ -12,6 +12,12 @@ function copyPrototype(type, name, newName, change_results)
     if p.result then
       p.result = newName
     end
+    if p.take_result then
+      p.take_result = newName
+    end
+    if p.placed_as_equipment_result then
+      p.placed_as_equipment_result = newName
+    end
   end
   return p
 end

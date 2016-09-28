@@ -16,7 +16,7 @@ require "lib"
 --fake_signal.red_light=nil
 
 --data:extend({fake_item, fake_signal})
-
+require("prototypes.equipment")
 require("prototypes.entity.entities")
 require("prototypes.entity.farl_player")
 require("prototypes.item.item")
