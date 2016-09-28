@@ -51,7 +51,7 @@ Blueprint.group_entities = function(e)
       local e_type = game.entity_prototypes[name].type
       local rail_entities = {["wall"]=true}
       if not rail_entities[e_type] then
-        table.insert(offsets.poleEntities, {name = name, direction = dir, position = e[i].position})
+        table.insert(offsets.poleEntities, {name = name, direction = dir, position = e[i].position, pickup_position = e[i].pickup_position, drop_position = e[i].drop_position, request_filters = e[i].request_filters, recipe = e[i].recipe})
       else
         table.insert(offsets.railEntities, {name = name, direction = dir, position = e[i].position})
       end
