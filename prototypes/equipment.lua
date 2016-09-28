@@ -32,8 +32,11 @@ farlRoboport.construction_radius = 0
 farlRoboport.categories = {"farl-equipment"}
 
 local farlRoboportRecipe = copyPrototype("recipe", "personal-roboport-equipment", "farl-roboport", true)
+
+
 local farlRoboportItem = copyPrototype("item", "personal-roboport-equipment", "farl-roboport", true)
 farlRoboportItem.subgroup = "electric-vehicles-equipment"
 farlRoboportItem.order = "f"
+farlRoboportItem.icon = "__FARL__/graphics/icons/farl-roboport.png"
 
 data:extend{farlRoboport, farlRoboportItem, farlRoboportRecipe}
