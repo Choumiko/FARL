@@ -431,6 +431,17 @@ FARL.update = function(self, _)
       self.acc = self.driver.riding_state.acceleration
       if ((self.acc ~= 3 and self.frontmover) or (self.acc ~= 1 and not self.frontmover)) then
 
+        --autopilot
+        if self.ghostPath then
+          local data = self.ghostPath[#self.ghostPath]
+          self.input = data.input
+          self.ghostPath[#self.ghostPath] = nil
+          if #self.ghostPath == 0 then
+            self:deactivate("Finished path")
+            return
+          end
+        end
+
         --check if previous curve is far enough behind if input is the same
         if self.lastCurve and self.lastCurve.input == self.input and self.settings.parallelTracks
           and #self.settings.activeBP.straight.lanes > 0 and not self.settings.bulldozer then
@@ -1088,6 +1099,32 @@ FARL.getRail = function(self, lastRail, travelDir, input)
   return newTravelDir, { name = name, position = addPos(lastRail.position, data.offset), direction = data.direction, type = data.type }
 end
 
+FARL.getGhostRail = function(self, lastRail, travelDir, input)
+  if not travelDir or not input then error("no traveldir or input", 2) end
+  if travelDir > 7 or travelDir < 0 then
+    self:deactivate("Traveldir wrong: " .. travelDir)
+    return false, false
+  end
+  if input > 2 or input < 0 then
+    self:deactivate("Input wrong: " .. input)
+    return travelDir, false
+  end
+  if not lastRail then error("no lastRail", 2) end
+  local data = input_to_next_rail[travelDir][lastRail.ghost_type]
+  if not data then error("no data", 2) end
+  if not data[lastRail.direction] or not data[lastRail.direction][input] then
+    if not data[lastRail.direction] then
+      return travelDir, false
+    end
+    input = 1
+  end
+  data = data[lastRail.direction][input]
+
+  local name = data.type == "straight-rail" and self.settings.rail.straight or self.settings.rail.curved
+  local newTravelDir = (travelDir + input2dir[input]) % 8
+  return newTravelDir, { name = "entity-ghost", ghost_name = name, ghost_type = name, position = addPos(lastRail.position, data.offset), direction = data.direction, type = "entity-ghost" }
+end
+
 FARL.cruiseControl = function(self)
   local acc = self.frontmover and defines.riding.acceleration.accelerating or defines.riding.acceleration.reversing
   local decc = self.frontmover and defines.riding.acceleration.reversing or defines.riding.acceleration.accelerating
@@ -1155,6 +1192,29 @@ FARL.findRail = function(self, rail)
     end
   end
   return found
+end
+
+FARL.findGhostRail = function(self, rail)
+  local area = expandPos(rail.position, 0.4)
+  local found = self.surface.find_entity(rail.name, rail.position)
+    for _, r in pairs(self.surface.find_entities_filtered { area = area, name = rail.name }) do
+      --log(serpent.line(r.ghost_name, {comment=false}))
+      --log(serpent.line({f=r.position,r=rail.position}, {comment=false}))
+      --log(r.direction .. " " .. rail.direction)
+      --log((r.position.x == rail.position.x and r.position.y == rail.position.y))
+      if r.position.x == rail.position.x and r.position.y == rail.position.y and r.direction == rail.direction then
+        return r
+      end
+    end
+--  if found then
+--    log(serpent.line(found.ghost_name, {comment=false}))
+--    log(serpent.line({f=found.position,r=rail.position}, {comment=false}))
+--    log(found.direction .. " " .. rail.direction)
+--    log((found.position.x == rail.position.x and found.position.y == rail.position.y))
+--    if found.ghost_name == rail.ghost_name and found.direction == rail.direction then
+--      return found
+--    end
+--  end
 end
 
 FARL.calculate_rail_data = function(self)
@@ -1235,7 +1295,7 @@ FARL.calculate_rail_data = function(self)
   end
 end
 
-FARL.activate = function(self)
+FARL.activate = function(self, foo)
   local status, err = pcall(function()
     debugLog("Activating")
     self.lastrail = false
@@ -1260,6 +1320,15 @@ FARL.activate = function(self)
     end
     self.direction = self:calcTrainDir()
     self.lastrail = self:findLastRail()
+
+    self.ghostPath = self:getGhostPath()
+    if self.ghostPath then
+      for _, data in pairs(self.ghostPath) do
+        data.rail.destroy()
+        data.rail = nil
+      end
+    end
+
     if not self.lastrail then
       self:deactivate({ "msg-error-2" }, true)
       return
@@ -1453,6 +1522,7 @@ FARL.deactivate = function(self, reason)
   self.input = nil
   self.cruise = false
   self.path = nil
+  self.ghostPath = nil
   --    if self.last_signal then
   --      for i, signal in pairs(self.last_signal) do
   --        if signal and signal.valid then
@@ -1559,6 +1629,23 @@ FARL.findLastRail = function(self)
     self:flyingText2({ "text-front" }, RED, true, last.position)
   end
   return last
+end
+
+FARL.getGhostPath = function(self)
+  local next = {name = "entity-ghost", ghost_name = self.lastrail.name, ghost_type = self.lastrail.type, position = self.lastrail.position, direction=self.lastrail.direction}
+  local dir = self.direction
+  local count, limit = 0, 30
+  local ghostPath = {}
+  local prevDir, input = dir, 1
+  while next do --and count < limit do
+    next, dir, input = self:getConnectedGhostRail(next, dir)
+    if next then
+      self:flyingText(count, YELLOW, true, next.position)
+      table.insert(ghostPath, 1, {dir = dir, rail = next, input = input})
+    end
+    count = count + 1
+  end
+  return #ghostPath > 0 and ghostPath or false
 end
 
 FARL.addItemToCargo = function(self, item, count, place_result)
@@ -2581,10 +2668,33 @@ FARL.get_connected_rail = function(self, rail, straight_only, travelDir)
         return ret, newTravel
       end
     end
-    --ret =  rail.get_connected_rail{rail_direction=dir, rail_connection_direction=i}
-    --if ret then
-    --return ret
-    --end
+  end
+  return ret
+end
+
+FARL.getConnectedGhostRail = function(self, rail, travelDir, straight_only)
+  local dirs = { 1, 0, 2 }
+  local ret = false
+  if straight_only then
+    dirs = { 1 }
+  end
+  local newTravel, nrail
+  log("Searching neighbours for " .. rail.ghost_name .. "@" .. serpent.line(rail.position,{comment=false}))
+  for _, i in pairs(dirs) do
+    log("input: " .. i)
+    newTravel, nrail = self:getGhostRail(rail, travelDir, i)
+    self:flyingText2("C"..i, RED, true, nrail.position)
+    if nrail and newTravel then
+      log("searching: " .. nrail.ghost_name .. "@" .. serpent.line(nrail.position,{comment=false}))
+      ret = self:findGhostRail(nrail)
+      if ret then
+        log("found: " .. ret.ghost_name .. "@" .. serpent.line(ret.position,{comment=false}))
+        self:flyingText2("C"..i.."F", RED, true, ret.position)
+        return ret, newTravel, i
+      else
+        log("not found")
+      end
+    end
   end
   return ret
 end

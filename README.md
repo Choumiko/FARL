@@ -16,6 +16,12 @@
 [Look at the forums](https://forums.factorio.com/viewforum.php?f=61)
 
 #Changelog
+0.7.0
+ 
+ - FARL scans for ghost tracks when activating and follows them 
+ - added equipment grids to locomotives. Any locomotive with a FARL-Roboport equipped will now work like FARL
+ - fixed blueprints for entites with direction/recipe (e.g. Flamethrower)
+  
 0.6.0
 
  - version for Factorio 0.14.x
