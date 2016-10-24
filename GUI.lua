@@ -131,6 +131,14 @@ GUI = {
       GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
     end,
 
+    createPopup = function(player)
+      local gui = GUI.add(player.gui.center, {type = "frame", direction="vertical", name = "farl_confirm"})
+      GUI.addLabel(gui, {caption="Ghost rails detected, start Autopilo?"})
+      local flow = GUI.add(gui, {type="flow", direction="horizontal", name="buttonFlow"})
+      GUI.addButton(flow, {name="confirmYes", caption="Yes"}, GUI.confirmYes)
+      GUI.addButton(flow, {name="confirmNo", caption="No"}, GUI.confirmNo)
+    end,
+
     destroyGui = function(player)
       if player.valid then
         if player.gui.left.farl == nil then return end
@@ -196,6 +204,21 @@ GUI = {
 
     debugInfo = function(event, farl, player)
       farl:debugInfo()
+    end,
+
+    confirmYes = function(event, farl, player)
+      farl.confirmed = true
+      farl:activate()
+      if farl.active then
+        farl:toggleCruiseControl()
+      end
+      farl.confirmed = nil
+      player.gui.center.farl_confirm.destroy()
+    end,
+
+    confirmNo = function(event, farl, player)
+      farl.confirmed = false
+      player.gui.center.farl_confirm.destroy()
     end,
 
     toggleBulldozer = function(event, farl, player)
@@ -493,4 +516,6 @@ GUI.callbacks = {
   blueprint_concrete_vertical = GUI.create_concrete_vertical,
   blueprint_concrete_diagonal = GUI.create_concrete_diagonal,
   print_statistics = GUI.print_statistics,
+  confirmYes = GUI.confirmYes,
+  confirmNo = GUI.confirmNo
 }

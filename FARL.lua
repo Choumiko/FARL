@@ -1197,24 +1197,24 @@ end
 FARL.findGhostRail = function(self, rail)
   local area = expandPos(rail.position, 0.4)
   local found = self.surface.find_entity(rail.name, rail.position)
-    for _, r in pairs(self.surface.find_entities_filtered { area = area, name = rail.name }) do
-      --log(serpent.line(r.ghost_name, {comment=false}))
-      --log(serpent.line({f=r.position,r=rail.position}, {comment=false}))
-      --log(r.direction .. " " .. rail.direction)
-      --log((r.position.x == rail.position.x and r.position.y == rail.position.y))
-      if r.position.x == rail.position.x and r.position.y == rail.position.y and r.direction == rail.direction then
-        return r
-      end
+  for _, r in pairs(self.surface.find_entities_filtered { area = area, name = rail.name }) do
+    --log(serpent.line(r.ghost_name, {comment=false}))
+    --log(serpent.line({f=r.position,r=rail.position}, {comment=false}))
+    --log(r.direction .. " " .. rail.direction)
+    --log((r.position.x == rail.position.x and r.position.y == rail.position.y))
+    if r.position.x == rail.position.x and r.position.y == rail.position.y and r.direction == rail.direction then
+      return r
     end
---  if found then
---    log(serpent.line(found.ghost_name, {comment=false}))
---    log(serpent.line({f=found.position,r=rail.position}, {comment=false}))
---    log(found.direction .. " " .. rail.direction)
---    log((found.position.x == rail.position.x and found.position.y == rail.position.y))
---    if found.ghost_name == rail.ghost_name and found.direction == rail.direction then
---      return found
---    end
---  end
+  end
+  --  if found then
+  --    log(serpent.line(found.ghost_name, {comment=false}))
+  --    log(serpent.line({f=found.position,r=rail.position}, {comment=false}))
+  --    log(found.direction .. " " .. rail.direction)
+  --    log((found.position.x == rail.position.x and found.position.y == rail.position.y))
+  --    if found.ghost_name == rail.ghost_name and found.direction == rail.direction then
+  --      return found
+  --    end
+  --  end
 end
 
 FARL.calculate_rail_data = function(self)
@@ -1323,9 +1323,19 @@ FARL.activate = function(self, foo)
 
     self.ghostPath = self:getGhostPath()
     if self.ghostPath then
-      for _, data in pairs(self.ghostPath) do
-        data.rail.destroy()
-        data.rail = nil
+      if self.confirmed == nil then
+        GUI.createPopup(self.driver)
+        return
+      end
+      if self.confirmed == true then
+        for _, data in pairs(self.ghostPath) do
+          local position = data.rail.position
+          local direction = data.rail.direction
+          local name = data.rail.name
+          local ghost_name = data.rail.ghost_name
+          data.rail.destroy()
+          data.rail = {position = position, name=name, inner_name = ghost_name, direction=direction}
+        end
       end
     end
 
@@ -1522,6 +1532,14 @@ FARL.deactivate = function(self, reason)
   self.input = nil
   self.cruise = false
   self.path = nil
+  if self.ghostPath and #self.ghostPath > 0 then
+    log(serpent.block(self.ghostPath,{comment=false}))
+    for _, data in pairs(self.ghostPath) do
+      local ghost = data.rail
+      ghost.force = self.locomotive.force
+      self.surface.create_entity(data.rail)
+    end
+  end
   self.ghostPath = nil
   --    if self.last_signal then
   --      for i, signal in pairs(self.last_signal) do
@@ -1724,6 +1742,13 @@ FARL.genericPlace = function(self, arg, ignore)
     --end
   end
   return canPlace, entity
+end
+
+FARL.genericPlaceGhost = function(self, arg, ignore)
+  local ghostEntity = table.deepCopy(arg)
+  ghostEntity.inner_name = arg.name
+  ghostEntity.name = "entity-ghost"
+  return self:genericPlace(ghostEntity, ignore)
 end
 
 --parse blueprints
