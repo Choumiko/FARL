@@ -326,20 +326,20 @@ FARL.new = function(player, ent)
   return new
 end
 
-FARL.onPlayerEnter = function(player)
-  local i = FARL.findByLocomotive(player.vehicle)
+FARL.onPlayerEnter = function(player, loco, originalPlayer)
   local farl
+  local i = FARL.findByLocomotive(loco and loco or player.vehicle)
   if i then
-    global.farl[i].driver = player
-    global.farl[i].settings = Settings.loadByPlayer(player)
-    global.farl[i].destroy = false
-    global.farl[i].cheat_mode = player.cheat_mode
     farl = global.farl[i]
+    farl.driver = player
+    farl.settings = Settings.loadByPlayer(originalPlayer and originalPlayer or player)
+    farl.destroy = false
+    farl.cheat_mode = player.cheat_mode
   else
     farl = FARL.new(player)
     table.insert(global.farl, farl)
   end
-  farl.train = player.vehicle.train
+  farl.train = loco and loco.train or player.vehicle.train
   farl.frontmover = false
   for _, l in pairs(farl.train.locomotives.front_movers) do
     if l == farl.locomotive then
@@ -347,18 +347,21 @@ FARL.onPlayerEnter = function(player)
       break
     end
   end
+  if originalPlayer then
+    farl.openedBy = originalPlayer
+  end
   if farl.settings.bulldozer and not farl:bulldozerModeAllowed() then
     farl.settings.bulldozer = false
     farl:print({ "msg-bulldozer-error" })
     farl:print({ "msg-bulldozer-disabled" })
   end
-  if remote.interfaces.YARM and remote.interfaces.YARM.hide_expando then
+  if remote.interfaces.YARM and remote.interfaces.YARM.hide_expando and player.name ~= "farl_player" then
     farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", player.index)
   end
   --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
 end
 
-FARL.onPlayerLeave = function(player, tick)
+FARL.onPlayerLeave = function(player, tick, originalPlayer)
   for _, f in pairs(global.farl) do
     if f.driver and f.driver == player then
       f:deactivate()
@@ -367,7 +370,10 @@ FARL.onPlayerLeave = function(player, tick)
       f.lastMove = nil
       f.railBelow = nil
       f.next_rail = nil
-      if remote.interfaces.YARM and remote.interfaces.YARM.show_expando and f.settings.YARM_old_expando then
+      if originalPlayer and f.openedBy == originalPlayer then
+        f.openedBy = nil
+      end
+      if remote.interfaces.YARM and remote.interfaces.YARM.show_expando and f.settings.YARM_old_expando and player.name ~= "farl_player" then
         remote.call("YARM", "show_expando", player.index)
       end
       --f.settings = false
@@ -436,10 +442,6 @@ FARL.update = function(self, _)
           local data = self.ghostPath[#self.ghostPath]
           self.input = data.input
           self.ghostPath[#self.ghostPath] = nil
-          if #self.ghostPath == 0 then
-            self:deactivate("Finished path")
-            return
-          end
         end
 
         --check if previous curve is far enough behind if input is the same
@@ -497,6 +499,9 @@ FARL.update = function(self, _)
           if not last.position and not last.name then
             self:deactivate({ "msg-no-entity" })
             return
+          end
+          if self.ghostPath then
+            self.ghostProgress = self.ghostProgress + 1
           end
           self.protected_index = self.protected_index + 1
           if self.protected_index == 7 then
@@ -673,6 +678,12 @@ FARL.update = function(self, _)
           self:placeRailEntities(queue.travelDir, queue.rail)
         end
         self.rail_queue = {}
+      end
+    end
+    if self.ghostPath then
+      if #self.ghostPath == 0 then
+        self:deactivate("Finished path")
+        return
       end
     end
   end
@@ -1198,23 +1209,10 @@ FARL.findGhostRail = function(self, rail)
   local area = expandPos(rail.position, 0.4)
   local found = self.surface.find_entity(rail.name, rail.position)
   for _, r in pairs(self.surface.find_entities_filtered { area = area, name = rail.name }) do
-    --log(serpent.line(r.ghost_name, {comment=false}))
-    --log(serpent.line({f=r.position,r=rail.position}, {comment=false}))
-    --log(r.direction .. " " .. rail.direction)
-    --log((r.position.x == rail.position.x and r.position.y == rail.position.y))
     if r.position.x == rail.position.x and r.position.y == rail.position.y and r.direction == rail.direction then
       return r
     end
   end
-  --  if found then
-  --    log(serpent.line(found.ghost_name, {comment=false}))
-  --    log(serpent.line({f=found.position,r=rail.position}, {comment=false}))
-  --    log(found.direction .. " " .. rail.direction)
-  --    log((found.position.x == rail.position.x and found.position.y == rail.position.y))
-  --    if found.ghost_name == rail.ghost_name and found.direction == rail.direction then
-  --      return found
-  --    end
-  --  end
 end
 
 FARL.calculate_rail_data = function(self)
@@ -1295,9 +1293,8 @@ FARL.calculate_rail_data = function(self)
   end
 end
 
-FARL.activate = function(self, foo)
+FARL.activate = function(self, scanForGhosts)
   local status, err = pcall(function()
-    debugLog("Activating")
     self.lastrail = false
     self.signalCount = { main = 0 }
     self.protected = {}
@@ -1320,22 +1317,27 @@ FARL.activate = function(self, foo)
     end
     self.direction = self:calcTrainDir()
     self.lastrail = self:findLastRail()
-
-    self.ghostPath = self:getGhostPath()
+    if scanForGhosts then
+      self.ghostPath = self:getGhostPath()
+    end
     if self.ghostPath then
       if self.confirmed == nil then
-        GUI.createPopup(self.driver)
+        GUI.createPopup(self.openedBy and self.openedBy or self.driver)
         return
       end
       if self.confirmed == true then
+        self.ghostProgressStart = #self.ghostPath
+        self.ghostProgress = 0
         for _, data in pairs(self.ghostPath) do
           local position = data.rail.position
           local direction = data.rail.direction
           local name = data.rail.name
           local ghost_name = data.rail.ghost_name
+          local ttl = data.rail.time_to_live
           data.rail.destroy()
-          data.rail = {position = position, name=name, inner_name = ghost_name, direction=direction}
+          data.rail = {position = position, name=name, inner_name = ghost_name, direction=direction, timeToLive = ttl}
         end
+        self.destroyedGhosts = true
       end
     end
 
@@ -1532,15 +1534,24 @@ FARL.deactivate = function(self, reason)
   self.input = nil
   self.cruise = false
   self.path = nil
-  if self.ghostPath and #self.ghostPath > 0 then
-    log(serpent.block(self.ghostPath,{comment=false}))
+  self.ghostProgress = nil
+  if self.ghostPath and #self.ghostPath > 0 and self.destroyedGhosts then
+    --log(serpent.block(self.ghostPath,{comment=false}))
     for _, data in pairs(self.ghostPath) do
       local ghost = data.rail
       ghost.force = self.locomotive.force
-      self.surface.create_entity(data.rail)
+      local ent = self.surface.create_entity(ghost)
+      if ent then
+        ent.time_to_live = data.rail.timeToLive
+      end
     end
   end
+  if self.driver and self.driver.name == "farl_player" then
+    self.driver.destroy()
+    self.driver = false
+  end
   self.ghostPath = nil
+  self.confirmed = nil
   --    if self.last_signal then
   --      for i, signal in pairs(self.last_signal) do
   --        if signal and signal.valid then
@@ -1577,9 +1588,9 @@ FARL.deactivate = function(self, reason)
   --    self.previews = {}
 end
 
-FARL.toggleActive = function(self)
+FARL.toggleActive = function(self, scanForGhosts)
   if not self.active then
-    self:activate()
+    self:activate(scanForGhosts)
     return
   else
     self:deactivate()
@@ -1658,7 +1669,7 @@ FARL.getGhostPath = function(self)
   while next do --and count < limit do
     next, dir, input = self:getConnectedGhostRail(next, dir)
     if next then
-      self:flyingText(count, YELLOW, true, next.position)
+      --self:flyingText(count, YELLOW, true, next.position)
       table.insert(ghostPath, 1, {dir = dir, rail = next, input = input})
     end
     count = count + 1
@@ -2643,32 +2654,39 @@ end
 
 FARL.debugInfo = function(self)
   local locomotive = self.locomotive
-  --if not self.active then self:activate() end
-  self:print("Train@" .. pos2Str(locomotive.position) .. " dir:" .. self:calcTrainDir() .. " orient:" .. locomotive.orientation)
-  self:print("Frontmover: " .. tostring(self.frontmover))
-  self:print("calcDir: " .. self.locomotive.orientation * 8)
-  self:print("calcDirRound: " .. round(self.locomotive.orientation * 8, 0))
-  self:show_path()
-  local bulldoze_rail = self.frontmover and self.train.back_rail or self.train.front_rail
-  self:flyingText("B", GREEN, true, bulldoze_rail.position)
-  local rail = self.train.front_rail
-  if rail then
-    --self:flyingText2("B", GREEN, true, rail.position)
-    self:print("Rail@" .. pos2Str(rail.position) .. " dir:" .. rail.direction)
-    local fixed = diagonal_to_real_pos(rail)
-    if rail.direction % 2 == 1 then
-      --self:flyingText2("F", GREEN, true, fixed)
-      self:print("Fixed: " .. pos2Str(fixed) .. " dir:" .. rail.direction)
+  log(serpent.block(self, {comment=false}))
+  log(self.driver.name)
+  log(self.cheat_mode)
+  log(self.settings.player.name)
+  local foo = nil
+  if foo then
+    --if not self.active then self:activate() end
+    self:print("Train@" .. pos2Str(locomotive.position) .. " dir:" .. self:calcTrainDir() .. " orient:" .. locomotive.orientation)
+    self:print("Frontmover: " .. tostring(self.frontmover))
+    self:print("calcDir: " .. self.locomotive.orientation * 8)
+    self:print("calcDirRound: " .. round(self.locomotive.orientation * 8, 0))
+    --self:show_path()
+    local bulldoze_rail = self.frontmover and self.train.back_rail or self.train.front_rail
+    self:flyingText("B", GREEN, true, bulldoze_rail.position)
+    local rail = self.train.front_rail
+    if rail then
+      --self:flyingText2("B", GREEN, true, rail.position)
+      self:print("Rail@" .. pos2Str(rail.position) .. " dir:" .. rail.direction)
+      local fixed = diagonal_to_real_pos(rail)
+      if rail.direction % 2 == 1 then
+        --self:flyingText2("F", GREEN, true, fixed)
+        self:print("Fixed: " .. pos2Str(fixed) .. " dir:" .. rail.direction)
+      end
+    else
+      self:print({ "msg-no-rail" })
     end
-  else
-    self:print({ "msg-no-rail" })
-  end
-  local last = self:findLastRail()
-  if last then
-    self:print("Last@" .. pos2Str(last.position) .. " dir:" .. last.direction)
-  end
-  if self.lastpole then
-    self:print("Pole@" .. pos2Str(self.lastPole))
+    local last = self:findLastRail()
+    if last then
+      self:print("Last@" .. pos2Str(last.position) .. " dir:" .. last.direction)
+    end
+    if self.lastpole then
+      self:print("Pole@" .. pos2Str(self.lastPole))
+    end
   end
 end
 
@@ -2714,20 +2732,18 @@ FARL.getConnectedGhostRail = function(self, rail, travelDir, straight_only)
     dirs = { 1 }
   end
   local newTravel, nrail
-  log("Searching neighbours for " .. rail.ghost_name .. "@" .. serpent.line(rail.position,{comment=false}))
+  --log("Searching neighbours for " .. rail.ghost_name .. "@" .. serpent.line(rail.position,{comment=false}))
   for _, i in pairs(dirs) do
-    log("input: " .. i)
+    --log("input: " .. i)
     newTravel, nrail = self:getGhostRail(rail, travelDir, i)
-    self:flyingText2("C"..i, RED, true, nrail.position)
+    --self:flyingText2("C"..i, RED, true, nrail.position)
     if nrail and newTravel then
-      log("searching: " .. nrail.ghost_name .. "@" .. serpent.line(nrail.position,{comment=false}))
+      --log("searching: " .. nrail.ghost_name .. "@" .. serpent.line(nrail.position,{comment=false}))
       ret = self:findGhostRail(nrail)
       if ret then
-        log("found: " .. ret.ghost_name .. "@" .. serpent.line(ret.position,{comment=false}))
-        self:flyingText2("C"..i.."F", RED, true, ret.position)
+        --log("found: " .. ret.ghost_name .. "@" .. serpent.line(ret.position,{comment=false}))
+        --self:flyingText2("C"..i.."F", RED, true, ret.position)
         return ret, newTravel, i
-      else
-        log("not found")
       end
     end
   end

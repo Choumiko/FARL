@@ -18,7 +18,8 @@
 #Changelog
 0.7.0
  
- - FARL scans for ghost tracks when activating and follows them 
+ - FARL scans for ghost tracks when activating and follows them
+ - FARL can follow ghost tracks on its own (Select "Drive without me" once FARL has detected ghost tracks)
  - added equipment grids to locomotives. Any locomotive with a FARL-Roboport equipped will now work like FARL
  - fixed blueprints for entites with direction/recipe (e.g. Flamethrower)
   

@@ -37,11 +37,55 @@ local function getMetaItemData()
   end
 end
 
+function isFARLLocomotive(loco)
+  if not loco or not loco.valid or not loco.type == "locomotive" then
+    return false
+  end
+  if loco.name == "farl" then
+    return true
+  end
+  if loco.grid then
+    for _, equipment in pairs(loco.grid.equipment) do
+      if equipment.name == "farl-roboport" then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+local function on_player_opened(entity, player)
+  if isFARLLocomotive(entity) then
+    if player.gui.left.farl == nil then
+      GUI.createAutopilotGui(entity, player)
+    end
+  end
+end
+
+local function on_player_closed(entity, player)
+  if player.vehicle == nil and player.gui.left.farl ~= nil then
+    GUI.destroyAutopilotGui(entity, player)
+  end
+end
+
 local function on_tick(event)
   local status, err = pcall(function()
+    if event.tick % 10 == 8  then
+      global.player_opened = global.player_opened or {}
+      for _, player in pairs(game.connected_players) do
+        if player.opened ~= nil and player.opened.type == "locomotive" and not global.player_opened[player.index] then
+          on_player_opened(player.opened, player)
+          global.player_opened[player.index] = player.opened
+        end
+        if global.player_opened[player.index] and player.opened == nil then
+          on_player_closed(global.player_opened[player.index], player)
+          global.player_opened[player.index] = nil
+        end
+      end
+    end
+
     if global.overlayStack and global.overlayStack[event.tick] then
-      local tick = event.tick
-      for _, overlay in pairs(global.overlayStack[tick]) do
+      for _, overlay in pairs(global.overlayStack[event.tick]) do
         if overlay.valid then
           overlay.destroy()
         end
@@ -60,7 +104,7 @@ local function on_tick(event)
       if not farl.destroy and farl.driver and farl.driver.valid then
         local status, err = pcall(function()
           farl:update(event)
-          if farl.driver and farl.driver.name ~= "farl_player" then
+          if farl.driver and (farl.driver.name ~= "farl_player" or farl.openedBy)  then
             GUI.updateGui(farl)
           end
         end)
@@ -276,6 +320,13 @@ local function on_gui_click(event)
       if farl then
         GUI.onGuiClick(event, farl, player)
       else
+        if isFARLLocomotive(global.player_opened[index]) then
+          local i = FARL.findByLocomotive(global.player_opened[index])
+          if i then
+            GUI.onGuiClick(event, global.farl[i], player)
+            return
+          end
+        end
         player.print("Gui without train, wrooong!")
         GUI.destroyGui(player)
       end
@@ -301,23 +352,6 @@ end
 
 function on_entity_died(event)
   on_preplayer_mined_item(event)
-end
-
-function isFARLLocomotive(loco)
-  if not loco or not loco.valid or not loco.type == "locomotive" then
-    return false
-  end
-  if loco.name == "farl" then
-    return true
-  end
-  if loco.grid then
-    for _, equipment in pairs(loco.grid.equipment) do
-      if equipment.name == "farl-roboport" then
-        return true
-      end
-    end
-  end
-  return false
 end
 
 function on_player_driving_changed_state(event)

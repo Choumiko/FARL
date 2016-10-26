@@ -123,6 +123,10 @@ GUI = {
       if debugButton then
         GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
       end
+      GUI.add(rows,{type = "progressbar", name = "pathProgress", size = 200, value = 0.5, style = "production_progressbar_style"}).style.maximal_width = 150
+      GUI.addLabel(rows,{caption="", name = "pathLabel"})
+      GUI.add(rows, {type = "flow", direction="vertical", name = "farlConfirm"})
+
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
       GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
       GUI.add(rows, {type="checkbox", name="concrete", caption={"tgl-concrete"}}, "concrete")
@@ -131,12 +135,23 @@ GUI = {
       GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
     end,
 
+    createAutopilotGui = function(entity, player)
+
+    end,
+
+    destroyAutopilotGui = function(entity, player)
+
+    end,
+
     createPopup = function(player)
-      local gui = GUI.add(player.gui.center, {type = "frame", direction="vertical", name = "farl_confirm"})
-      GUI.addLabel(gui, {caption="Ghost rails detected, start Autopilo?"})
-      local flow = GUI.add(gui, {type="flow", direction="horizontal", name="buttonFlow"})
-      GUI.addButton(flow, {name="confirmYes", caption="Yes"}, GUI.confirmYes)
-      GUI.addButton(flow, {name="confirmNo", caption="No"}, GUI.confirmNo)
+      if player.gui.left.farl then
+        local gui = GUI.add(player.gui.left.farl.rows.farlConfirm, {type = "frame", direction="vertical", name = "farlConfirmFlow"})
+        GUI.addLabel(gui, {caption="Ghost rails detected, start Autopilot?"})
+        GUI.add(gui, {type = "checkbox", name = "autoPilot", caption="Drive without me", state = false})
+        local flow = GUI.add(gui, {type="flow", direction="horizontal", name="buttonFlow"})
+        GUI.addButton(flow, {name="confirmYes", caption="Yes"}, GUI.confirmYes)
+        GUI.addButton(flow, {name="confirmNo", caption="No"}, GUI.confirmNo)
+      end
     end,
 
     destroyGui = function(player)
@@ -199,7 +214,7 @@ GUI = {
     end,
 
     toggleStart = function(event, farl, player)
-      farl:toggleActive()
+      farl:toggleActive(true)
     end,
 
     debugInfo = function(event, farl, player)
@@ -208,17 +223,34 @@ GUI = {
 
     confirmYes = function(event, farl, player)
       farl.confirmed = true
+
+      --kick player out and insert farl_player
+      if event.element.parent.parent.autoPilot.state then
+        local loco = player.vehicle
+        player.vehicle.passenger = nil
+        GUI.destroyGui(player)
+        local ghostPlayer = player.surface.create_entity({name="farl_player", position=player.position, force=player.force})
+        ghostPlayer.cheat_mode = player.cheat_mode
+        loco.passenger = ghostPlayer
+        farl.driver = ghostPlayer
+      end
       farl:activate()
       if farl.active then
         farl:toggleCruiseControl()
       end
       farl.confirmed = nil
-      player.gui.center.farl_confirm.destroy()
+      if player.gui.left.farl then
+        player.gui.left.farl.rows.farlConfirm.farlConfirmFlow.destroy()
+        
+      end
     end,
 
     confirmNo = function(event, farl, player)
       farl.confirmed = false
-      player.gui.center.farl_confirm.destroy()
+      farl:activate()
+      farl.ghostPath = nil
+      farl.confirmed = nil
+      player.gui.left.farl.rows.farlConfirm.farlConfirmFlow.destroy()
     end,
 
     toggleBulldozer = function(event, farl, player)
@@ -490,15 +522,24 @@ GUI = {
     end,
 
     updateGui = function(farl)
-      if farl.driver.name ~= "farl_player" and farl.driver.gui.left.farl then
+      local guiPlayer = farl.driver.name ~= "farl_player" and farl.driver or farl.openedBy
+      if guiPlayer and guiPlayer.gui.left.farl then
         --GUI.init(farl.driver)
-        farl.driver.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
-        farl.driver.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
-        if not farl.settings then
-          farl.settings = Settings.loadByPlayer(farl.driver)
+        guiPlayer.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
+        guiPlayer.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
+        if farl.ghostProgress then
+          guiPlayer.gui.left.farl.rows.pathProgress.value = farl.ghostProgress / farl.ghostProgressStart
+          guiPlayer.gui.left.farl.rows.pathLabel.caption = farl.ghostProgress .. "/" .. farl.ghostProgressStart
+        else
+          guiPlayer.gui.left.farl.rows.pathProgress.value = 0
+          guiPlayer.gui.left.farl.rows.pathLabel.caption = "-/-"
         end
-        farl.driver.gui.left.farl.rows.bulldozer.state = farl.settings.bulldozer
-        farl.driver.gui.left.farl.rows.maintenance.state = farl.settings.maintenance
+        
+        if not farl.settings then
+          farl.settings = Settings.loadByPlayer(guiPlayer)
+        end
+        guiPlayer.gui.left.farl.rows.bulldozer.state = farl.settings.bulldozer
+        guiPlayer.gui.left.farl.rows.maintenance.state = farl.settings.maintenance
       end
     end,
 }
