@@ -1708,8 +1708,10 @@ FARL.genericCanPlace = function(self, arg)
   --apiCalls.canplace = apiCalls.canplace + 1
   if not arg.direction then
     return self.surface.can_place_entity { name = name, position = arg.position }
+      --return self.surface.can_place_entity { name = name, position = arg.position, inner_name = arg.inner_name }
   else
     return self.surface.can_place_entity { name = name, position = arg.position, direction = arg.direction }
+      --return self.surface.can_place_entity { name = name, position = arg.position, direction = arg.direction, inner_name = arg.inner_name }
   end
 end
 
@@ -1743,13 +1745,13 @@ FARL.genericPlace = function(self, arg, ignore)
   end
   return canPlace, entity
 end
-
+--[[
 FARL.genericPlaceGhost = function(self, arg, ignore)
-  local ghostEntity = table.deepCopy(arg)
+  local ghostEntity = util.table.deepcopy(arg)
   ghostEntity.inner_name = arg.name
   ghostEntity.name = "entity-ghost"
-  return self:genericPlace(ghostEntity, ignore)
-end
+  return self:genericPlace(ghostEntity, true)
+end]]--
 
 --parse blueprints
 -- chain signal: needs direction == 4, defines track that FARL drives on
@@ -2100,6 +2102,7 @@ FARL.placeParallelCurve = function(self, traveldir, rail, lane_index)
         if not last then break end
         if self:getCargoCount(last.name) > 0 then
           self:prepareArea(last)
+          --local _, ent = self:genericPlaceGhost(last)
           local _, ent = self:genericPlace(last)
           self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(last, self.settings)
           if self.signal_in[lane_index] then
@@ -2162,6 +2165,7 @@ FARL.placeParallelCurve = function(self, traveldir, rail, lane_index)
   end
 
   self:prepareAreaForCurve(new_curve)
+  --local _, ent = self:genericPlaceGhost(new_curve)
   local _, ent = self:genericPlace(new_curve)
   if not ent then
     self:print("Failed to create curve @" .. pos2Str(new_curve.position))
@@ -2203,6 +2207,7 @@ FARL.placeParallelTrack = function(self, traveldir, lastRail, lane_index)
   --    end
   if not blocked and hasRail then
     self:prepareArea(new_rail)
+    --local _, ent = self:genericPlaceGhost(new_rail)
     local _, ent = self:genericPlace(new_rail)
     self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(new_rail, self.settings)
     --self.lanes[lane_index].lastrail = ent or new_rail
@@ -2220,6 +2225,8 @@ FARL.placeParallelTrack = function(self, traveldir, lastRail, lane_index)
     --      end
     if not ent then
       self:print("Failed to create track @" .. pos2Str(new_rail.position))
+      log("failed")
+      log(serpent.line(new_rail, {comment=false}))
       self:flyingText2("E", RED, true, new_rail.position)
       return new_rail
     else
@@ -2241,6 +2248,7 @@ FARL.placeParallelSignals = function(self, traveldir, rail, lane_index)
       signal.force = self.locomotive.force
 
       self:prepareArea(signal)
+      --local success, entity = self:genericPlaceGhost(signal)
       local success, entity = self:genericPlace(signal)
       if entity then
         self:protect(entity)
@@ -2340,6 +2348,7 @@ FARL.placePoleEntities = function(self, traveldir, pole)
         local entity = { name = poleEntities[i].name, position = pos }
         if self:prepareArea(entity) then
           local _, ent = self:genericPlace { name = poleEntities[i].name, position = pos, direction = direction, pickup_position = pickup_position, drop_position = drop_position, request_filters = poleEntities[i].request_filters, recipe  = poleEntities[i].recipe, force = self.locomotive.force }
+          --local _, ent = self:genericPlaceGhost { name = poleEntities[i].name, position = pos, direction = direction, pickup_position = pickup_position, drop_position = drop_position, request_filters = poleEntities[i].request_filters, recipe  = poleEntities[i].recipe, force = self.locomotive.force }
           if ent then
             self:protect(ent)
             self:removeItemFromCargo(poleEntities[i].name, 1)
@@ -2366,6 +2375,7 @@ FARL.placeRailEntities = function(self, traveldir, rail)
         local entity = { name = railEntities[i].name, position = pos }
         if self:prepareArea(entity) then
           local _, ent = self:genericPlace { name = railEntities[i].name, position = pos, direction = 0, force = self.locomotive.force }
+          --local _, ent = self:genericPlaceGhost { name = railEntities[i].name, position = pos, direction = 0, force = self.locomotive.force }
           if ent then
             self:protect(ent)
             self:removeItemFromCargo(railEntities[i].name, 1)

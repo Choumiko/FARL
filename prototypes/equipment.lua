@@ -10,7 +10,14 @@ data:extend
       width = 2,
       height = 2,
       equipment_categories = {"farl-equipment"},
-    },
+    },--[[
+    {
+      type = "equipment-grid",
+      name = "farl-equipment-grid-wagon",
+      width = 8,
+      height = 8,
+      equipment_categories = {"farl-equipment", "armor"},
+    },]]--
 }
 
 if not data.raw["item-subgroup"]["electric-vehicles-equipment"] then
@@ -27,7 +34,10 @@ end
 
 local farlRoboport =  copyPrototype("roboport-equipment", "personal-roboport-equipment", "farl-roboport", true)
 farlRoboport.energy_consumption = "0W"
+--farlRoboport.robot_limit = 50
 farlRoboport.robot_limit = 0
+--farlRoboport.charging_station_count = 10
+--farlRoboport.construction_radius = 30
 farlRoboport.construction_radius = 0
 farlRoboport.categories = {"farl-equipment"}
 

@@ -70,3 +70,11 @@ for locoName, loco in pairs(data.raw.locomotive) do
   end
   log("Loco: " .. locoName .. " " .. serpent.line(loco.equipment_grid, {comment=false}))
 end
+--[[
+for wagonName, wagon in pairs(data.raw["cargo-wagon"]) do
+  if not wagon.equipment_grid then
+    wagon.equipment_grid = "farl-equipment-grid-wagon"
+  else
+    addFarlCategory(wagon.equipment_grid)
+  end
+end]]--
