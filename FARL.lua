@@ -294,19 +294,12 @@ FARL.curvePositions = {
   [6] = { straight = { dir = 2, off = { x = 3, y = -1 } }, diagonal = { dir = 3, off = { x = -3, y = 1 } } },
   [7] = { straight = { dir = 2, off = { x = 3, y = 1 } }, diagonal = { dir = 1, off = { x = -3, y = -1 } } }
 }
-FARL.new = function(player, ent)
-  local vehicle
-  local driver = false
-  if ent then
-    vehicle = ent
-  else
-    vehicle = player.vehicle
-    driver = player
-  end
+
+FARL.newByLocomotive = function(loco)
   local new = {
-    locomotive = vehicle,
-    train = vehicle.train,
-    driver = driver,
+    locomotive = loco,
+    train = loco.train,
+    driver = false,
     active = false,
     lastrail = false,
     direction = false,
@@ -315,50 +308,55 @@ FARL.new = function(player, ent)
     cruise = false,
     cruiseInterrupt = 0,
     lastposition = false,
-    surface = vehicle.surface,
+    surface = loco.surface,
     destroy = false,
     concrete_queue = {},
     rail_queue = {},
-    cheat_mode = player.cheat_mode
   }
-  new.settings = Settings.loadByPlayer(player)
   setmetatable(new, { __index = FARL })
+  global.farl[loco.unit_number] = new
   return new
 end
 
-FARL.onPlayerEnter = function(player, loco, originalPlayer)
-  local farl
-  local i = FARL.findByLocomotive(loco and loco or player.vehicle)
-  if i then
-    farl = global.farl[i]
-    farl.driver = player
-    farl.settings = Settings.loadByPlayer(originalPlayer and originalPlayer or player)
-    farl.destroy = false
-    farl.cheat_mode = player.cheat_mode
-  else
-    farl = FARL.new(player)
-    table.insert(global.farl, farl)
+FARL.new = function(player)
+  local farl = FARL.newByLocomotive(player.vehicle)
+  farl.driver = player
+  farl.cheat_mode = player.cheat_mode
+  farl.settings = Settings.loadByPlayer(player)
+  return farl
+end
+
+FARL.setup = function(loco)
+  local farl = FARL.findByLocomotive(loco)
+  if farl then
+    farl.train = loco.train
+    farl.frontmover = false
+    for _, l in pairs(farl.train.locomotives.front_movers) do
+      if l == farl.locomotive then
+        farl.frontmover = true
+        break
+      end
+    end
+    return farl
   end
-  farl.train = loco and loco.train or player.vehicle.train
-  farl.frontmover = false
-  for _, l in pairs(farl.train.locomotives.front_movers) do
-    if l == farl.locomotive then
-      farl.frontmover = true
-      break
+end
+
+FARL.onPlayerEnter = function(player)
+  local farl = FARL.setup(player.vehicle)
+  if farl then
+    farl.driver = player
+    farl.settings = Settings.loadByPlayer(player)
+    farl.cheat_mode = player.cheat_mode
+
+    if farl.settings.bulldozer and not farl:bulldozerModeAllowed() then
+      farl.settings.bulldozer = false
+      farl:print({ "msg-bulldozer-error" })
+      farl:print({ "msg-bulldozer-disabled" })
+    end
+    if remote.interfaces.YARM and remote.interfaces.YARM.hide_expando and player.name ~= "farl_player" then
+      farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", player.index)
     end
   end
-  if originalPlayer then
-    farl.openedBy = originalPlayer
-  end
-  if farl.settings.bulldozer and not farl:bulldozerModeAllowed() then
-    farl.settings.bulldozer = false
-    farl:print({ "msg-bulldozer-error" })
-    farl:print({ "msg-bulldozer-disabled" })
-  end
-  if remote.interfaces.YARM and remote.interfaces.YARM.hide_expando and player.name ~= "farl_player" then
-    farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", player.index)
-  end
-  --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
 end
 
 FARL.onPlayerLeave = function(player, tick, originalPlayer)
@@ -385,20 +383,18 @@ FARL.onPlayerLeave = function(player, tick, originalPlayer)
 end
 
 FARL.findByLocomotive = function(loco)
-  for i, f in pairs(global.farl) do
-    if f.locomotive == loco then
-      return i
-    end
-  end
-  return false
+  return global.farl[loco.unit_number] or FARL.newByLocomotive(loco)
 end
 
 FARL.findByPlayer = function(player)
-  for _, f in pairs(global.farl) do
-    if f.locomotive == player.vehicle then
-      f.driver = player
-      return f
-    end
+  if player.vehicle then
+    local farl = global.farl[player.vehicle.unit_number]
+    if farl and farl.locomotive == player.vehicle then
+      farl.driver = player
+      return farl
+    else
+      return FARL.new(player)
+    end 
   end
   return false
 end

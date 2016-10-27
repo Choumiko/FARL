@@ -277,6 +277,22 @@ local function on_configuration_changed(data)
               end
             end
           end
+          if oldVersion < "0.6.1" then
+            local newFarls = {}
+            if global.farl then
+              for _, farl in pairs(global.farl) do
+                farl = resetMetatable(farl, FARL)
+                if farl.active then
+                  farl:deactivate("Updating FARL")
+                end
+                if farl.locomotive and farl.locomotive.valid then
+                  newFarls[farl.locomotive.unit_number] = farl
+                end
+              end
+              global.farl = newFarls
+            end
+
+          end
         end
       end
     else
@@ -320,13 +336,6 @@ local function on_gui_click(event)
       if farl then
         GUI.onGuiClick(event, farl, player)
       else
-        if isFARLLocomotive(global.player_opened[index]) then
-          local i = FARL.findByLocomotive(global.player_opened[index])
-          if i then
-            GUI.onGuiClick(event, global.farl[i], player)
-            return
-          end
-        end
         player.print("Gui without train, wrooong!")
         GUI.destroyGui(player)
       end
@@ -341,10 +350,10 @@ end
 function on_preplayer_mined_item(event)
   local ent = event.entity
   if ent.type == "locomotive" or ent.type == "cargo-wagon" then
-    for i=#global.farl, 1, -1 do
-      if (global.farl[i].train.valid and global.farl[i].train == ent.train) or not global.farl[i].train.valid then
+    for i, farl in pairs(global.farl) do
+      if not farl.train or (farl.train.valid and farl.train == ent.train) or not farl.train.valid then
         global.farl[i]:deactivate()
-        table.remove(global.farl, i)
+        global.farl[i] = nil
       end
     end
   end
@@ -454,12 +463,9 @@ script.on_event(defines.events.on_player_driving_changed_state, on_player_drivin
 function on_player_switched(event)
   local status, err = pcall(function()
     if isFARLLocomotive(event.carriage) then
-      local i = FARL.findByLocomotive(event.carriage)
-      if i then
-        local farl = global.farl[i]
-        if farl then
+      local farl = FARL.findByLocomotive(event.carriage)
+      if farl then
           farl:deactivate()
-        end
       end
     end
   end)
