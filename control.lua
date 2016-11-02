@@ -57,14 +57,17 @@ end
 local function on_player_opened(entity, player)
   if isFARLLocomotive(entity) then
     if player.gui.left.farl == nil then
-      GUI.createAutopilotGui(entity, player)
+      local farl = FARL.findByLocomotive(entity)
+      farl.openedBy = player
+      FARL.onPlayerEnter(player, entity)
+      GUI.createGui(player, entity)
     end
   end
 end
 
 local function on_player_closed(entity, player)
   if player.vehicle == nil and player.gui.left.farl ~= nil then
-    GUI.destroyAutopilotGui(entity, player)
+    GUI.destroyGui(player, entity)
   end
 end
 
@@ -331,7 +334,7 @@ local function on_gui_click(event)
   local status, err = pcall(function()
     local index = event.player_index
     local player = game.players[index]
-    if player.gui.left.farl ~= nil then --and player.gui.left.farlAI == nil then
+    if player.gui.left.farl ~= nil then
       local farl = FARL.findByPlayer(player)
       if farl then
         GUI.onGuiClick(event, farl, player)

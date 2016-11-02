@@ -328,7 +328,7 @@ end
 
 FARL.setup = function(loco)
   local farl = FARL.findByLocomotive(loco)
-  if farl then
+  if farl and not farl.active then
     farl.train = loco.train
     farl.frontmover = false
     for _, l in pairs(farl.train.locomotives.front_movers) do
@@ -337,13 +337,13 @@ FARL.setup = function(loco)
         break
       end
     end
-    return farl
   end
+  return farl
 end
 
-FARL.onPlayerEnter = function(player)
-  local farl = FARL.setup(player.vehicle)
-  if farl then
+FARL.onPlayerEnter = function(player, loco)
+  local farl = FARL.setup(player.vehicle or loco)
+  if farl and not farl.active then
     farl.driver = player
     farl.settings = Settings.loadByPlayer(player)
     farl.cheat_mode = player.cheat_mode
@@ -387,14 +387,24 @@ FARL.findByLocomotive = function(loco)
 end
 
 FARL.findByPlayer = function(player)
+  local farl
   if player.vehicle then
-    local farl = global.farl[player.vehicle.unit_number]
+    farl = global.farl[player.vehicle.unit_number]
     if farl and farl.locomotive == player.vehicle then
       farl.driver = player
       return farl
     else
       return FARL.new(player)
-    end 
+    end
+  else
+    if player.opened and isFARLLocomotive(player.opened) then
+      farl = global.farl[player.opened.unit_number]
+      if farl and farl.locomotive == player.opened then
+        return farl
+      else
+        return FARL.newByLocomotive(player.opened)
+      end
+    end
   end
   return false
 end
@@ -1571,6 +1581,7 @@ FARL.deactivate = function(self, reason)
   self.protected_index = {}
   self.concrete_queue = {}
   self.rail_queue = {}
+  self.startedBy = nil
   --    self.previews = self.previews or {}
   --    for _, p in pairs(self.previews) do
   --      if p then
@@ -2749,6 +2760,10 @@ end
 FARL.print = function(self, msg)
   if self.driver and self.driver.name ~= "farl_player" then
     self.driver.print(msg)
+  elseif self.openedBy and self.openedBy.valid then
+    self.openedBy.print({"", "FARL '", self.locomotive.backer_name,"': ",msg})
+  elseif self.startedBy and self.startedBy.valid then
+    self.startedBy.print({"", "FARL '", self.locomotive.backer_name,"': ",msg})
   else
     self:flyingText(msg, RED, true)
   end

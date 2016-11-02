@@ -154,10 +154,16 @@ GUI = {
       end
     end,
 
-    destroyGui = function(player)
+    destroyGui = function(player, entity)
       if player.valid then
         if player.gui.left.farl == nil then return end
         player.gui.left.farl.destroy()
+        if entity and isFARLLocomotive(entity) then
+          local farl = FARL.findByLocomotive(entity)
+          if farl and farl.openedBy == player then
+            farl.openedBy = nil
+          end
+        end
       end
     end,
 
@@ -226,13 +232,21 @@ GUI = {
 
       --kick player out and insert farl_player
       if event.element.parent.parent.autoPilot.state then
-        local loco = player.vehicle
-        player.vehicle.passenger = nil
+        local loco = player.vehicle or player.opened
+        if not loco or not isFARLLocomotive(loco) then
+          farl:deactivate()
+          GUI.destroyGUI(player)
+          return
+        end
+        loco.passenger = nil
         GUI.destroyGui(player)
         local ghostPlayer = player.surface.create_entity({name="farl_player", position=player.position, force=player.force})
         ghostPlayer.cheat_mode = player.cheat_mode
         loco.passenger = ghostPlayer
         farl.driver = ghostPlayer
+        farl.settings = util.table.deepcopy(Settings.loadByPlayer(player))
+        farl.settings.player = ghostPlayer
+        farl.startedBy = player
       end
       farl:activate()
       if farl.active then
@@ -241,7 +255,6 @@ GUI = {
       farl.confirmed = nil
       if player.gui.left.farl then
         player.gui.left.farl.rows.farlConfirm.farlConfirmFlow.destroy()
-        
       end
     end,
 
@@ -522,7 +535,7 @@ GUI = {
     end,
 
     updateGui = function(farl)
-      local guiPlayer = farl.driver.name ~= "farl_player" and farl.driver or farl.openedBy
+      local guiPlayer = (farl.driver and farl.driver.name ~= "farl_player") and farl.driver or farl.openedBy
       if guiPlayer and guiPlayer.gui.left.farl then
         --GUI.init(farl.driver)
         guiPlayer.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
@@ -534,7 +547,7 @@ GUI = {
           guiPlayer.gui.left.farl.rows.pathProgress.value = 0
           guiPlayer.gui.left.farl.rows.pathLabel.caption = "-/-"
         end
-        
+
         if not farl.settings then
           farl.settings = Settings.loadByPlayer(guiPlayer)
         end
