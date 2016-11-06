@@ -1,15 +1,6 @@
 require "util"
 require "Blueprint"
 
-trigger_event = {
-  --["concrete-lamppost"] = true,
-  --["big-electric-pole"] = true, --for BigBrother
---["curved-power-rail"] = true,
---["straight-power-rail"] = true,
---["5d-power-rail-water"] = true,
---["5d-curved-power-rail-water"] = true
-}
-
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 input2dir = { [0] = -1, [1] = 0, [2] = 1 }
 --[traveldir] ={[raildir]
@@ -358,6 +349,7 @@ FARL.onPlayerEnter = function(player, loco)
     if remote.interfaces.YARM and remote.interfaces.YARM.hide_expando and player.name ~= "farl_player" then
       farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", player.index)
     end
+    return farl
   end
 end
 
@@ -421,12 +413,13 @@ FARL.update = function(self, _)
       self.train = self.locomotive.train
     else
       self:deactivate("Error (invalid train)")
-      return
+      return true
     end
   end
   if self.active and not self.train.manual_mode then
     self:deactivate()
     self.train.manual_mode = true
+    return true
   end
 
   self.cruiseInterrupt = self.driver.riding_state.acceleration
@@ -437,7 +430,7 @@ FARL.update = function(self, _)
     --if not next_rail then
     if not self.lastrail.valid then
       self:deactivate({ "msg-error-2" })
-      return
+      return true
     end
     local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
     if distance(self.lastrail.position, firstWagon.position) < 6 then
@@ -466,7 +459,7 @@ FARL.update = function(self, _)
             --deactivate if it's a scripted player, as the path gets messed up
             if self.ghostPath or self.driver.name == "farl_player" then
               self:deactivate("Curves to close to each other.")
-              return
+              return true
             end
           end
         end
@@ -477,7 +470,7 @@ FARL.update = function(self, _)
           newTravelDir, nextRail = self:getRail(self.lastrail, self.direction, 1)
           if not nextRail then
             --self:print("What happened?")
-            return
+            return true
           end
         end
         --TODO add preview for direction change
@@ -516,7 +509,7 @@ FARL.update = function(self, _)
         if dir_ then
           if not last.position and not last.name then
             self:deactivate({ "msg-no-entity" })
-            return
+            return true
           end
           if self.ghostPath then
             self.ghostProgress = self.ghostProgress + 1
@@ -549,7 +542,7 @@ FARL.update = function(self, _)
                   self:addItemToCargo(name, addAmount, true)
                 else
                   self:deactivate({ "msg-cant-remove" })
-                  return
+                  return true
                 end
               end
               table.remove(self.path, i)
@@ -667,11 +660,11 @@ FARL.update = function(self, _)
           self.direction = newTravelDir
           self.lastrail = last
           --log("end update success")
-          return
+          return true
         else
           self:deactivate(last)
           --log("end update fail:"..last)
-          return
+          return true
         end
       end
     else
@@ -701,7 +694,7 @@ FARL.update = function(self, _)
     if self.ghostPath then
       if #self.ghostPath == 0 then
         self:deactivate("Finished path")
-        return
+        return true
       end
     end
   end
@@ -837,7 +830,7 @@ FARL.removeEntitiesFiltered = function(self, args)
           item = k
         end
       end
-      if trigger_event[name] or entity.type == "electric-pole" then
+      if global.trigger_events[name] or entity.type == "electric-pole" then
         game.raise_event(defines.events.on_robot_pre_mined, { entity = entity })
       end
       if not entity.destroy() then
@@ -1760,7 +1753,7 @@ FARL.genericPlace = function(self, arg, ignore)
     --apiCalls.create = apiCalls.create + 1
   end
   if entity then
-    if trigger_event[entity.name] or entity.type == "electric-pole" then
+    if global.trigger_events[entity.name] or entity.type == "electric-pole" then
       game.raise_event(defines.events.on_robot_built_entity, { created_entity = entity })
     end
     local stat = global.statistics[entity.force.name].created[entity.name] or 0

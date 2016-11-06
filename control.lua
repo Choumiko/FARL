@@ -1,9 +1,3 @@
-if not defines then
-  require "defines"
-  defines.train_state = defines.trainstate
-  defines.wire_type =defines.circuitconnector
-end
-
 require "Settings"
 require "FARL"
 require "GUI"
@@ -82,19 +76,19 @@ end
 
 local function on_tick(event)
   local status, err = pcall(function()
---    if event.tick % 10 == 8  then
---      global.player_opened = global.player_opened or {}
---      for _, player in pairs(game.connected_players) do
---        if player.opened ~= nil and player.opened.type == "locomotive" and not global.player_opened[player.index] then
---          on_player_opened(player.opened, player)
---          global.player_opened[player.index] = player.opened
---        end
---        if global.player_opened[player.index] and player.opened == nil then
---          on_player_closed(global.player_opened[player.index], player)
---          global.player_opened[player.index] = nil
---        end
---      end
---    end
+    --    if event.tick % 10 == 8  then
+    --      global.player_opened = global.player_opened or {}
+    --      for _, player in pairs(game.connected_players) do
+    --        if player.opened ~= nil and player.opened.type == "locomotive" and not global.player_opened[player.index] then
+    --          on_player_opened(player.opened, player)
+    --          global.player_opened[player.index] = player.opened
+    --        end
+    --        if global.player_opened[player.index] and player.opened == nil then
+    --          on_player_closed(global.player_opened[player.index], player)
+    --          global.player_opened[player.index] = nil
+    --        end
+    --      end
+    --    end
 
     if global.overlayStack and global.overlayStack[event.tick] then
       for _, overlay in pairs(global.overlayStack[event.tick]) do
@@ -115,10 +109,10 @@ local function on_tick(event)
     for i, farl in pairs(global.farl) do
       if not farl.destroy and farl.driver and farl.driver.valid then
         local status, err = pcall(function()
-          farl:update(event)
-          --if farl.driver and (farl.driver.name ~= "farl_player" or farl.openedBy)  then
-          GUI.updateGui(farl)
-          --end
+          if farl:update(event) then
+            --if farl.driver and (farl.driver.name ~= "farl_player" or farl.openedBy)  then
+            GUI.updateGui(farl)
+          end
         end)
         if not status then
           if farl and farl.active then
@@ -153,7 +147,7 @@ local function init_global()
   global.overlayStack = global.overlayStack or {}
   global.statistics = global.statistics or {}
   global.electric_poles = global.electric_poles or {}
-
+  global.trigger_events = global.trigger_events or {}
   global.version = global.version or "0.5.35"
   if global.debug_log == nil then
     global.debug_log = false
@@ -314,11 +308,16 @@ local function on_configuration_changed(data)
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
     global.version = newVersion
   end
---  if remote.interfaces["satellite-uplink"] and remote.interfaces["satellite-uplink"].add_allowed_item then
---    log("registered")
---    remote.call("satellite-uplink", "add_allowed_item", "rail")
---    remote.call("satellite-uplink", "add_item", "rail", 1)
---  end
+  for name, _ in pairs(global.trigger_events) do
+    if not game.entity_prototypes[name] then
+      global.trigger_events[name] = nil
+    end
+  end
+  --  if remote.interfaces["satellite-uplink"] and remote.interfaces["satellite-uplink"].add_allowed_item then
+  --    log("registered")
+  --    remote.call("satellite-uplink", "add_allowed_item", "rail")
+  --    remote.call("satellite-uplink", "add_item", "rail", 1)
+  --  end
   if data.mod_changes["5dim_trains"] then
     --5dims_trains was added/updated
     if data.mod_changes["5dim_trains"].new_version then
@@ -384,8 +383,11 @@ function on_player_driving_changed_state(event)
   local player = game.players[event.player_index]
   if isFARLLocomotive(player.vehicle) then
     if player.gui.left.farl == nil then
-      FARL.onPlayerEnter(player)
+      local farl = FARL.onPlayerEnter(player)
       GUI.createGui(player)
+      if farl then
+        GUI.updateGui(farl)
+      end
     end
   end
   if player.vehicle == nil and player.gui.left.farl ~= nil then
@@ -637,4 +639,25 @@ remote.add_interface("farl",
         end
       end
     end,
+
+    add_entity_to_trigger = function(name)
+      global.trigger_events = global.trigger_events or {}
+      if game.entity_prototypes[name] then
+        global.trigger_events[name] = true
+        return true
+      end
+    end,
+
+    remove_entity_from_trigger = function(name)
+      global.trigger_events = global.trigger_events or {}
+      if global.trigger_events[name] then
+        global.trigger_events[name] = nil
+        return true
+      end
+    end,
+
+    get_trigger_list = function()
+      global.trigger_events = global.trigger_events or {}
+      return global.trigger_events
+    end
   })
