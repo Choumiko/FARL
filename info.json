@@ -6,5 +6,5 @@
   "author": "Choumiko",
   "homepage": "https://forums.factorio.com/viewforum.php?f=61",
   "description": "Fully automated rail-layer",
-  "dependencies": ["? 5dim_trains", "? TheFatController"]
+  "dependencies": ["? Satellite Uplink Station", "? 5dim_trains", "? TheFatController"]
 } 

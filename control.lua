@@ -67,25 +67,34 @@ end
 
 local function on_player_closed(entity, player)
   if player.vehicle == nil and player.gui.left.farl ~= nil then
+    local farl = FARL.findByLocomotive(entity)
+    if farl then
+      if farl.openedBy == player then
+        farl.openedBy = nil
+      end
+      if farl.driver == player then
+        farl.driver = false
+      end
+    end
     GUI.destroyGui(player, entity)
   end
 end
 
 local function on_tick(event)
   local status, err = pcall(function()
-    if event.tick % 10 == 8  then
-      global.player_opened = global.player_opened or {}
-      for _, player in pairs(game.connected_players) do
-        if player.opened ~= nil and player.opened.type == "locomotive" and not global.player_opened[player.index] then
-          on_player_opened(player.opened, player)
-          global.player_opened[player.index] = player.opened
-        end
-        if global.player_opened[player.index] and player.opened == nil then
-          on_player_closed(global.player_opened[player.index], player)
-          global.player_opened[player.index] = nil
-        end
-      end
-    end
+--    if event.tick % 10 == 8  then
+--      global.player_opened = global.player_opened or {}
+--      for _, player in pairs(game.connected_players) do
+--        if player.opened ~= nil and player.opened.type == "locomotive" and not global.player_opened[player.index] then
+--          on_player_opened(player.opened, player)
+--          global.player_opened[player.index] = player.opened
+--        end
+--        if global.player_opened[player.index] and player.opened == nil then
+--          on_player_closed(global.player_opened[player.index], player)
+--          global.player_opened[player.index] = nil
+--        end
+--      end
+--    end
 
     if global.overlayStack and global.overlayStack[event.tick] then
       for _, overlay in pairs(global.overlayStack[event.tick]) do
@@ -107,9 +116,9 @@ local function on_tick(event)
       if not farl.destroy and farl.driver and farl.driver.valid then
         local status, err = pcall(function()
           farl:update(event)
-          if farl.driver and (farl.driver.name ~= "farl_player" or farl.openedBy)  then
-            GUI.updateGui(farl)
-          end
+          --if farl.driver and (farl.driver.name ~= "farl_player" or farl.openedBy)  then
+          GUI.updateGui(farl)
+          --end
         end)
         if not status then
           if farl and farl.active then
@@ -305,6 +314,11 @@ local function on_configuration_changed(data)
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
     global.version = newVersion
   end
+--  if remote.interfaces["satellite-uplink"] and remote.interfaces["satellite-uplink"].add_allowed_item then
+--    log("registered")
+--    remote.call("satellite-uplink", "add_allowed_item", "rail")
+--    remote.call("satellite-uplink", "add_item", "rail", 1)
+--  end
   if data.mod_changes["5dim_trains"] then
     --5dims_trains was added/updated
     if data.mod_changes["5dim_trains"].new_version then
@@ -468,7 +482,7 @@ function on_player_switched(event)
     if isFARLLocomotive(event.carriage) then
       local farl = FARL.findByLocomotive(event.carriage)
       if farl then
-          farl:deactivate()
+        farl:deactivate()
       end
     end
   end)
@@ -481,7 +495,6 @@ end
 if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then
   script.on_event(remote.call("fat", "get_player_switched_event"), on_player_switched)
 end
-
 
 remote.add_interface("farl",
   {

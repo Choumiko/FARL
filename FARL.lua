@@ -2,8 +2,8 @@ require "util"
 require "Blueprint"
 
 trigger_event = {
-  ["concrete-lamppost"] = true,
-  ["big-electric-pole"] = true,
+  --["concrete-lamppost"] = true,
+  --["big-electric-pole"] = true, --for BigBrother
 --["curved-power-rail"] = true,
 --["straight-power-rail"] = true,
 --["5d-power-rail-water"] = true,
@@ -314,7 +314,8 @@ FARL.newByLocomotive = function(loco)
     rail_queue = {},
   }
   setmetatable(new, { __index = FARL })
-  global.farl[loco.unit_number] = new
+  local idLoco = #loco.train.locomotives.front_movers > 0 and loco.train.locomotives.front_movers[1] or loco.train.locomotives.back_movers[1] 
+  global.farl[idLoco.unit_number] = new
   return new
 end
 
@@ -331,8 +332,9 @@ FARL.setup = function(loco)
   if farl and not farl.active then
     farl.train = loco.train
     farl.frontmover = false
+    farl.locomotive = loco
     for _, l in pairs(farl.train.locomotives.front_movers) do
-      if l == farl.locomotive then
+      if l == loco then
         farl.frontmover = true
         break
       end
@@ -342,7 +344,7 @@ FARL.setup = function(loco)
 end
 
 FARL.onPlayerEnter = function(player, loco)
-  local farl = FARL.setup(player.vehicle or loco)
+  local farl = FARL.setup(loco or player.vehicle)
   if farl and not farl.active then
     farl.driver = player
     farl.settings = Settings.loadByPlayer(player)
@@ -383,7 +385,8 @@ FARL.onPlayerLeave = function(player, tick, originalPlayer)
 end
 
 FARL.findByLocomotive = function(loco)
-  return global.farl[loco.unit_number] or FARL.newByLocomotive(loco)
+  local idLoco = #loco.train.locomotives.front_movers > 0 and loco.train.locomotives.front_movers[1] or loco.train.locomotives.back_movers[1] 
+  return global.farl[idLoco.unit_number] or FARL.newByLocomotive(loco)
 end
 
 FARL.findByPlayer = function(player)
@@ -421,6 +424,10 @@ FARL.update = function(self, _)
       return
     end
   end
+  if self.active and not self.train.manual_mode then
+    self:deactivate()
+    self.train.manual_mode = true
+  end
 
   self.cruiseInterrupt = self.driver.riding_state.acceleration
   self:cruiseControl()
@@ -456,6 +463,11 @@ FARL.update = function(self, _)
           --self:print("curveblock:"..self.lastCurve.curveblock.."dist:"..self.lastCurve.dist)
           if self.lastCurve.dist < self.lastCurve.curveblock then
             self.input = 1
+            --deactivate if it's a scripted player, as the path gets messed up
+            if self.ghostPath or self.driver.name == "farl_player" then
+              self:deactivate("Curves to close to each other.")
+              return
+            end
           end
         end
 
@@ -825,7 +837,7 @@ FARL.removeEntitiesFiltered = function(self, args)
           item = k
         end
       end
-      if trigger_event[name] then
+      if trigger_event[name] or entity.type == "electric-pole" then
         game.raise_event(defines.events.on_robot_pre_mined, { entity = entity })
       end
       if not entity.destroy() then
@@ -1748,7 +1760,7 @@ FARL.genericPlace = function(self, arg, ignore)
     --apiCalls.create = apiCalls.create + 1
   end
   if entity then
-    if trigger_event[entity.name] then
+    if trigger_event[entity.name] or entity.type == "electric-pole" then
       game.raise_event(defines.events.on_robot_built_entity, { created_entity = entity })
     end
     local stat = global.statistics[entity.force.name].created[entity.name] or 0

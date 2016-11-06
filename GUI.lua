@@ -123,8 +123,11 @@ GUI = {
       if debugButton then
         GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
       end
-      GUI.add(rows,{type = "progressbar", name = "pathProgress", size = 200, value = 0.5, style = "production_progressbar_style"}).style.maximal_width = 150
-      GUI.addLabel(rows,{caption="", name = "pathLabel"})
+      local progressBar = GUI.add(rows,{type = "progressbar", name = "pathProgress", size = 200, value = 0.5, style = "production_progressbar_style"})
+      progressBar.style.maximal_width = 150
+      progressBar.style.visible = false
+      local progressLabel = GUI.addLabel(rows,{caption="", name = "pathLabel"})
+      progressLabel.style.visible = false
       GUI.add(rows, {type = "flow", direction="vertical", name = "farlConfirm"})
 
       GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
@@ -232,13 +235,16 @@ GUI = {
 
       --kick player out and insert farl_player
       if event.element.parent.parent.autoPilot.state then
-        local loco = player.vehicle or player.opened
-        if not loco or not isFARLLocomotive(loco) then
-          farl:deactivate()
-          GUI.destroyGUI(player)
-          return
+        local loco = player.vehicle
+        local farlLoco = farl.locomotive
+--        if not loco or not isFARLLocomotive(loco) then
+--          farl:deactivate()
+--          GUI.destroyGui(player)
+--          return
+--        end
+        if player.vehicle and farlLoco == player.vehicle then
+          loco.passenger = nil
         end
-        loco.passenger = nil
         GUI.destroyGui(player)
         local ghostPlayer = player.surface.create_entity({name="farl_player", position=player.position, force=player.force})
         ghostPlayer.cheat_mode = player.cheat_mode
@@ -541,9 +547,13 @@ GUI = {
         guiPlayer.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         guiPlayer.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
         if farl.ghostProgress then
+          guiPlayer.gui.left.farl.rows.pathProgress.style.visible = true
           guiPlayer.gui.left.farl.rows.pathProgress.value = farl.ghostProgress / farl.ghostProgressStart
+          guiPlayer.gui.left.farl.rows.pathLabel.style.visible = true
           guiPlayer.gui.left.farl.rows.pathLabel.caption = farl.ghostProgress .. "/" .. farl.ghostProgressStart
         else
+          guiPlayer.gui.left.farl.rows.pathProgress.style.visible = false
+          guiPlayer.gui.left.farl.rows.pathLabel.style.visible = false
           guiPlayer.gui.left.farl.rows.pathProgress.value = 0
           guiPlayer.gui.left.farl.rows.pathLabel.caption = "-/-"
         end
