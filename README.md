@@ -14,6 +14,17 @@
 
 ###Usage
 [Look at the forums](https://forums.factorio.com/viewforum.php?f=61)
+[FARL Autopilot](https://www.twitch.tv/choumiko/v/99457468)
+
+###Mod support
+
+There are 2 remote functions to tell FARL whether it should raise on_robot_built_entity/on_robot_pre_mined events for a specific entity:
+ - remote.call("farl", "add_entity_to_trigger", "entity-name")
+ - remote.call("farl", "remove_entity_from_trigger", "entity-name")
+ 
+To make it work just add FARL as an optional dependency in your info.json and do the remote.call in on_configuration_changed.
+FARL stores the names in global and only removes them if the interface is used or the entity doesn't exist anymore (checked in on_configuration_changed)
+
 
 #Changelog
 0.7.0
@@ -22,6 +33,7 @@
  - FARL can follow ghost tracks on its own (Select "Drive without me" once FARL has detected ghost tracks)
  - added equipment grids to locomotives. Any locomotive with a FARL-Roboport equipped will now work like FARL
  - fixed blueprints for entites with direction/recipe (e.g. Flamethrower)
+ - FARL raises on_robot_built_entity/on_robot_pre_mined events whenever an electric pole is created/destroyed
   
 0.6.0
 
