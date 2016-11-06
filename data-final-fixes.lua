@@ -68,7 +68,7 @@ for locoName, loco in pairs(data.raw.locomotive) do
       addFarlCategory(loco.equipment_grid)
     end
   end
-  log("Loco: " .. locoName .. " " .. serpent.line(loco.equipment_grid, {comment=false}))
+  --log("Loco: " .. locoName .. " " .. serpent.line(loco.equipment_grid, {comment=false}))
 end
 --[[
 for wagonName, wagon in pairs(data.raw["cargo-wagon"]) do
