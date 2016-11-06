@@ -351,6 +351,7 @@ local function on_gui_click(event)
       local farl = FARL.findByPlayer(player)
       if farl then
         GUI.onGuiClick(event, farl, player)
+        GUI.updateGui(farl)
       else
         player.print("Gui without train, wrooong!")
         GUI.destroyGui(player)
