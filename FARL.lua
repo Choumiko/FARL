@@ -1999,7 +1999,7 @@ FARL.placeRails = function(self, nextRail, newTravelDir)
 
   local removeAmount = newRail.name == self.settings.rail.curved and 4 or 1
   local removeItem = self.settings.rail.straight
-  local hasRail = self:getCargoCount(newRail.name) > removeAmount
+  local hasRail = self:getCargoCount(newRail.name) >= removeAmount
 
   if canplace and hasRail then
     newRail.force = self.locomotive.force
@@ -2180,7 +2180,7 @@ FARL.placeParallelCurve = function(self, traveldir, rail, lane_index)
   self.lastCurve.blocked[lane_index] = self.lanes["d" .. traveldir % 2]["i" .. bi]["l" .. lane_index].lag
 
   local remove_item, remove_amount = self.settings.rail.straight, 4
-  local hasRail = self:getCargoCount(self.settings.rail.straight) > remove_amount
+  local hasRail = self:getCargoCount(self.settings.rail.straight) >= remove_amount
 
   if not hasRail then
     self:deactivate({ "msg-out-of-rails" })
@@ -2390,7 +2390,7 @@ FARL.placeRailEntities = function(self, traveldir, rail)
   local rad = diff * (math.pi / 4)
   if type(railEntities) == "table" then
     for i = 1, #railEntities do
-      if self:getCargoCount(railEntities[i].name) > 1 then
+      if self:getCargoCount(railEntities[i].name) > 0 then
         local offset = railEntities[i].position
         offset = rotate(offset, rad)
         local pos = addPos(diagonal_to_real_pos(rail), offset)
