@@ -237,11 +237,11 @@ GUI = {
       if event.element.parent.parent.autoPilot.state then
         local loco = player.vehicle
         local farlLoco = farl.locomotive
---        if not loco or not isFARLLocomotive(loco) then
---          farl:deactivate()
---          GUI.destroyGui(player)
---          return
---        end
+        --        if not loco or not isFARLLocomotive(loco) then
+        --          farl:deactivate()
+        --          GUI.destroyGui(player)
+        --          return
+        --        end
         if player.vehicle and farlLoco == player.vehicle then
           loco.passenger = nil
         end
@@ -417,16 +417,10 @@ GUI = {
       if player ~= nil then
         local hotbar = player.get_inventory(defines.inventory.player_quickbar) --TODO 0.13 use inventory.god_quickbar
         if hotbar ~= nil then
-          local i = 1
-          while (i < 30) do
-            local itemStack
-            if pcall(function () itemStack = hotbar[i] end) then
-              if itemStack ~= nil and itemStack.valid_for_read and itemStack.type == "blueprint" then
-                table.insert(blueprints, itemStack)
-              end
-              i = i + 1
-            else
-              i = 100
+          for i=1,#hotbar do
+            local itemStack = hotbar[i]
+            if itemStack and itemStack.valid_for_read and itemStack.type == "blueprint" then
+              table.insert(blueprints, itemStack)
             end
           end
         end

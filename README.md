@@ -27,6 +27,10 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+0.7.1
+ 
+ - fixed FARL only reading blueprints in the first 3 quickbar rows
+
 0.7.0
  
  - FARL scans for ghost tracks in front of it when activating and follows them
