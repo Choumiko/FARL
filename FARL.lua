@@ -1785,7 +1785,7 @@ FARL.parseBlueprints = function(self, bp)
     if e then
       local bpType, rails, poles, box, offsets = Blueprint.group_entities(e)
       if not bpType then
-        self:print(rails)
+        --self:print(rails)
         return
       end
       if #poles > 0 then
