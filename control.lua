@@ -479,6 +479,14 @@ script.on_event(defines.events.on_player_driving_changed_state, on_player_drivin
 --script.on_event(defines.events.on_player_placed_equipment, on_player_placed_equipment)
 --script.on_event(defines.events.on_player_removed_equipment, on_player_removed_equipment)
 
+script.on_event("toggle-train-control", function(event)
+  if not game.active_mods["Honk"] then
+    local vehicle = game.players[event.player_index].vehicle
+    if vehicle and vehicle.type == "locomotive" then
+      vehicle.train.manual_mode = not vehicle.train.manual_mode
+    end
+  end
+end)
 
 function on_player_switched(event)
   local status, err = pcall(function()
