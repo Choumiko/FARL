@@ -98,8 +98,9 @@ local function on_tick(event)
       end
       global.overlayStack[event.tick] = nil
     end
-
-    for i, farl in pairs(global.farl) do
+    
+    --for i, farl in pairs(global.farl) do
+    for i, farl in pairs(global.activeFarls) do
       if farl.driver and farl.driver.valid then
         local status, err = pcall(function()
           if farl:update(event) then
@@ -383,6 +384,7 @@ function on_preplayer_mined_item(event)
       if not farl.train or (farl.train.valid and farl.train == ent.train) or not farl.train.valid then
         global.farl[i]:deactivate()
         global.farl[i] = nil
+        global.activeFarls[i] = nil
       end
     end
   end

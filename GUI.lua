@@ -535,25 +535,26 @@ GUI = {
       local guiPlayer = (farl.driver and farl.driver.name ~= "farl_player") and farl.driver or false
       if guiPlayer and guiPlayer.gui.left.farl then
         --GUI.init(farl.driver)
-        guiPlayer.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
+        local farlGui = guiPlayer.gui.left.farl.rows 
+        farlGui.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         guiPlayer.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
         if farl.ghostProgress then
-          guiPlayer.gui.left.farl.rows.pathProgress.style.visible = true
-          guiPlayer.gui.left.farl.rows.pathProgress.value = farl.ghostProgress / farl.ghostProgressStart
-          guiPlayer.gui.left.farl.rows.pathLabel.style.visible = true
-          guiPlayer.gui.left.farl.rows.pathLabel.caption = farl.ghostProgress .. "/" .. farl.ghostProgressStart
+          farlGui.pathProgress.style.visible = true
+          farlGui.pathProgress.value = farl.ghostProgress / farl.ghostProgressStart
+          farlGui.pathLabel.style.visible = true
+          farlGui.pathLabel.caption = farl.ghostProgress .. "/" .. farl.ghostProgressStart
         else
-          guiPlayer.gui.left.farl.rows.pathProgress.style.visible = false
-          guiPlayer.gui.left.farl.rows.pathLabel.style.visible = false
-          guiPlayer.gui.left.farl.rows.pathProgress.value = 0
-          guiPlayer.gui.left.farl.rows.pathLabel.caption = "-/-"
+          farlGui.pathProgress.style.visible = false
+          farlGui.pathLabel.style.visible = false
+          farlGui.pathProgress.value = 0
+          farlGui.pathLabel.caption = "-/-"
         end
 
         if not farl.settings then
           farl.settings = Settings.loadByPlayer(guiPlayer)
         end
-        guiPlayer.gui.left.farl.rows.bulldozer.state = farl.settings.bulldozer
-        guiPlayer.gui.left.farl.rows.maintenance.state = farl.settings.maintenance
+        farlGui.bulldozer.state = farl.settings.bulldozer
+        farlGui.maintenance.state = farl.settings.maintenance
       end
     end,
 }

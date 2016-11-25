@@ -288,7 +288,7 @@ FARL.curvePositions = {
 
 FARL.getIdFromTrain = function(train)
   if train and train.valid and train.locomotives then
-    return #train.locomotives.front_movers > 0 and train.locomotives.front_movers[1] or train.locomotives.back_movers[1]
+    return #train.locomotives.front_movers > 0 and train.locomotives.front_movers[1].unit_number or train.locomotives.back_movers[1].unit_number
   end
 end
 
@@ -311,7 +311,7 @@ FARL.newByLocomotive = function(loco)
   }
   setmetatable(new, { __index = FARL })
   local idLoco = FARL.getIdFromTrain(loco.train)
-  global.farl[idLoco.unit_number] = new
+  global.farl[idLoco] = new
   return new
 end
 
@@ -354,6 +354,7 @@ FARL.onPlayerEnter = function(player, loco)
     if remote.interfaces.YARM and remote.interfaces.YARM.hide_expando and player.name ~= "farl_player" then
       farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", player.index)
     end
+    global.activeFarls[FARL.getIdFromTrain(farl.train)] = farl
     return farl
   end
 end
@@ -362,6 +363,7 @@ FARL.onPlayerLeave = function(player)
   for _, f in pairs(global.farl) do
     if f.driver and f.driver == player then
       f:deactivate()
+      global.activeFarls[FARL.getIdFromTrain(f.train)] = nil
       f.driver = false
       f.lastMove = nil
       f.railBelow = nil
@@ -380,19 +382,18 @@ end
 
 FARL.findByLocomotive = function(loco)
   local idLoco = FARL.getIdFromTrain(loco.train)
-  return global.farl[idLoco.unit_number] or FARL.newByLocomotive(loco)
+  return global.farl[idLoco] or FARL.newByLocomotive(loco)
 end
 
 FARL.findByPlayer = function(player)
   local farl
   if player.vehicle then
-    farl = global.farl[player.vehicle.unit_number]
+    local id = FARL.getIdFromTrain(player.vehicle.train)
+    farl = global.farl[id]
     if farl and farl.locomotive == player.vehicle then
-    log("found  " .. player.vehicle.unit_number)
       farl.driver = player
       return farl
     else
-      log("new farl " .. player.vehicle.unit_number)
       return FARL.new(player)
     end
   else
@@ -1565,6 +1566,7 @@ FARL.deactivate = function(self, reason)
     self.driver.destroy()
     self.driver = false
   end
+  
   self.ghostPath = nil
   self.confirmed = nil
   --    if self.last_signal then
