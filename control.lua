@@ -100,10 +100,9 @@ local function on_tick(event)
     end
 
     for i, farl in pairs(global.farl) do
-      if not farl.destroy and farl.driver and farl.driver.valid then
+      if farl.driver and farl.driver.valid then
         local status, err = pcall(function()
           if farl:update(event) then
-            --if farl.driver and (farl.driver.name ~= "farl_player" or farl.openedBy)  then
             GUI.updateGui(farl)
           end
         end)
@@ -112,11 +111,6 @@ local function on_tick(event)
             farl:deactivate("Unexpected error: "..err)
           end
           debugDump("Unexpected error: "..err,true)
-        end
-      else
-        if farl.destroy == event.tick then
-          farl.destroy = false
-          farl.settings = false
         end
       end
     end
@@ -132,6 +126,7 @@ local function init_global()
   global.players =  global.players or {}
   global.savedBlueprints = global.savedBlueprints or {}
   global.farl = global.farl or {}
+  global.activeFarls = global.activeFarls or {}
   global.railInfoLast = global.railInfoLast or {}
   global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
   global.godmode = false
@@ -301,6 +296,20 @@ local function on_configuration_changed(data)
               end
               global.destroyNextTick = nil
             end
+            init_global()
+            if global.farl then
+              for id, farl in pairs(global.farl) do
+                if not farl.driver then
+                  farl.settings = false
+                end
+                farl.openedBy = nil
+                farl.destroy = nil
+                if farl.active or farl.driver then
+                  global.activeFarls[id] = farl
+                end
+                saveVar(global)
+              end
+            end
           end
         end
       end
@@ -395,7 +404,7 @@ function on_player_driving_changed_state(event)
     end
   end
   if player.vehicle == nil and player.gui.left.farl ~= nil then
-    FARL.onPlayerLeave(player, event.tick + 5)
+    FARL.onPlayerLeave(player)
     debugDump("onPlayerLeave (driving state changed)")
     GUI.destroyGui(player)
   end

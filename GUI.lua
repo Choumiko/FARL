@@ -163,9 +163,6 @@ GUI = {
         player.gui.left.farl.destroy()
         if entity and isFARLLocomotive(entity) then
           local farl = FARL.findByLocomotive(entity)
-          if farl and farl.openedBy == player then
-            farl.openedBy = nil
-          end
         end
       end
     end,
@@ -535,7 +532,7 @@ GUI = {
     end,
 
     updateGui = function(farl)
-      local guiPlayer = (farl.driver and farl.driver.name ~= "farl_player") and farl.driver or farl.openedBy
+      local guiPlayer = (farl.driver and farl.driver.name ~= "farl_player") and farl.driver or false
       if guiPlayer and guiPlayer.gui.left.farl then
         --GUI.init(farl.driver)
         guiPlayer.gui.left.farl.rows.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}

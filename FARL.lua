@@ -286,6 +286,12 @@ FARL.curvePositions = {
   [7] = { straight = { dir = 2, off = { x = 3, y = 1 } }, diagonal = { dir = 1, off = { x = -3, y = -1 } } }
 }
 
+FARL.getIdFromTrain = function(train)
+  if train and train.valid and train.locomotives then
+    return #train.locomotives.front_movers > 0 and train.locomotives.front_movers[1] or train.locomotives.back_movers[1]
+  end
+end
+
 FARL.newByLocomotive = function(loco)
   local new = {
     locomotive = loco,
@@ -300,12 +306,11 @@ FARL.newByLocomotive = function(loco)
     cruiseInterrupt = 0,
     lastposition = false,
     surface = loco.surface,
-    destroy = false,
     concrete_queue = {},
     rail_queue = {},
   }
   setmetatable(new, { __index = FARL })
-  local idLoco = #loco.train.locomotives.front_movers > 0 and loco.train.locomotives.front_movers[1] or loco.train.locomotives.back_movers[1] 
+  local idLoco = FARL.getIdFromTrain(loco.train)
   global.farl[idLoco.unit_number] = new
   return new
 end
@@ -353,18 +358,15 @@ FARL.onPlayerEnter = function(player, loco)
   end
 end
 
-FARL.onPlayerLeave = function(player, tick, originalPlayer)
+FARL.onPlayerLeave = function(player)
   for _, f in pairs(global.farl) do
     if f.driver and f.driver == player then
       f:deactivate()
       f.driver = false
-      f.destroy = tick
       f.lastMove = nil
       f.railBelow = nil
       f.next_rail = nil
-      if originalPlayer and f.openedBy == originalPlayer then
-        f.openedBy = nil
-      end
+
       if remote.interfaces.YARM and remote.interfaces.YARM.show_expando and f.settings.YARM_old_expando and player.name ~= "farl_player" then
         remote.call("YARM", "show_expando", player.index)
       end
@@ -377,7 +379,7 @@ FARL.onPlayerLeave = function(player, tick, originalPlayer)
 end
 
 FARL.findByLocomotive = function(loco)
-  local idLoco = #loco.train.locomotives.front_movers > 0 and loco.train.locomotives.front_movers[1] or loco.train.locomotives.back_movers[1] 
+  local idLoco = FARL.getIdFromTrain(loco.train)
   return global.farl[idLoco.unit_number] or FARL.newByLocomotive(loco)
 end
 
@@ -386,9 +388,11 @@ FARL.findByPlayer = function(player)
   if player.vehicle then
     farl = global.farl[player.vehicle.unit_number]
     if farl and farl.locomotive == player.vehicle then
+    log("found  " .. player.vehicle.unit_number)
       farl.driver = player
       return farl
     else
+      log("new farl " .. player.vehicle.unit_number)
       return FARL.new(player)
     end
   else
@@ -1333,7 +1337,7 @@ FARL.activate = function(self, scanForGhosts)
     end
     if self.ghostPath then
       if self.confirmed == nil then
-        GUI.createPopup(self.openedBy and self.openedBy or self.driver)
+        GUI.createPopup(self.driver)
         return
       end
       if self.confirmed == true then
@@ -2765,8 +2769,6 @@ end
 FARL.print = function(self, msg)
   if self.driver and self.driver.name ~= "farl_player" then
     self.driver.print(msg)
-  elseif self.openedBy and self.openedBy.valid then
-    self.openedBy.print({"", "FARL '", self.locomotive.backer_name,"': ",msg})
   elseif self.startedBy and self.startedBy.valid then
     self.startedBy.print({"", "FARL '", self.locomotive.backer_name,"': ",msg})
   else
