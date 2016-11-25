@@ -98,14 +98,7 @@ local function on_tick(event)
       end
       global.overlayStack[event.tick] = nil
     end
-    if global.destroyNextTick[event.tick] then
-      local pis = global.destroyNextTick[event.tick]
-      for _, pi in pairs(pis) do
-        GUI.destroyGui(game.players[pi])
-        debugDump("Gui destroyed (on tick)")
-      end
-      global.destroyNextTick[event.tick] = nil
-    end
+
     for i, farl in pairs(global.farl) do
       if not farl.destroy and farl.driver and farl.driver.valid then
         local status, err = pcall(function()
@@ -143,7 +136,6 @@ local function init_global()
   global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
   global.godmode = false
   godmode = global.godmode
-  global.destroyNextTick = global.destroyNextTick or {}
   global.overlayStack = global.overlayStack or {}
   global.statistics = global.statistics or {}
   global.electric_poles = global.electric_poles or {}
@@ -283,6 +275,7 @@ local function on_configuration_changed(data)
               end
             end
           end
+
           if oldVersion < "0.6.1" then
             local newFarls = {}
             if global.farl then
@@ -297,7 +290,17 @@ local function on_configuration_changed(data)
               end
               global.farl = newFarls
             end
+          end
 
+          if oldVersion < "0.7.1" then
+            if global.destroyNextTick then
+              for _, pis in pairs(global.destroyNextTick) do
+                for _, pi in pairs(pis) do
+                  GUI.destroyGui(game.players[pi])
+                end
+              end
+              global.destroyNextTick = nil
+            end
           end
         end
       end
@@ -394,11 +397,7 @@ function on_player_driving_changed_state(event)
   if player.vehicle == nil and player.gui.left.farl ~= nil then
     FARL.onPlayerLeave(player, event.tick + 5)
     debugDump("onPlayerLeave (driving state changed)")
-    local tick = event.tick + 5
-    if not global.destroyNextTick[tick] then
-      global.destroyNextTick[tick] = {}
-    end
-    table.insert(global.destroyNextTick[tick], event.player_index)
+    GUI.destroyGui(player)
   end
 end
 
@@ -429,15 +428,17 @@ end
 
 function debugDump(var, force)
   if false or force then
+    local msg
+    if type(var) == "string" then
+      msg = var
+    else
+      msg = serpent.dump(var, {name="var", comment=false, sparse=false, sortkeys=true})
+    end
     for i,player in pairs(game.players) do
-      local msg
-      if type(var) == "string" then
-        msg = var
-      else
-        msg = serpent.dump(var, {name="var", comment=false, sparse=false, sortkeys=true})
-      end
       player.print(msg)
     end
+    local tick = game and game.tick or 0
+    log(tick .. " " .. msg)
   end
 end
 
@@ -488,6 +489,7 @@ script.on_event("toggle-train-control", function(event)
   end
 end)
 
+--when Player is in a FARL and used FatController to switch to another train
 function on_player_switched(event)
   local status, err = pcall(function()
     if isFARLLocomotive(event.carriage) then
