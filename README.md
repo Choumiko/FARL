@@ -23,18 +23,22 @@
 ###Mod support
 
 There are 2 remote functions to tell FARL whether it should raise on_robot_built_entity/on_robot_pre_mined events for a specific entity:
- - remote.call("farl", "add_entity_to_trigger", "entity-name")
- - remote.call("farl", "remove_entity_from_trigger", "entity-name")
+
+- remote.call("farl", "add_entity_to_trigger", "entity-name")
+- remote.call("farl", "remove_entity_from_trigger", "entity-name")
  
 To make it work just add FARL as an optional dependency in your info.json and do the remote.call in on_configuration_changed.
 FARL stores the names in global and only removes them if the interface is used or the entity doesn't exist anymore (checked in on_configuration_changed)
 
 
 #Changelog
+0.7.2
 
+ - fixed error when FARL was the only mod that added a hotkey
+ 
 0.7.1
  
- - added hotkey to toggle between automatic/manual mode when inside a train(Hotkey is only added when [Honk](https://mods.factorio.com/mods/GotLag/Honk) isn't installed)
+ - added hotkey to toggle between automatic/manual mode when inside a train (Hotkey is only added when [Honk](https://mods.factorio.com/mods/GotLag/Honk) isn't installed)
  - fixed FARL only reading blueprints in the first 3 quickbar rows
  - fixed error when removing trees that don't drop an item when mined
 

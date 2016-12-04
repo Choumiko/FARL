@@ -23,7 +23,7 @@ require("prototypes.item.item")
 require("prototypes.recipe.recipe")
 require("prototypes.styles")
 
-if not data.raw["custom-input"]["toggle-train-control"] then
+if not data.raw["custom-input"] or not data.raw["custom-input"]["toggle-train-control"] then
   data:extend({
     {
       type = "custom-input",
