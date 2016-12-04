@@ -16,6 +16,10 @@
 [Look at the forums](https://forums.factorio.com/viewforum.php?f=61)  
 [FARL Autopilot](https://www.twitch.tv/choumiko/v/99457468)
 
+###Hotkeys
+
+- Press J (default) to toggle trains between automatic and manual mode when inside a train
+
 ###Mod support
 
 There are 2 remote functions to tell FARL whether it should raise on_robot_built_entity/on_robot_pre_mined events for a specific entity:
@@ -27,9 +31,12 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+
 0.7.1
  
+ - added hotkey to toggle between automatic/manual mode when inside a train(Hotkey is only added when [Honk](https://mods.factorio.com/mods/GotLag/Honk) isn't installed)
  - fixed FARL only reading blueprints in the first 3 quickbar rows
+ - fixed error when removing trees that don't drop an item when mined
 
 0.7.0
  

@@ -286,6 +286,13 @@ FARL.curvePositions = {
   [7] = { straight = { dir = 2, off = { x = 3, y = 1 } }, diagonal = { dir = 1, off = { x = -3, y = -1 } } }
 }
 
+FARL.find_entities_filtered = function(self, args, from)
+
+  log(game.tick .. " " .. from .. " " .. serpent.line(args, {comment=false}) .. " found: " .. self.surface.count_entities_filtered(args))
+
+  return self.surface.find_entities_filtered(args)
+end
+
 FARL.getIdFromTrain = function(train)
   if train and train.valid and train.locomotives then
     return #train.locomotives.front_movers > 0 and train.locomotives.front_movers[1].unit_number or train.locomotives.back_movers[1].unit_number
@@ -772,32 +779,35 @@ end
 FARL.removeTrees = function(self, area)
   --apiCalls.count.tree = apiCalls.count.tree + 1
   for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "tree" }) do
+    --for _, entity in pairs(self:find_entities_filtered({ area = area, type = "tree" }, "removeTrees")) do
     local stat = global.statistics[self.locomotive.force.name].removed["tree-01"] or 0
     global.statistics[self.locomotive.force.name].removed["tree-01"] = stat + 1
     if not(godmode or self.cheat_mode) and self.settings.collectWood then
       local products = entity.prototype.mineable_properties.products --get the products of this tree
-      if #products == 1 and products[1].name == "raw-wood" then
-        self:addItemToCargo("raw-wood", 1)
-      else
-        local floor, round, random = math.floor, round, math.random
-        for _, v in pairs(products) do
-          if v.type == "item" then
-            local amount
-            if v.amount then
-              amount = v.amount
-            else
-              local rounded_probability = 1
-              local rounded_random = 1
-              if v.probability < 1 then --determine whether or not we are adding this item to inventory based on it's drop probability
-                rounded_probability = floor(round(v.probability, 2))
-                rounded_random = round(random(), 2)
+      if products then
+        if #products == 1 and products[1].name == "raw-wood" then
+          self:addItemToCargo("raw-wood", 1)
+        else
+          local floor, round, random = math.floor, round, math.random
+          for _, v in pairs(products) do
+            if v.type == "item" then
+              local amount
+              if v.amount then
+                amount = v.amount
+              else
+                local rounded_probability = 1
+                local rounded_random = 1
+                if v.probability < 1 then --determine whether or not we are adding this item to inventory based on it's drop probability
+                  rounded_probability = floor(round(v.probability, 2))
+                  rounded_random = round(random(), 2)
+                end
+                if rounded_probability >= rounded_random then
+                  amount = floor(random(v.amount_min, v.amount_max))
+                end
               end
-              if rounded_probability >= rounded_random then
-                amount = floor(random(v.amount_min, v.amount_max))
+              if amount then
+                self:addItemToCargo(v.name, math.ceil(amount / 2))
               end
-            end
-            if amount then
-              self:addItemToCargo(v.name, math.ceil(amount / 2))
             end
           end
         end
@@ -809,6 +819,7 @@ end
 
 FARL.removeStone = function(self, area)
   for _, entity in pairs(self.surface.find_entities_filtered { area = area, name = "stone-rock" }) do
+    --for _, entity in pairs(self:find_entities_filtered( { area = area, name = "stone-rock" }, "removeStone")) do
     entity.die()
     if not(godmode or self.cheat_mode) and self.settings.collectWood then
       self:addItemToCargo("stone", 15)
@@ -824,6 +835,7 @@ FARL.removeEntitiesFiltered = function(self, args)
   local force = self.locomotive.force
   local neutral_force = game.forces.neutral
   for _, entity in pairs(self.surface.find_entities_filtered(args)) do
+    --for _, entity in pairs(self:find_entities_filtered(args, "removeEntitiesFiltered")) do
     if not self:isProtected(entity) and (entity.force == force or entity.force == neutral_force) then
       local item = false
       local name = entity.name
@@ -1019,6 +1031,7 @@ FARL.pickupItems = function(self, area)
   if self.surface.count_entities_filtered { area = area, name = "item-on-ground" } > 0 then
     --apiCalls.find.item = apiCalls.find.item + 1
     for _, entity in pairs(self.surface.find_entities_filtered { area = area, name = "item-on-ground" }) do
+      --for _, entity in pairs(self:find_entities_filtered( { area = area, name = "item-on-ground" },"pickUpItems")) do
       self:addItemToCargo(entity.stack.name, entity.stack.count, entity.stack.prototype.place_result)
       entity.destroy()
     end
@@ -1566,7 +1579,7 @@ FARL.deactivate = function(self, reason)
     self.driver.destroy()
     self.driver = false
   end
-  
+
   self.ghostPath = nil
   self.confirmed = nil
   --    if self.last_signal then
