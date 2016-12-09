@@ -412,7 +412,7 @@ GUI = {
     findBlueprintsInHotbar = function(player)
       local blueprints = {}
       if player ~= nil then
-        local hotbar = player.get_inventory(defines.inventory.player_quickbar) --TODO 0.13 use inventory.god_quickbar
+        local hotbar = player.controller_type == defines.controllers.character and player.get_inventory(defines.inventory.player_quickbar) or player.get_inventory(defines.inventory.god_quickbar)
         if hotbar ~= nil then
           for i=1,#hotbar do
             local itemStack = hotbar[i]

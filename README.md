@@ -32,6 +32,10 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+0.7.3
+
+ - fixed FARL looking for blueprints in the main inventory instead of the quickbar when in Sandbox scenario / god controller
+
 0.7.2
 
  - fixed error when FARL was the only mod that added a hotkey
