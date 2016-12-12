@@ -32,6 +32,11 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+0.7.4
+
+ - fixed a load order issue with [VehiclesEquipement](https://mods.factorio.com/mods/Y.Petremann/VehiclesEquipement)
+ - fixed FARLs with an equipment grid loosing the equipment when mined
+
 0.7.3
 
  - fixed FARL looking for blueprints in the main inventory instead of the quickbar when in Sandbox scenario / god controller

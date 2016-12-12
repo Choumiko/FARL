@@ -1,7 +1,7 @@
 data:extend(
   {
     {
-      type = "item",
+      type = "item-with-entity-data",
       name = "farl",
       icon = "__FARL__/graphics/icons/farl.png",
       flags = {"goes-to-quickbar"},
