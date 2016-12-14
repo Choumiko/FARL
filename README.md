@@ -32,6 +32,10 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+0.7.5
+
+ - FARL gets the same equipment grid as the vanilla locomotive, if FARL doesn't already have another grid assigned
+
 0.7.4
 
  - fixed a load order issue with [VehiclesEquipement](https://mods.factorio.com/mods/Y.Petremann/VehiclesEquipement)
