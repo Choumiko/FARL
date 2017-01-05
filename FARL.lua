@@ -1566,13 +1566,20 @@ FARL.deactivate = function(self, reason)
   self.ghostProgress = nil
   if self.ghostPath and #self.ghostPath > 0 and self.destroyedGhosts then
     --log(serpent.block(self.ghostPath,{comment=false}))
-    for _, data in pairs(self.ghostPath) do
-      local ghost = data.rail
-      ghost.force = self.locomotive.force
-      local ent = self.surface.create_entity(ghost)
-      if ent then
-        ent.time_to_live = data.rail.timeToLive
+    local force = self.locomotive.force
+    local status, err = pcall(function()
+      for _, data in pairs(self.ghostPath) do
+        local ghost = data.rail
+        ghost.force = force
+        local ent =
+          self.surface.create_entity(ghost)
+        if ent then
+          ent.time_to_live = data.rail.timeToLive
+        end
       end
+    end)
+    if not status then
+      self:print({ "", "Error deactivating: ", err })
     end
   end
   if self.driver and self.driver.name == "farl_player" then
