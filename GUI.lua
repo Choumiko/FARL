@@ -442,6 +442,9 @@ GUI = {
       local status, err = pcall(function()
         local bp = GUI.findSetupBlueprintsInHotbar(player)
         if bp then
+          if #bp > 2 then
+            farl:print({"msg-error-too-many-bps"})
+          end
           local was_active = farl.active
           farl:deactivate()
           farl:parseBlueprints(bp)
@@ -451,6 +454,8 @@ GUI = {
             farl:activate()
           end
           return
+        else
+          farl:print({ "msg-error-no-blueprint" })
         end
       end)
       if not status then
