@@ -444,6 +444,11 @@ GUI = {
         if bp then
           if #bp > 2 then
             farl:print({"msg-error-too-many-bps"})
+            return
+          end
+          if #bp == 0 then
+            farl:print({ "msg-error-no-blueprint" })
+            return
           end
           local was_active = farl.active
           farl:deactivate()
@@ -454,8 +459,6 @@ GUI = {
             farl:activate()
           end
           return
-        else
-          farl:print({ "msg-error-no-blueprint" })
         end
       end)
       if not status then
@@ -517,10 +520,11 @@ GUI = {
           end
         end
         if bp then
-          local icons = {{index = 2, signal={name = "farl", type="item"}},[0] = {index = 1, signal={name = "rail", type="item"}}}
           bp.set_blueprint_entities(util.table.deepcopy(bp_table.entities))
           bp.set_blueprint_tiles(util.table.deepcopy(bp_table.tiles))
-          bp.blueprint_icons = icons
+          local icons = {[1]={index = 1, signal={name = "rail", type="item"}},[2]={index = 2, signal={name = "farl", type="item"}}}
+          --TODO fix error
+          pcall(function() bp.blueprint_icons = icons end)
         else
           farl:print({"msg-no-empty-blueprint"})
         end
