@@ -34,6 +34,7 @@ FARL stores the names in global and only removes them if the interface is used o
 #Changelog
 1.0.0
  - version for Factorio 0.15.x
+ - added error messages when reading invalid/too many blueprints
 
 0.7.5
 
