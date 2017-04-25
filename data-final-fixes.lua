@@ -1,9 +1,10 @@
 require "lib"
 
-local metarecipe = copyPrototype("recipe", "deconstruction-planner", "farl-meta")
+local metarecipe = copyPrototype("recipe", "inserter", "farl-meta")
 metarecipe.ingredients = {}
 metarecipe.enabled = false
 metarecipe.hidden = true
+
 --local metaitem = copyPrototype("deconstruction-item", "deconstruction-planner", "farl-meta")
 --table.insert(metaitem.flags, "hidden")
 --metarecipe.result = "farl-meta"
@@ -61,8 +62,8 @@ local function addFarlCategory(equipmentGridName)
 end
 
 --add grid to farl if one is present and FARL doesn't already have one
-if data.raw["locomotive"]["diesel-locomotive"].equipment_grid and not data.raw["locomotive"]["farl"].equipment_grid then
-  data.raw["locomotive"]["farl"].equipment_grid = data.raw["locomotive"]["diesel-locomotive"].equipment_grid
+if data.raw["locomotive"]["locomotive"].equipment_grid and not data.raw["locomotive"]["farl"].equipment_grid then
+  data.raw["locomotive"]["farl"].equipment_grid = data.raw["locomotive"]["locomotive"].equipment_grid
 end
 
 for locoName, loco in pairs(data.raw.locomotive) do

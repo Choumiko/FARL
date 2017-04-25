@@ -848,7 +848,7 @@ FARL.removeEntitiesFiltered = function(self, args)
         end
       end
       if global.trigger_events[name] or entity.type == "electric-pole" then
-        game.raise_event(defines.events.on_robot_pre_mined, { entity = entity })
+        script.raise_event(defines.events.on_robot_pre_mined, { entity = entity })
       end
       if not entity.destroy() then
         self:deactivate({ "msg-cant-remove" })
@@ -1780,7 +1780,7 @@ FARL.genericPlace = function(self, arg, ignore)
   end
   if entity then
     if global.trigger_events[entity.name] or entity.type == "electric-pole" then
-      game.raise_event(defines.events.on_robot_built_entity, { created_entity = entity })
+      script.raise_event(defines.events.on_robot_built_entity, { created_entity = entity })
     end
     local stat = global.statistics[entity.force.name].created[entity.name] or 0
     global.statistics[entity.force.name].created[entity.name] = stat + 1
