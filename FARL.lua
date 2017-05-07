@@ -267,6 +267,9 @@ function get_item_name(some_name)
       name = false
     end
   end
+  if not name then
+  	log("No item found for: " .. tostring(some_name))
+  end
   return name
 end
 
@@ -1744,7 +1747,10 @@ end
 FARL.getCargoCount = function(self, item)
   local name = get_item_name(item)
   if godmode or self.cheat_mode then return 9001 end
-  return self.train.get_item_count(name)
+  if not name then
+    self:print("No item found for: " .. item)
+  end
+  return name and self.train.get_item_count(name) or 0
 end
 
 FARL.genericCanPlace = function(self, arg)
@@ -2456,7 +2462,7 @@ FARL.connectCCNet = function(self, pole)
       end
       for i = 1, #c do
         if self:getCargoCount(items[i]) > 0 then
-          pole.connect_neighbour({ target_entity = self.ccNetPole, wire = c[i] }) --TODO check 0.13
+          pole.connect_neighbour({ target_entity = self.ccNetPole, wire = c[i] })
           self:removeItemFromCargo(items[i], 1)
         end
       end

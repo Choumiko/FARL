@@ -32,7 +32,12 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+1.0.1
+
+ - fixed error with invalid item name
+
 1.0.0
+
  - version for Factorio 0.15.x
  - added error messages when reading invalid/too many blueprints
 
