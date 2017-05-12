@@ -32,6 +32,10 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+1.0.2
+
+ - fixed gui not being destroyed when mining the FARL the player is in
+
 1.0.1
 
  - fixed error with invalid item name
