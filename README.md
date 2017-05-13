@@ -32,6 +32,10 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+1.0.3
+
+ - fixed cruise control not working when driving the "backwards" locomotive in double headers
+
 1.0.2
 
  - fixed gui not being destroyed when mining the FARL the player is in

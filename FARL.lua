@@ -1171,19 +1171,19 @@ end
 FARL.cruiseControl = function(self)
   local acc = self.frontmover and defines.riding.acceleration.accelerating or defines.riding.acceleration.reversing
   local decc = self.frontmover and defines.riding.acceleration.reversing or defines.riding.acceleration.accelerating
-  --local speed = math.abs(self.train.speed)
+  local speed = math.abs(self.train.speed)
   local limit = self.active and self.settings.cruiseSpeed or 0.9
   if self.cruise then
     if self.cruiseInterrupt == 2 then
       self:toggleCruiseControl()
       return
     end
-    if self.train.speed < limit then
+    if speed < limit then
       self.driver.riding_state = { acceleration = acc, direction = self.driver.riding_state.direction }
-    elseif self.active and self.train.speed > limit + 0.1 then
+    elseif self.active and speed > limit + 0.1 then
       self.driver.riding_state = { acceleration = decc, direction = self.driver.riding_state.direction }
     else
-      self.driver.riding_state = { acceleration = 0, direction = self.driver.riding_state.direction }
+      self.driver.riding_state = { acceleration = defines.riding.acceleration.nothing, direction = self.driver.riding_state.direction }
     end
   else
     self.driver.riding_state = { acceleration = self.driver.riding_state.acceleration, direction = self.driver.riding_state.direction }
@@ -1644,6 +1644,7 @@ FARL.toggleCruiseControl = function(self)
       self.cruise = true
       local input = self.input or 1
       self.driver.riding_state = { acceleration = 1, direction = input }
+      GUI.updateGui(self)
     end
     return
   else
@@ -1651,6 +1652,7 @@ FARL.toggleCruiseControl = function(self)
       self.cruise = false
       local input = self.input or 1
       self.driver.riding_state = { acceleration = self.driver.riding_state.acceleration, direction = input }
+      GUI.updateGui(self)
     end
     return
   end
