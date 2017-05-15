@@ -503,6 +503,12 @@ script.on_event(defines.events.on_player_driving_changed_state, on_player_drivin
 --script.on_event(defines.events.on_player_placed_equipment, on_player_placed_equipment)
 --script.on_event(defines.events.on_player_removed_equipment, on_player_removed_equipment)
 
+script.on_event(defines.events.on_player_placed_equipment, function(event)
+  if event.equipment.name == "farl-roboport" then
+    event.equipment.energy = 5000000000
+  end
+end)
+
 script.on_event("toggle-train-control", function(event)
   if not game.active_mods["Honk"] and not game.active_mods["Honck"] then
     local vehicle = game.players[event.player_index].vehicle

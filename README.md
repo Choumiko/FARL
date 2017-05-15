@@ -35,6 +35,7 @@ FARL stores the names in global and only removes them if the interface is used o
 1.0.4
 
  - fixed cruise control not working when driving the "backwards" locomotive in double headers
+ - fixed FARL freezing the game when creating a loop with rail ghosts and using the Autopilot
 
 1.0.2
 

@@ -268,7 +268,7 @@ function get_item_name(some_name)
     end
   end
   if not name then
-  	log("No item found for: " .. tostring(some_name))
+    log("No item found for: " .. tostring(some_name))
   end
   return name
 end
@@ -1709,11 +1709,17 @@ FARL.getGhostPath = function(self)
   local count, limit = 0, 30
   local ghostPath = {}
   local prevDir, input = dir, 1
+  local already_on_path = {}
   while next do --and count < limit do
     next, dir, input = self:getConnectedGhostRail(next, dir)
     if next then
-      --self:flyingText(count, YELLOW, true, next.position)
-      table.insert(ghostPath, 1, {dir = dir, rail = next, input = input})
+      if not already_on_path[next.unit_number] then
+        --self:flyingText(count, YELLOW, true, next.position)
+        table.insert(ghostPath, 1, {dir = dir, rail = next, input = input})
+        already_on_path[next.unit_number] = true
+      else
+        break
+      end
     end
     count = count + 1
   end
