@@ -267,9 +267,6 @@ function get_item_name(some_name)
       name = false
     end
   end
-  if not name then
-    log("No item found for: " .. tostring(some_name))
-  end
   return name
 end
 
