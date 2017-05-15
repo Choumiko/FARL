@@ -179,6 +179,7 @@ defaultSettings =
     wooden = false,
     flipPoles = false,
     signalDistance = 15,
+    signalEveryPole = false,
     minPoles = true,
     poles = true,
     poleEntities = true,

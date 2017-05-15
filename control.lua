@@ -312,6 +312,13 @@ local function on_configuration_changed(data)
               end
             end
           end
+          if oldVersion < "1.0.4" then
+            for _, psettings in pairs(global.players) do
+              if psettings.signalEveryPole == nil then
+                psettings.signalEveryPole = false
+              end
+            end
+          end
         end
       end
     else
@@ -382,7 +389,7 @@ function on_preplayer_mined_item(event)
   if ent.type == "locomotive" or ent.type == "cargo-wagon" then
     for i, farl in pairs(global.farl) do
       if not farl.train or (farl.train.valid and farl.train == ent.train) or not farl.train.valid then
-		    local player = game.players[event.player_index]
+        local player = game.players[event.player_index]
         if farl.driver and farl.driver == player then
           FARL.onPlayerLeave(player)
           GUI.destroyGui(player)

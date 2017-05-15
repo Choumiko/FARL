@@ -183,7 +183,7 @@ GUI = {
         local i = event.element.name:match("save_bp_(%w*)")
         GUI.save_bp(event,farl, player,tonumber(i))
       elseif name == "signals" or name == "poles" or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
-        or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" or name == "mirrorConcrete" then
+        or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" or name == "mirrorConcrete" or name == "signalEveryPole" then
         psettings[name] = not psettings[name]
         if name == "poles" then
           if psettings[name] and farl.active then
@@ -347,6 +347,9 @@ GUI = {
 
         GUI.add(settings, {type="label", caption={"stg-signalDistance"}})
         GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, psettings.signalDistance)
+        
+        --GUI.add(settings, {type="checkbox", name="signalEveryPole", caption={"stg-signalEveryPole"}, tooltip={"farl_tooltip_signalEveryPole"}}, "signalEveryPole")
+        --GUI.add(settings, {type="label", caption=""})
 
         if remote.interfaces.dim_trains then
           GUI.add(settings,{type="checkbox", name="poweredRails", caption="use powered rails", state=psettings.electric})
