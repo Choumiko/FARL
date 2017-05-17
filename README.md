@@ -32,6 +32,10 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+1.0.5
+
+ - fixed crash when a locomotive or cargo wagon where destroyed
+
 1.0.4
 
  - fixed cruise control not working when driving the "backwards" locomotive in double headers

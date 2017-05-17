@@ -389,10 +389,12 @@ function on_preplayer_mined_item(event)
   if ent.type == "locomotive" or ent.type == "cargo-wagon" then
     for i, farl in pairs(global.farl) do
       if not farl.train or (farl.train.valid and farl.train == ent.train) or not farl.train.valid then
-        local player = game.players[event.player_index]
-        if farl.driver and farl.driver == player then
-          FARL.onPlayerLeave(player)
-          GUI.destroyGui(player)
+        if event.player_index then
+          local player = game.players[event.player_index]
+          if farl.driver and farl.driver == player then
+            FARL.onPlayerLeave(player)
+            GUI.destroyGui(player)
+          end
         end
         global.farl[i]:deactivate()
         global.farl[i] = nil
