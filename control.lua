@@ -1,4 +1,8 @@
 require "Settings"
+
+rails_by_index = {}
+rails_localised = {}
+
 require "FARL"
 require "GUI"
 
@@ -29,6 +33,49 @@ local function getMetaItemData()
   for i, ent in pairs(metaitem) do
     global.electric_poles[ent.name] = ent.amount/10
   end
+end
+
+local function getRailTypes()
+  local rails_by_item = {}
+  local railstring = ""
+  for name, proto in pairs(game.entity_prototypes) do
+    local properties = proto.mineable_properties
+    if proto.type == "straight-rail" and proto.items_to_place_this then
+      for _, item in pairs(proto.items_to_place_this) do
+        rails_by_item[item.name] = rails_by_item[item.name] or {}
+        rails_by_item[item.name].straight = name
+        rails_by_item[item.name].item = item.name
+      end
+    end
+    if proto.type == "curved-rail" then
+      for _, item in pairs(proto.items_to_place_this) do
+        rails_by_item[item.name] = rails_by_item[item.name] or {}
+        rails_by_item[item.name].curved = name
+      end
+    end
+  end
+  local index = 1
+  if rails_by_item.rail then
+    rails_by_item.rail.index = index
+    rails_by_index[index] = rails_by_item.rail
+    rails_localised[index] = game.item_prototypes["rail"].localised_name
+    index = index + 1
+    railstring = railstring .. "rail"
+  end
+
+  for item, rails in pairs(rails_by_item) do
+    if item ~= "rail" then
+      rails.index = index
+      rails_by_index[index] = rails_by_item[item]
+      rails_localised[index] = game.item_prototypes[item].localised_name
+      index = index + 1
+      railstring = railstring .. item
+    end
+  end
+  log(serpent.block(rails_localised))
+  rails = rails_by_item
+  log(railstring)
+  return railstring
 end
 
 function isFARLLocomotive(loco)
@@ -137,6 +184,7 @@ local function init_global()
   global.electric_poles = global.electric_poles or {}
   global.trigger_events = global.trigger_events or {}
   global.version = global.version or "0.5.35"
+  global.railString = global.railString or "rail"
   if global.debug_log == nil then
     global.debug_log = false
   end
@@ -173,6 +221,7 @@ local function on_init()
   init_players()
   setMetatables()
   getMetaItemData()
+  getRailTypes()
 end
 
 local function on_load()
@@ -312,10 +361,15 @@ local function on_configuration_changed(data)
               end
             end
           end
-          if oldVersion < "1.0.4" then
+          if oldVersion < "1.0.6" then
+          	getRailTypes()
             for _, psettings in pairs(global.players) do
               if psettings.signalEveryPole == nil then
                 psettings.signalEveryPole = false
+              end
+              if psettings.railType == nil then
+                psettings.railType = 1
+                psettings.rails = rails[rails_by_index[1]]
               end
             end
           end
@@ -345,6 +399,17 @@ local function on_configuration_changed(data)
     else
       --5dims_trains was removed
       global.electricInstalled = false
+    end
+  end
+  local railstring = getRailTypes()
+  --rails where added/removed, reset to index 1
+  if railstring ~= global.railString then
+    for i, psettings in pairs(global.players) do
+      if psettings.railType ~= 1 then
+        game.players[i].print("Rail types where changed, resetting to vanilla rail.")
+      end
+      psettings.railType = 1
+      psettings.rails = rails[rails_by_index[1]]
     end
   end
   --some mod changed, readd poles, concrete
@@ -685,7 +750,10 @@ remote.add_interface("farl",
     add_entity_to_trigger = function(name)
       global.trigger_events = global.trigger_events or {}
       if game.entity_prototypes[name] then
+        trigger_events[name] = true
         global.trigger_events[name] = true
+        log(string.format("Registered %s to trigger create/remove events", name))
+        log(serpent.block(global.trigger_events))
         return true
       end
     end,
@@ -693,13 +761,17 @@ remote.add_interface("farl",
     remove_entity_from_trigger = function(name)
       global.trigger_events = global.trigger_events or {}
       if global.trigger_events[name] then
+        trigger_events[name] = nil
         global.trigger_events[name] = nil
+        log(string.format("Removed %s from triggering create/remove events", name))
+        log(serpent.block(global.trigger_events))
         return true
       end
     end,
 
     get_trigger_list = function()
       global.trigger_events = global.trigger_events or {}
-      return global.trigger_events
+      trigger_events = trigger_events or {}
+      return trigger_events
     end
   })

@@ -1,6 +1,8 @@
 require "util"
 require "Blueprint"
 
+trigger_events = {}
+
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
 input2dir = { [0] = -1, [1] = 0, [2] = 1 }
 --[traveldir] ={[raildir]
@@ -255,19 +257,28 @@ end
 
 function get_item_name(some_name)
   local name = false
+  local count = 1
   if game.item_prototypes[some_name] then
     name = game.item_prototypes[some_name].name
   elseif game.entity_prototypes[some_name] then
-    local items = game.entity_prototypes[some_name].items_to_place_this
+    local entityProto = game.entity_prototypes[some_name]
+    local items = entityProto.items_to_place_this
     local _, item = next(items)
     name = item.name
+    if entityProto.mineable_properties and entityProto.mineable_properties.minable and entityProto.mineable_properties.products then
+      for _, item1 in pairs(entityProto.mineable_properties.products) do
+        if item1.name == name then
+          count = item1.amount or item1.amount_max
+        end
+      end
+    end
   elseif game.tile_prototypes[some_name] then
     name = game.tile_prototypes[some_name].items_to_place_this and next(game.tile_prototypes[some_name].items_to_place_this)
     if name == "landfill" then
       name = false
     end
   end
-  return name
+  return name, count
 end
 
 --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
@@ -550,6 +561,9 @@ FARL.update = function(self, _)
               if self.settings.bulldozer then
                 self:bulldoze_area(rail, self.path[i].travel_dir)
                 local addAmount = self.path[i].rail.type == "straight-rail" and 1 or 4
+                if trigger_events[self.path[i].rail.name] then
+                  script.raise_event(defines.events.on_robot_pre_mined, { entity = self.path[i].rail })
+                end
                 if self.path[i].rail.destroy() then
                   self:addItemToCargo(name, addAmount, true)
                 else
@@ -834,7 +848,9 @@ end
 FARL.removeEntitiesFiltered = function(self, args)
   local force = self.locomotive.force
   local neutral_force = game.forces.neutral
+  local count
   for _, entity in pairs(self.surface.find_entities_filtered(args)) do
+    count = 1
     --for _, entity in pairs(self:find_entities_filtered(args, "removeEntitiesFiltered")) do
     if not self:isProtected(entity) and (entity.force == force or entity.force == neutral_force) then
       local item = false
@@ -847,7 +863,7 @@ FARL.removeEntitiesFiltered = function(self, args)
           item = k
         end
       end
-      if global.trigger_events[name] or entity.type == "electric-pole" then
+      if trigger_events[name] or entity.type == "electric-pole" then
         script.raise_event(defines.events.on_robot_pre_mined, { entity = entity })
       end
       if not entity.destroy() then
@@ -855,7 +871,7 @@ FARL.removeEntitiesFiltered = function(self, args)
         return
       else
         if item and name ~= "concrete-lamp" then
-          self:addItemToCargo(item, 1)
+          self:addItemToCargo(item, count)
           local stat = global.statistics[self.locomotive.force.name].removed[item] or 0
           global.statistics[self.locomotive.force.name].removed[item] = stat + 1
         end
@@ -1724,14 +1740,14 @@ FARL.getGhostPath = function(self)
 end
 
 FARL.addItemToCargo = function(self, item, count, place_result)
+  local item2, count2 = get_item_name(item)
   count = count or 1
-  local rails = {
-    ["straight-rail"] = {name = "rail", count = 1},
-    ["curved-rail"] = {name = "rail", count = 4},
-    ["bi-straight-rail-wood"] = {name="bi-rail-wood", count = 1},
-    ["bi-curved-rail-wood"] = {name = "bi-rail-wood", count = 4}
-  }
-  local itemStack = rails[item] or {name = item, count = count}
+  if not game.item_prototypes[item] then
+    item = item2
+    count = count2
+  end
+  
+  local itemStack = {name = item, count = count}
   local remaining = count - self.train.insert(itemStack)
 
   if remaining > 0 and (self.settings.dropWood or place_result) then
@@ -1790,7 +1806,7 @@ FARL.genericPlace = function(self, arg, ignore)
     --apiCalls.create = apiCalls.create + 1
   end
   if entity then
-    if global.trigger_events[entity.name] or entity.type == "electric-pole" then
+    if trigger_events[entity.name] or entity.type == "electric-pole" then
       script.raise_event(defines.events.on_robot_built_entity, { created_entity = entity })
     end
     local stat = global.statistics[entity.force.name].created[entity.name] or 0

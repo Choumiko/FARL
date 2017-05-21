@@ -9,8 +9,9 @@
 - place rails on water if the train has concrete loaded
 - connects poles with red/green wires
 - Cruise control: keeps the speed at ~87km/h (full speed when not placing rails) without pressing W, deactivate by pressing S
-- Support for powered rails (5dim's mod)
-- Support for [Bio Industries](https://mods.factorio.com/mods/TheSAguy/Bio_Industries) wooden rails
+- For modders: Support for modded "compound" entities (Modders take a look at Mod support below)
+- Support for modded rails, changeable via the settings
+![Rail types](http://imgur.com/zGHNyGK.png "Rail types")
 
 ###Usage
 [Look at the forums](https://forums.factorio.com/viewforum.php?f=61)  
@@ -22,9 +23,13 @@
 
 ###Mod support
 
+Modded rails should work out of the box, as soon as updating FARL to at least 1.0.6
+
 There are 2 remote functions to tell FARL whether it should raise on_robot_built_entity/on_robot_pre_mined events for a specific entity:
 
 - remote.call("farl", "add_entity_to_trigger", "entity-name")
+
+If FARL should no longer keep on raising the events use this command (probably never):
 - remote.call("farl", "remove_entity_from_trigger", "entity-name")
  
 To make it work just add FARL as an optional dependency in your info.json and do the remote.call in on_configuration_changed.
@@ -32,6 +37,10 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+1.0.6
+
+ - added support for modded rails in the FARL settings
+
 1.0.5
 
  - fixed crash when a locomotive or cargo wagon where destroyed

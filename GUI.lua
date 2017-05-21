@@ -192,30 +192,6 @@ GUI = {
         end
       elseif name == "bridge" then
         psettings.bridge = not psettings.bridge
-      elseif name == "poweredRails" then
-        if not global.electricInstalled then
-          psettings.rail = rails.basic
-          return
-        end
-        psettings.electric = not psettings.electric
-        if psettings.electric then
-          psettings.rail = rails.electric
-        else
-          psettings.rail = rails.basic
-        end
-        farl.lastrail = false
-      elseif name == "woodenRails" then
-        if not game.entity_prototypes["bi-straight-rail-wood"] then
-          psettings.rail = rails.basic
-          return
-        end
-        psettings.wooden = not psettings.wooden
-        if psettings.wooden then
-          psettings.rail = rails.wooden
-        else
-          psettings.rail = rails.basic
-        end
-        farl.lastrail = false
       end
     end,
 
@@ -334,9 +310,10 @@ GUI = {
       if row.settings ~= nil then
         local s = row.settings
         local sDistance = tonumber(s.signalDistance.text) or psettings.signalDistance
+        local railType = tonumber(s.railType.selected_index) or 1
         sDistance = sDistance < 0 and 0 or sDistance
         player.gui.left.farl.rows.buttons.settings.caption={"text-settings"}
-        GUI.saveSettings({signalDistance = sDistance}, player)
+        GUI.saveSettings({signalDistance = sDistance, railType = railType}, player, farl)
         row.settings.destroy()
       else
         local settings = row.add({type="table", name="settings", colspan=2})
@@ -347,19 +324,12 @@ GUI = {
 
         GUI.add(settings, {type="label", caption={"stg-signalDistance"}})
         GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, psettings.signalDistance)
-        
+
         --GUI.add(settings, {type="checkbox", name="signalEveryPole", caption={"stg-signalEveryPole"}, tooltip={"farl_tooltip_signalEveryPole"}}, "signalEveryPole")
         --GUI.add(settings, {type="label", caption=""})
 
-        if remote.interfaces.dim_trains then
-          GUI.add(settings,{type="checkbox", name="poweredRails", caption="use powered rails", state=psettings.electric})
-          GUI.add(settings, {type="label", caption=""})
-        end
-
-        if game.entity_prototypes["bi-straight-rail-wood"] then
-          GUI.add(settings,{type="checkbox", name="woodenRails", caption="use wooden rails", state=psettings.wooden})
-          GUI.add(settings, {type="label", caption=""})
-        end
+        GUI.add(settings, {type="label", caption={"stg-railType"}})
+        GUI.add(settings,{type="drop-down", name="railType", items=rails_localised, selected_index=psettings.railType})
 
         GUI.add(settings, {type="label", caption={"stg-poleSide"}})
         GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=psettings.flipPoles})
@@ -534,11 +504,17 @@ GUI = {
       end
     end,
 
-    saveSettings = function(s, player)
+    saveSettings = function(s, player, farl)
       local psettings = Settings.loadByPlayer(player)
       for i,p in pairs(s) do
         if psettings[i] ~= nil then
-          psettings[i] = p
+          if i == "railType" and p ~= psettings[i] then
+            psettings[i] = p
+            psettings.rail = rails_by_index[p]
+            farl:deactivate()
+          else
+            psettings[i] = p
+          end
         end
       end
     end,
@@ -547,7 +523,7 @@ GUI = {
       local guiPlayer = (farl.driver and farl.driver.name ~= "farl_player") and farl.driver or false
       if guiPlayer and guiPlayer.gui.left.farl then
         --GUI.init(farl.driver)
-        local farlGui = guiPlayer.gui.left.farl.rows 
+        local farlGui = guiPlayer.gui.left.farl.rows
         farlGui.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
         guiPlayer.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
         if farl.ghostProgress then

@@ -1,9 +1,7 @@
 require "util"
 
 rails = {
-  basic = {curved = "curved-rail", straight = "straight-rail"},
-  electric = {curved = "curved-power-rail", straight = "straight-power-rail"},
-  wooden = {curved = "bi-curved-rail-wood", straight = "bi-straight-rail-wood"}}
+  rail = {curved = "curved-rail", straight = "straight-rail", index = 1, item="rail"}}
 
 --poleDistance = 1, side = right
 defaultsDiagonal = {
@@ -175,15 +173,14 @@ defaultSettings =
     curvedWeight = 4,
     cruiseSpeed = 0.4,
     dropWood = true,
-    electric = false,
-    wooden = false,
     flipPoles = false,
     signalDistance = 15,
     signalEveryPole = false,
     minPoles = true,
     poles = true,
     poleEntities = true,
-    rail = rails.basic,
+    railType = 1,
+    rail = rails.rail,
     signals = true,
     bulldozer = false,
     maintenance = false,
