@@ -816,7 +816,7 @@ FARL.removeTrees = function(self, area)
                   rounded_random = round(random(), 2)
                 end
                 if rounded_probability >= rounded_random then
-                  amount = floor(random(v.amount_min, v.amount_max))
+                  amount = random(v.amount_min, v.amount_max)
                 end
               end
               if amount then
@@ -827,19 +827,43 @@ FARL.removeTrees = function(self, area)
         end
       end
     end
-    entity.die()
+    entity.die() -- using die() here, because destroy() doesn't leave tree stumps
   end
 end
 
 FARL.removeStone = function(self, area)
-  for _, entity in pairs(self.surface.find_entities_filtered { area = area, name = "stone-rock" }) do
-    --for _, entity in pairs(self:find_entities_filtered( { area = area, name = "stone-rock" }, "removeStone")) do
-    entity.die()
-    if not(godmode or self.cheat_mode) and self.settings.collectWood then
-      self:addItemToCargo("stone", 15)
+  local prototypes = game.entity_prototypes
+  local floor, round, random = math.floor, round, math.random
+  local amount, name
+  for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "simple-entity", force = "neutral" }) do
+    local proto = prototypes[entity.name]
+    if proto.mineable_properties.minable and proto.mineable_properties.products then
+      if entity.destroy() and not(godmode or self.cheat_mode) and self.settings.collectWood then
+        local products = proto.mineable_properties.products
+        for _, product in pairs(products) do
+          log(serpent.block(product))
+          if product.type == "item" then
+            if product.probability == 1 or (product.probability >= math.random()) then
+              name = product.name
+            end
+            if name then
+              if product.amount_max == product.amount_min then
+                amount = product.amount_max
+              else
+                amount = random(product.amount_min, product.amount_max)
+              end
+              if amount and amount > 0 then
+                log(string.format("added %s %s", amount, name))
+                self:addItemToCargo(name, math.ceil(amount/2))
+              end
+              amount, name = false, false
+            end
+          end
+        end
+        local stat = global.statistics[self.locomotive.force.name].removed["stone-rock"] or 0
+        global.statistics[self.locomotive.force.name].removed["stone-rock"] = stat + 1
+      end
     end
-    local stat = global.statistics[self.locomotive.force.name].removed["stone-rock"] or 0
-    global.statistics[self.locomotive.force.name].removed["stone-rock"] = stat + 1
   end
 end
 
@@ -1746,7 +1770,7 @@ FARL.addItemToCargo = function(self, item, count, place_result)
     item = item2
     count = count2
   end
-  
+
   local itemStack = {name = item, count = count}
   local remaining = count - self.train.insert(itemStack)
 
