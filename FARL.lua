@@ -792,35 +792,34 @@ end
 
 FARL.removeTrees = function(self, area)
   --apiCalls.count.tree = apiCalls.count.tree + 1
+  local floor, round, random = math.floor, round, math.random
+  local amount, name, proto
   for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "tree" }) do
     --for _, entity in pairs(self:find_entities_filtered({ area = area, type = "tree" }, "removeTrees")) do
     local stat = global.statistics[self.locomotive.force.name].removed["tree-01"] or 0
     global.statistics[self.locomotive.force.name].removed["tree-01"] = stat + 1
-    if not(godmode or self.cheat_mode) and self.settings.collectWood then
-      local products = entity.prototype.mineable_properties.products --get the products of this tree
+    proto = entity.prototype.mineable_properties
+    if proto and proto.minable and proto.products and not(godmode or self.cheat_mode) and self.settings.collectWood then
+      local products = proto.products
       if products then
-        if #products == 1 and products[1].name == "raw-wood" then
-          self:addItemToCargo("raw-wood", 1)
-        else
-          local floor, round, random = math.floor, round, math.random
-          for _, v in pairs(products) do
-            if v.type == "item" then
-              local amount
-              if v.amount then
-                amount = v.amount
-              else
-                local rounded_probability = 1
-                local rounded_random = 1
-                if v.probability < 1 then --determine whether or not we are adding this item to inventory based on it's drop probability
-                  rounded_probability = floor(round(v.probability, 2))
-                  rounded_random = round(random(), 2)
-                end
-                if rounded_probability >= rounded_random then
-                  amount = random(v.amount_min, v.amount_max)
-                end
+        for _, product in pairs(products) do
+          if product.type == "item" then
+            if product.name == "raw-wood" then
+              self:addItemToCargo("raw-wood", 1)
+            else
+              if product.probability == 1 or (product.probability >= math.random()) then
+                name = product.name
               end
-              if amount then
-                self:addItemToCargo(v.name, math.ceil(amount / 2))
+              if name then
+                if product.amount_max == product.amount_min then
+                  amount = product.amount_max
+                else
+                  amount = random(product.amount_min, product.amount_max)
+                end
+                if amount and amount > 0 then
+                  self:addItemToCargo(name, math.ceil(amount/2))
+                end
+                amount, name = false, false
               end
             end
           end
@@ -832,14 +831,13 @@ FARL.removeTrees = function(self, area)
 end
 
 FARL.removeStone = function(self, area)
-  local prototypes = game.entity_prototypes
   local floor, round, random = math.floor, round, math.random
-  local amount, name
+  local amount, name, proto
   for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "simple-entity", force = "neutral" }) do
-    local proto = prototypes[entity.name]
-    if proto.mineable_properties.minable and proto.mineable_properties.products then
+    proto = entity.prototype.mineable_properties
+    if proto and proto.minable and proto.products then
       if entity.destroy() and not(godmode or self.cheat_mode) and self.settings.collectWood then
-        local products = proto.mineable_properties.products
+        local products = proto.products
         for _, product in pairs(products) do
           log(serpent.block(product))
           if product.type == "item" then

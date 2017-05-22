@@ -42,6 +42,11 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+1.0.8
+
+ - fixed FARL not removing red dessert rocks
+ - fixed FARL adding more stone than intended when removing rocks 
+ 
 1.0.7
 
  - fixed errors when opening the settings 
