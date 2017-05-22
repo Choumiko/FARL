@@ -37,6 +37,10 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+1.0.7
+
+ - fixed errors when opening the settings 
+ 
 1.0.6
 
  - added support for modded rails in the FARL settings

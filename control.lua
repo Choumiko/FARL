@@ -1,8 +1,4 @@
 require "Settings"
-
-rails_by_index = {}
-rails_localised = {}
-
 require "FARL"
 require "GUI"
 
@@ -36,6 +32,9 @@ local function getMetaItemData()
 end
 
 local function getRailTypes()
+  if not global.rails then
+    init_global()
+  end
   local rails_by_item = {}
   local railstring = ""
   for name, proto in pairs(game.entity_prototypes) do
@@ -57,8 +56,8 @@ local function getRailTypes()
   local index = 1
   if rails_by_item.rail then
     rails_by_item.rail.index = index
-    rails_by_index[index] = rails_by_item.rail
-    rails_localised[index] = game.item_prototypes["rail"].localised_name
+    global.rails_by_index[index] = rails_by_item.rail
+    global.rails_localised[index] = game.item_prototypes["rail"].localised_name
     index = index + 1
     railstring = railstring .. "rail"
   end
@@ -66,15 +65,13 @@ local function getRailTypes()
   for item, rails in pairs(rails_by_item) do
     if item ~= "rail" then
       rails.index = index
-      rails_by_index[index] = rails_by_item[item]
-      rails_localised[index] = game.item_prototypes[item].localised_name
+      global.rails_by_index[index] = rails_by_item[item]
+      global.rails_localised[index] = game.item_prototypes[item].localised_name
       index = index + 1
       railstring = railstring .. item
     end
   end
-  log(serpent.block(rails_localised))
-  rails = rails_by_item
-  log(railstring)
+  global.rails = rails_by_item
   return railstring
 end
 
@@ -169,7 +166,7 @@ local function on_tick(event)
   end
 end
 
-local function init_global()
+function init_global()
   global = global or {}
   global.players =  global.players or {}
   global.savedBlueprints = global.savedBlueprints or {}
@@ -185,6 +182,11 @@ local function init_global()
   global.trigger_events = global.trigger_events or {}
   global.version = global.version or "0.5.35"
   global.railString = global.railString or "rail"
+  global.rails_by_index = global.rails_by_index or {}
+  global.rails_localised = global.rails_localised or {}
+  global.rails =  global.rails or {
+    rail = {curved = "curved-rail", straight = "straight-rail", index = 1, item="rail"}
+  }
   if global.debug_log == nil then
     global.debug_log = false
   end
@@ -362,16 +364,26 @@ local function on_configuration_changed(data)
             end
           end
           if oldVersion < "1.0.6" then
-          	getRailTypes()
+            getRailTypes()
             for _, psettings in pairs(global.players) do
               if psettings.signalEveryPole == nil then
                 psettings.signalEveryPole = false
               end
-              if psettings.railType == nil then
+            end
+          end
+          if oldVersion < "1.0.7" then
+            local railstring = getRailTypes()
+            global.electricInstalled = nil
+            for _, psettings in pairs(global.players) do
+              if not psettings.railType or psettings.railType == nil then
                 psettings.railType = 1
-                psettings.rails = rails[rails_by_index[1]]
+                psettings.rail = global.rails_by_index[1]
               end
             end
+            log(serpent.block({railstring = railstring, globalRailString=global.railString}))
+            log(serpent.block(global.rails, {name="rails"}))
+            log(serpent.block(global.rails_by_index, {name="rails_by_index"}))
+            log(serpent.block(global.rails_localised, {name="rails_localised"}))
           end
         end
       end
@@ -379,7 +391,6 @@ local function on_configuration_changed(data)
       debugDump("FARL version: "..newVersion,true)
     end
     on_init()
-    global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
     global.version = newVersion
   end
   for name, _ in pairs(global.trigger_events) do
@@ -392,26 +403,20 @@ local function on_configuration_changed(data)
   --    remote.call("satellite-uplink", "add_allowed_item", "rail")
   --    remote.call("satellite-uplink", "add_item", "rail", 1)
   --  end
-  if data.mod_changes["5dim_trains"] then
-    --5dims_trains was added/updated
-    if data.mod_changes["5dim_trains"].new_version then
-      global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
-    else
-      --5dims_trains was removed
-      global.electricInstalled = false
-    end
-  end
+
   local railstring = getRailTypes()
   --rails where added/removed, reset to index 1
+  log(string.format("%s == %s", railstring, global.railString))
   if railstring ~= global.railString then
     for i, psettings in pairs(global.players) do
       if psettings.railType ~= 1 then
         game.players[i].print("Rail types where changed, resetting to vanilla rail.")
       end
       psettings.railType = 1
-      psettings.rails = rails[rails_by_index[1]]
+      psettings.rail = global.rails_by_index[1]
     end
   end
+  global.railString = railstring
   --some mod changed, readd poles, concrete
   getMetaItemData()
   setMetatables()

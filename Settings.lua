@@ -1,8 +1,5 @@
 require "util"
 
-rails = {
-  rail = {curved = "curved-rail", straight = "straight-rail", index = 1, item="rail"}}
-
 --poleDistance = 1, side = right
 defaultsDiagonal = {
   direction = 7,
@@ -180,7 +177,7 @@ defaultSettings =
     poles = true,
     poleEntities = true,
     railType = 1,
-    rail = rails.rail,
+    rail = {curved = "curved-rail", straight = "straight-rail", index = 1, item="rail"},
     signals = true,
     bulldozer = false,
     maintenance = false,
@@ -216,11 +213,11 @@ Settings = {
   end,
 
   checkMods = function(self)
-    if not global.electricInstalled then
-      self.electric = false
-    end
-    if not game.entity_prototypes['bi-straight-rail-wood'] then
-      self.wooden = false
+    self.electric = nil
+    self.wooden = nil
+    if not self.railType then
+      self.railType = 1
+      self.rail = global.rails_by_index[1]
     end
   end,
 

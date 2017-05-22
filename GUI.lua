@@ -329,7 +329,11 @@ GUI = {
         --GUI.add(settings, {type="label", caption=""})
 
         GUI.add(settings, {type="label", caption={"stg-railType"}})
-        GUI.add(settings,{type="drop-down", name="railType", items=rails_localised, selected_index=psettings.railType})
+        if not psettings.railType or not global.rails_localised[psettings.railType] then
+          psettings.railType = 1
+          psettings.rail = global.rails_by_index[1]
+        end
+        GUI.add(settings,{type="drop-down", name="railType", items=global.rails_localised, selected_index=psettings.railType})
 
         GUI.add(settings, {type="label", caption={"stg-poleSide"}})
         GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=psettings.flipPoles})
@@ -510,7 +514,7 @@ GUI = {
         if psettings[i] ~= nil then
           if i == "railType" and p ~= psettings[i] then
             psettings[i] = p
-            psettings.rail = rails_by_index[p]
+            psettings.rail = global.rails_by_index[p]
             farl:deactivate()
           else
             psettings[i] = p
