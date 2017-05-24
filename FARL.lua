@@ -550,11 +550,11 @@ FARL.update = function(self, _)
               if self.settings.bulldozer then
                 self:bulldoze_area(rail, self.path[i].travel_dir)
                 local addAmount = self.path[i].rail.type == "straight-rail" and 1 or 4
-                if trigger_events[self.path[i].rail.name] then
+                if trigger_events[name] then
                   script.raise_event(defines.events.on_robot_pre_mined, { entity = self.path[i].rail })
                 end
                 if self.path[i].rail.destroy() then
-                  self:addItemToCargo(name, addAmount, true)
+                  self:addItemToCargo(name, addAmount, true) --TODO addAmount shouldn't be needed
                 else
                   self:deactivate({ "msg-cant-remove" })
                   return true
@@ -588,7 +588,7 @@ FARL.update = function(self, _)
             --place rail entities (only walls for now), place on the mainrail euqal to the furthest lagging parallel track
             if self.settings.railEntities and #self.settings.activeBP.straight.lanes == 0 then
               local c = #self.path - 1
-              if c > 0 and self.path[c] and self.path[c].rail.name ~= self.settings.rail.curved then
+              if c > 0 and self.path[c] and self.path[c].rail.type ~= "curved-rail" then
                 local rail = self.path[c].rail
                 table.insert(self.rail_queue, { travelDir = self.path[c].travel_dir, rail = { direction = rail.direction, type = rail.type, name = rail.name, position = addPos(rail.position) } })
               end
@@ -601,7 +601,7 @@ FARL.update = function(self, _)
               local dir = self.path[c - 1].travel_dir
               --debugLog("calculating pole for rail@"..pos2Str(self.path[c-1].rail.position))
               local rails = self:getPoleRails(rail, dir, self.path[c - 2].travel_dir)
-              if self.path[c - 2].rail.name == self.settings.rail.curved and #rails > 0 then
+              if self.path[c - 2].rail.type == "curved-rail" and #rails > 0 then
                 rails[1].range[1] = -1
               end
               local bestpole, bestrail = self:getBestPole(self.lastPole, rails, "o")
@@ -941,7 +941,7 @@ FARL.replaceWater = function(self, tiles, w, dw)
 end
 
 FARL.placeConcrete = function(self, dir, rail)
-  if rail.name == self.settings.rail.curved then return end
+  if rail.type == "curved-rail" then return end
   local type = rail.direction % 2 == 1 and "diagonal" or "straight"
   local concrete = self.settings.activeBP[type].concrete
   if not concrete then return end
@@ -1089,7 +1089,7 @@ FARL.find_tile = function(self, sarea1, sarea2, travel_dir)
 end
 
 FARL.bulldoze_area = function(self, rail, travel_dir)
-  if rail.name == self.settings.rail.curved then
+  if rail.type == "curved-rail" then
     self:prepareAreaForCurve(rail)
     return
   end
@@ -1187,7 +1187,7 @@ FARL.getGhostRail = function(self, lastRail, travelDir, input)
 
   local name = data.type == "straight-rail" and self.settings.rail.straight or self.settings.rail.curved
   local newTravelDir = (travelDir + input2dir[input]) % 8
-  return newTravelDir, { name = "entity-ghost", ghost_name = name, ghost_type = name, position = addPos(lastRail.position, data.offset), direction = data.direction, type = "entity-ghost" }
+  return newTravelDir, { name = "entity-ghost", ghost_name = name, ghost_type = data.type, position = addPos(lastRail.position, data.offset), direction = data.direction, type = "entity-ghost" }
 end
 
 FARL.cruiseControl = function(self)
@@ -1250,7 +1250,7 @@ end
 FARL.findRail = function(self, rail)
   local area = expandPos(rail.position, 0.4)
   local found = false
-  for _, r in pairs(self.surface.find_entities_filtered { area = area, name = rail.name }) do
+  for _, r in pairs(self.surface.find_entities_filtered { area = area, type = rail.type }) do
     if r.position.x == rail.position.x and r.position.y == rail.position.y and r.direction == rail.direction then
       found = r
       break
@@ -1399,7 +1399,7 @@ FARL.activate = function(self, scanForGhosts)
       self:deactivate({ "msg-error-2" }, true)
       return
     end
-    if self.lastrail.name == self.settings.rail.curved then
+    if self.lastrail.type == "curved-rail" then
       self:deactivate({ "msg-error-curves" }, true)
       return
     end
@@ -1426,7 +1426,7 @@ FARL.activate = function(self, scanForGhosts)
     --debugDump(#self.path,true)
     if self.settings.bulldozer then
       bulldoze_rail = self.frontmover and self.train.back_rail or self.train.front_rail
-      if not same_orientation or bulldoze_rail.name == self.settings.rail.curved then
+      if not same_orientation or bulldoze_rail.type == "curved-rail" then
         debugDump("Train is on a curve somewhere, train doesn't like!", true)
         self:deactivate()
         return
@@ -1437,7 +1437,7 @@ FARL.activate = function(self, scanForGhosts)
     for i = #self.path - 1, #self.path - 3, -1 do
       if self.settings.railEntities and not self.settings.bulldozer then
         local c = i
-        if c > 0 and self.path[c] and self.path[c].rail.name ~= self.settings.rail.curved then
+        if c > 0 and self.path[c] and self.path[c].rail.type ~= "curved-rail" then
           local rail = self.path[c].rail
           table.insert(self.rail_queue, { travelDir = self.path[c].travel_dir, rail = { direction = rail.direction, type = rail.type, name = rail.name, position = addPos(rail.position) } })
         end
@@ -2028,18 +2028,18 @@ end
 FARL.placeRails = function(self, nextRail, newTravelDir)
   local newDir = nextRail.direction
   local newPos = nextRail.position
-  local newRail = { name = nextRail.name, position = newPos, direction = newDir }
+  local newRail = { name = nextRail.name, position = newPos, direction = newDir, type = nextRail.type }
 
-  if newRail.name == self.settings.rail.curved then
+  if newRail.type == "curved-rail" then
     self:prepareAreaForCurve(newRail)
   end
   local rtype = newDir % 2 == 0 and "straight" or "diagonal"
   local bp = self.settings.activeBP[rtype]
   local canplace
-  if self.settings.bulldozer and newRail.name ~= self.settings.rail.curved then
+  if self.settings.bulldozer and newRail.type ~= "curved-rail" then
     self:bulldoze_area(newRail, newTravelDir)
   end
-  if newRail.direction % 2 == 0 and newRail.name ~= self.settings.rail.curved then
+  if newRail.direction % 2 == 0 and newRail.type ~= "curved-rail" then
     local area = self:createBoundingBox(newRail, newTravelDir)
     canplace = self:prepareArea(newRail, area)
     if not canplace then
@@ -2060,7 +2060,7 @@ FARL.placeRails = function(self, nextRail, newTravelDir)
     end
   end
 
-  local removeAmount = newRail.name == self.settings.rail.curved and 4 or 1
+  local removeAmount = newRail.type == "curved-rail" and 4 or 1
   local removeItem = self.settings.rail.straight
   local hasRail = self:getCargoCount(newRail.name) >= removeAmount
 
@@ -2324,7 +2324,7 @@ end
 
 FARL.placeParallelSignals = function(self, traveldir, rail, lane_index)
   --if self.signalCount[lane_index] > self.settings.signalDistance and rail.name ~= self.settings.rail.curved then
-  if self.signal_in[lane_index] and self.signal_in[lane_index] < 1 and rail.name ~= self.settings.rail.curved then
+  if self.signal_in[lane_index] and self.signal_in[lane_index] < 1 and rail.type ~= "curved-rail" then
     local signals = traveldir % 2 == 0 and self.settings.activeBP.straight.signals or self.settings.activeBP.diagonal.signals
     if signals and type(signals) == "table" and signals[lane_index] then
       local signal_data = signals[lane_index]
@@ -2373,8 +2373,8 @@ FARL.calcPole = function(self, lastrail, traveldir)
   local status, err = pcall(function()
     local offset
     if not lastrail then error("no rail", 2) end
-    if not lastrail.name then error("calcPole: invalid rail", 2) end
-    if lastrail.name ~= self.settings.rail.curved then
+    if not lastrail.name or not lastrail.type then error("calcPole: invalid rail", 2) end
+    if lastrail.type ~= "curved-rail" then
       local diagonal = traveldir % 2 == 1 and true or false
       local pole = not diagonal and self.settings.activeBP.straight.pole or self.settings.activeBP.diagonal.pole
       local pos = addPos(pole.position)
@@ -2565,12 +2565,12 @@ end
 
 FARL.getPoleRails = function(self, rail, newDir, oldDir)
   local rails
-  if rail.name == self.settings.rail.curved then
+  if rail.type == "curved-rail" then
     --range[1][2] = 0
     --debugDump({old=ptraveldir,new=pnewDir},true)
     local tracks, tmp = FARL.curvePositions[rail.direction], {}
-    tmp.d = { name = self.settings.rail.straight, direction = tracks.diagonal.dir, position = addPos(rail.position, tracks.diagonal.off) }
-    tmp.s = { name = self.settings.rail.straight, direction = tracks.straight.dir, position = addPos(rail.position, tracks.straight.off) }
+    tmp.d = { name = self.settings.rail.straight, direction = tracks.diagonal.dir, position = addPos(rail.position, tracks.diagonal.off), type = "straight-rail" }
+    tmp.s = { name = self.settings.rail.straight, direction = tracks.straight.dir, position = addPos(rail.position, tracks.straight.off), type = "straight-rail" }
     local dDir, sDir
     if oldDir % 2 == 1 then
       sDir = newDir
@@ -2631,7 +2631,7 @@ FARL.placePole = function(self, polePos, poleDir)
 end
 
 FARL.placeSignal = function(self, traveldir, rail)
-  if self.signalCount.main > self.settings.signalDistance and rail.name ~= self.settings.rail.curved then
+  if self.signalCount.main > self.settings.signalDistance and rail.type ~= "curved-rail" then
     --debugDump(self.signalCount,true)
     local signal = get_signal_for_rail(rail, traveldir)
     signal.force = self.locomotive.force
@@ -2700,7 +2700,7 @@ FARL.findLastPole = function(self, rail)
   local trainDir = self.direction or self:calcTrainDir()
   if not pole then
     local offset = { x = 1, y = 1 }
-    if lastrail.name ~= self.settings.rail.curved then
+    if lastrail.type ~= "curved-rail" then
       offset = self:calcPole(lastrail, trainDir)
     else
       self:print("calcPole with curved2")
