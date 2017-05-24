@@ -2,31 +2,29 @@ require "Settings"
 require "FARL"
 require "GUI"
 
-MOD_NAME = "FARL"
-debugButton = false
-godmode = false
+MOD_NAME = "FARL"--luacheck: allow defined top
+debugButton = false--luacheck: allow defined top
+godmode = false--luacheck: allow defined top
 
-function resetMetatable(o, mt)
+function resetMetatable(o, mt)--luacheck: allow defined top
   setmetatable(o,{__index=mt})
   return o
 end
 
-function setMetatables()
-  for i,farl in pairs(global.farl) do
-    farl = resetMetatable(farl, FARL)
+function setMetatables()--luacheck: allow defined top
+  for i, farl in pairs(global.farl) do
+    global.farl[i] = resetMetatable(farl, FARL)
   end
   for name, s in pairs(global.players) do
-    s = resetMetatable(s,Settings)
+    global.players[name] = resetMetatable(s,Settings)
   end
 end
-
-local concrete_lookup = {["stone-brick"] = "stone-path"}
 
 local function getMetaItemData()
   game.forces.player.recipes["farl-meta"].reload()
   local metaitem = game.forces.player.recipes["farl-meta"].ingredients
   global.electric_poles = {}
-  for i, ent in pairs(metaitem) do
+  for _, ent in pairs(metaitem) do
     global.electric_poles[ent.name] = ent.amount/10
   end
 end
@@ -38,7 +36,6 @@ local function getRailTypes()
   local rails_by_item = {}
   local railstring = ""
   for name, proto in pairs(game.entity_prototypes) do
-    local properties = proto.mineable_properties
     if proto.type == "straight-rail" and proto.items_to_place_this then
       for _, item in pairs(proto.items_to_place_this) do
         rails_by_item[item.name] = rails_by_item[item.name] or {}
@@ -75,7 +72,7 @@ local function getRailTypes()
   return railstring
 end
 
-function isFARLLocomotive(loco)
+function isFARLLocomotive(loco)--luacheck: allow defined top
   if not loco or not loco.valid or not loco.type == "locomotive" then
     return false
   end
@@ -90,32 +87,6 @@ function isFARLLocomotive(loco)
     end
   end
   return false
-end
-
-local function on_player_opened(entity, player)
-  if isFARLLocomotive(entity) then
-    if player.gui.left.farl == nil then
-      local farl = FARL.findByLocomotive(entity)
-      farl.openedBy = player
-      FARL.onPlayerEnter(player, entity)
-      GUI.createGui(player, entity)
-    end
-  end
-end
-
-local function on_player_closed(entity, player)
-  if player.vehicle == nil and player.gui.left.farl ~= nil then
-    local farl = FARL.findByLocomotive(entity)
-    if farl then
-      if farl.openedBy == player then
-        farl.openedBy = nil
-      end
-      if farl.driver == player then
-        farl.driver = false
-      end
-    end
-    GUI.destroyGui(player, entity)
-  end
 end
 
 local function on_tick(event)
@@ -144,7 +115,7 @@ local function on_tick(event)
     end
 
     --for i, farl in pairs(global.farl) do
-    for i, farl in pairs(global.activeFarls) do
+    for _, farl in pairs(global.activeFarls) do
       if farl.driver and farl.driver.valid then
         local status, err = pcall(function()
           if farl:update(event) then
@@ -166,7 +137,7 @@ local function on_tick(event)
   end
 end
 
-function init_global()
+function init_global() --luacheck: allow defined top
   global = global or {}
   global.players =  global.players or {}
   global.savedBlueprints = global.savedBlueprints or {}
@@ -199,7 +170,7 @@ local function init_player(player)
 end
 
 local function init_players()
-  for i,player in pairs(game.players) do
+  for _, player in pairs(game.players) do
     init_player(player)
   end
 end
@@ -252,13 +223,13 @@ local function on_configuration_changed(data)
         on_init()
         if oldVersion > "0.5.13" then
           if oldVersion < "0.5.19" then
-            for name, p_settings in pairs(global.players) do
+            for _, p_settings in pairs(global.players) do
               if p_settings.bulldozer == nil then p_settings.bulldozer = false end
               if p_settings.maintenance == nil then p_settings.maintenance = false end
               if p_settings.root ~= nil then p_settings.root = nil end
               if p_settings.flipSignals ~= nil then p_settings.flipSignals = nil end
             end
-            for i, farl in pairs(global.farl) do
+            for _, farl in pairs(global.farl) do
               if farl.bulldozer ~= nil then farl.bulldozer = nil end
               if farl.maintenance ~= nil then farl.maintenance = nil end
               farl.protected_tiles = {}
@@ -274,7 +245,7 @@ local function on_configuration_changed(data)
           if oldVersion < "0.5.21" then
             local tmp = {}
             local tmpBps = {}
-            for i,player in pairs(game.players) do
+            for _, player in pairs(game.players) do
               if global.players[player.name] then
                 tmp[player.index] = global.players[player.name]
                 global.players[player.name] = nil
@@ -420,7 +391,7 @@ local function on_configuration_changed(data)
   --some mod changed, readd poles, concrete
   getMetaItemData()
   setMetatables()
-  for name,s in pairs(global.players) do
+  for _,s in pairs(global.players) do
     s:checkMods()
   end
 end
@@ -454,7 +425,7 @@ local function on_gui_click(event)
   end
 end
 
-function on_preplayer_mined_item(event)
+function on_preplayer_mined_item(event)--luacheck: allow defined top
   local ent = event.entity
   if ent.type == "locomotive" or ent.type == "cargo-wagon" then
     for i, farl in pairs(global.farl) do
@@ -474,11 +445,11 @@ function on_preplayer_mined_item(event)
   end
 end
 
-function on_entity_died(event)
+function on_entity_died(event)--luacheck: allow defined top
   on_preplayer_mined_item(event)
 end
 
-function on_player_driving_changed_state(event)
+function on_player_driving_changed_state(event)--luacheck: allow defined top
   local player = game.players[event.player_index]
   if isFARLLocomotive(player.vehicle) then
     if player.gui.left.farl == nil then
@@ -521,7 +492,7 @@ end
 --  end
 --end
 
-function debugDump(var, force)
+function debugDump(var, force) --luacheck: allow defined top
   if false or force then
     local msg
     if type(var) == "string" then
@@ -529,7 +500,7 @@ function debugDump(var, force)
     else
       msg = serpent.dump(var, {name="var", comment=false, sparse=false, sortkeys=true})
     end
-    for i,player in pairs(game.players) do
+    for _,player in pairs(game.players) do
       player.print(msg)
     end
     local tick = game and game.tick or 0
@@ -537,10 +508,10 @@ function debugDump(var, force)
   end
 end
 
-function debugLog(var, prepend)
+function debugLog(var, prepend)--luacheck: allow defined top
   if not global.debug_log then return end
   local str = prepend or ""
-  for i,player in pairs(game.players) do
+  for _,player in pairs(game.players) do
     local msg
     if type(var) == "string" then
       msg = var
@@ -552,7 +523,7 @@ function debugLog(var, prepend)
   end
 end
 
-function saveVar(var, name)
+function saveVar(var, name)--luacheck: allow defined top
   var = var or global
   local n = name or ""
   game.write_file("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
@@ -591,7 +562,7 @@ script.on_event("toggle-train-control", function(event)
 end)
 
 --when Player is in a FARL and used FatController to switch to another train
-function on_player_switched(event)
+function on_player_switched(event)--luacheck: allow defined top
   local status, err = pcall(function()
     if isFARLLocomotive(event.carriage) then
       local farl = FARL.findByLocomotive(event.carriage)
@@ -640,7 +611,7 @@ remote.add_interface("farl",
         game.forces.player.recipes["farl"].enabled = true
         game.forces.player.recipes["farl-roboport"].enabled = true
       end
-      for i,p in pairs(game.players) do
+      for _,p in pairs(game.players) do
         if p.gui.left.farl then p.gui.left.farl.destroy() end
         if p.gui.top.farl then p.gui.top.farl.destroy() end
       end
@@ -648,7 +619,6 @@ remote.add_interface("farl",
     end,
 
     setCurvedWeight = function(weight, player)
-      local w = tonumber(weight) or 4
       local s = Settings.loadByPlayer(player)
       s.curvedWeight = weight
     end,
@@ -659,13 +629,13 @@ remote.add_interface("farl",
     end,
 
     setSpeed = function(speed)
-      for name, s in pairs(global.players) do
+      for _, s in pairs(global.players) do
         s.cruiseSpeed = speed
       end
     end,
 
     tileAt = function(x,y)
-      debugDump(game.get_tile(x, y).name,true)
+      debugDump(game.surfaces[game.player.surface].get_tile(x, y).name,true)
     end,
 
     quickstart = function(player)

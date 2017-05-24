@@ -1,4 +1,4 @@
-function copyPrototype(type, name, newName, change_results)
+function copyPrototype(type, name, newName, change_results) --luacheck: allow defined top
   if not data.raw[type][name] then error("type "..type.." "..name.." doesn't exist") end
   local p = table.deepcopy(data.raw[type][name])
   p.name = newName
@@ -22,7 +22,7 @@ function copyPrototype(type, name, newName, change_results)
   return p
 end
 
-farl_railpictures = function()
+farl_railpictures = function() --luacheck: allow defined top
   local elems = {{"metals", "metals"}, {"backplates", "backplates"}, {"ties", "ties"}, {"stone_path", "stone-path"}}
   local keys = {
     {"straight_rail", "horizontal", 64, 64},

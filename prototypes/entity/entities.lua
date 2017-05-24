@@ -33,8 +33,8 @@ data:extend({
     time_to_live = 150,
     speed = 0.0
   }})
-  
-  data:extend({{
+
+data:extend({{
   type = "container",
   name = "farl_overlay",
   icon = "__FARL__/graphics/rm_Overlay.png",

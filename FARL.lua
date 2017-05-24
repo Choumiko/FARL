@@ -1,12 +1,12 @@
 require "util"
 require "Blueprint"
 
-trigger_events = {}
+trigger_events = {} --luacheck: allow defined top
 
 --local direction ={ N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7}
-input2dir = { [0] = -1, [1] = 0, [2] = 1 }
+input2dir = { [0] = -1, [1] = 0, [2] = 1 } --luacheck: allow defined top
 --[traveldir] ={[raildir]
-signalOffset =
+signalOffset = --luacheck: allow defined top
   {
     [0] = {
       [0] = { pos = { x = 1.5, y = 0.5 }, dir = 4 }
@@ -36,9 +36,9 @@ signalOffset =
       [1] = { pos = { x = 1.5, y = -1.5 }, dir = 3 },
       [5] = { pos = { x = 0.5, y = -0.5 }, dir = 3 }
     },
-  }
+}
 
-real_signalOffset =
+real_signalOffset = --luacheck: allow defined top
   {
     [0] = {
       [0] = { x = 1.5, y = 0.5 }
@@ -68,7 +68,7 @@ real_signalOffset =
       [1] = { x = 1, y = -1 },
       [5] = { x = 1, y = -1 }
     },
-  }
+}
 -- [traveldir%2][raildir]
 --[[local signalOffsetCurves =
 {
@@ -79,13 +79,14 @@ real_signalOffset =
 }]]
 
 local math = math
+local random = math.random
 
-function round(num, idp)
+function round(num, idp)--luacheck: allow defined top
   local mult = 10 ^ (idp or 0)
   return math.floor(num * mult + 0.5) / mult
 end
 
-function get_signal_weight(rail, settings)
+function get_signal_weight(rail, settings)--luacheck: allow defined top
   local weight = rail.name == settings.rail.curved and 3 or 1
   if rail.name ~= settings.rail.curved and rail.direction % 2 == 1 then
     return 0.75
@@ -93,18 +94,14 @@ function get_signal_weight(rail, settings)
   return weight
 end
 
-function addPos(p1, p2)
-  if not p1.x then
-    error("Invalid position", 2)
-  end
-  if p2 and not p2.x then
-    error("Invalid position 2", 2)
-  end
+function addPos(p1, p2) --luacheck: allow defined top
+  if not p1.x then error("Invalid position", 2) end
+  if p2 and not p2.x then error("Invalid position 2", 2) end
   p2 = p2 or { x = 0, y = 0 }
   return { x = p1.x + p2.x, y = p1.y + p2.y }
 end
 
-function subPos(p1, p2)
+function subPos(p1, p2) --luacheck: allow defined top
   p2 = p2 or { x = 0, y = 0 }
   return { x = p1.x - p2.x, y = p1.y - p2.y }
 end
@@ -115,7 +112,7 @@ for i = 0, 7 do
   rot[rad] = { cos = math.cos(rad), sin = math.sin(rad) }
 end
 
-function rotate(pos, rad)
+function rotate(pos, rad)--luacheck: allow defined top
   if not rot[rad] then error("rot[" .. rad .. "]", 2) end
   local cos, sin = rot[rad].cos, rot[rad].sin
   local r = { { x = cos, y = -sin }, { x = sin, y = cos } }
@@ -125,22 +122,18 @@ function rotate(pos, rad)
   return ret
 end
 
-function pos2Str(pos)
-  if not pos then
-    error("Position is nil", 2)
-  end
-  if not pos.x or not pos.y then
-    pos = { x = 0, y = 0 }
-  end
+function pos2Str(pos)--luacheck: allow defined top
+  if not pos then error("Position is nil", 2) end
+  if not pos.x or not pos.y then pos = { x = 0, y = 0 } end
   return util.positiontostr(pos)
 end
 
-function pos12toXY(pos)
+function pos12toXY(pos)--luacheck: allow defined top
   if not pos then error("nil pos", 2) end
   return { x = pos[1], y = pos[2] }
 end
 
-function fixPos(pos)
+function fixPos(pos)--luacheck: allow defined top
   local ret = {}
   if not pos then
     error("Position is nil", 2)
@@ -153,28 +146,24 @@ function fixPos(pos)
   return ret
 end
 
-function distance(pos1, pos2)
-  if not pos1.x then
-    error("invalid pos1", 2)
-  end
-  if not pos2.x then
-    error("invalid pos2", 2)
-  end
+function distance(pos1, pos2)--luacheck: allow defined top
+  if not pos1.x then error("invalid pos1", 2) end
+  if not pos2.x then error("invalid pos2", 2) end
   return util.distance(pos1, pos2)
 end
 
-function expandPos(pos, range)
+function expandPos(pos, range)--luacheck: allow defined top
   range = range or 0.5
   if not pos or not pos.x then error("expandPos: invalid pos", 3) end
   return { { pos.x - range, pos.y - range }, { pos.x + range, pos.y + range } }
 end
 
 -- defines a direction as a number from 0 to 7, with its opposite calculateable by adding 4 and modulo 8
-function oppositedirection(direction)
+function oppositedirection(direction)--luacheck: allow defined top
   return (direction + 4) % 8
 end
 
-function moveposition(pos, direction, distance)
+function moveposition(pos, direction, distance)--luacheck: allow defined top
   if not pos then error("Position is nil", 2) end
   if not pos[1] or not pos[2] then
     error("invalid position", 2)
@@ -192,7 +181,7 @@ function moveposition(pos, direction, distance)
   end
 end
 
-function diagonal_to_real_pos(rail)
+function diagonal_to_real_pos(rail)--luacheck: allow defined top
   local data = {
     [1] = { x = 0.5, y = -0.5 },
     [3] = { x = 0.5, y = 0.5 },
@@ -207,7 +196,7 @@ function diagonal_to_real_pos(rail)
   end
 end
 
-function moveRail(rail, direction, distance)
+function moveRail(rail, direction, distance)--luacheck: allow defined top
   local data = {
     [1] = { x = 0.5, y = -0.5 },
     [3] = { x = 0.5, y = 0.5 },
@@ -228,12 +217,12 @@ function moveRail(rail, direction, distance)
   return newRail
 end
 
-function move_right_forward(pos, direction, right, forward)
+function move_right_forward(pos, direction, right, forward)--luacheck: allow defined top
   local dir = (direction + 2) % 8
   return pos12toXY(moveposition(moveposition(fixPos(pos), dir, right), direction, forward))
 end
 
-function get_signal_for_rail(rail, traveldir, end_of_rail)
+function get_signal_for_rail(rail, traveldir, end_of_rail)--luacheck: allow defined top
   local rail_pos = diagonal_to_real_pos(rail)
   local offset = real_signalOffset[traveldir][rail.direction]
   local pos = addPos(rail_pos, offset)
@@ -248,14 +237,14 @@ function get_signal_for_rail(rail, traveldir, end_of_rail)
   return signal
 end
 
-function protectedKey(ent)
+function protectedKey(ent)--luacheck: allow defined top
   if ent.valid then
     return ent.name .. ":" .. ent.position.x .. ":" .. ent.position.y .. ":" .. ent.direction
   end
   return false
 end
 
-function get_item_name(some_name)
+function get_item_name(some_name)--luacheck: allow defined top
   local name = false
   local count = 1
   if game.item_prototypes[some_name] then
@@ -285,7 +274,7 @@ end
 local RED = { r = 0.9 }
 local GREEN = { g = 0.7 }
 local YELLOW = { r = 0.8, g = 0.8 }
-FARL = {}
+FARL = {}--luacheck: allow defined top
 FARL.curvePositions = {
   [0] = { straight = { dir = 0, off = { x = 1, y = 3 } }, diagonal = { dir = 5, off = { x = -1, y = -3 } } },
   [1] = { straight = { dir = 0, off = { x = -1, y = 3 } }, diagonal = { dir = 3, off = { x = 1, y = -3 } } },
@@ -792,7 +781,6 @@ end
 
 FARL.removeTrees = function(self, area)
   --apiCalls.count.tree = apiCalls.count.tree + 1
-  local floor, round, random = math.floor, round, math.random
   local amount, name, proto
   for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "tree" }) do
     --for _, entity in pairs(self:find_entities_filtered({ area = area, type = "tree" }, "removeTrees")) do
@@ -819,7 +807,7 @@ FARL.removeTrees = function(self, area)
                 if amount and amount > 0 then
                   self:addItemToCargo(name, math.ceil(amount/2))
                 end
-                amount, name = false, false
+                name = false
               end
             end
           end
@@ -831,7 +819,6 @@ FARL.removeTrees = function(self, area)
 end
 
 FARL.removeStone = function(self, area)
-  local floor, round, random = math.floor, round, math.random
   local amount, name, proto
   for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "simple-entity", force = "neutral" }) do
     proto = entity.prototype.mineable_properties
@@ -854,7 +841,7 @@ FARL.removeStone = function(self, area)
                 log(string.format("added %s %s", amount, name))
                 self:addItemToCargo(name, math.ceil(amount/2))
               end
-              amount, name = false, false
+              name = false
             end
           end
         end
@@ -1274,7 +1261,7 @@ end
 
 FARL.findGhostRail = function(self, rail)
   local area = expandPos(rail.position, 0.4)
-  local found = self.surface.find_entity(rail.name, rail.position)
+  --local found = self.surface.find_entity(rail.name, rail.position)
   for _, r in pairs(self.surface.find_entities_filtered { area = area, name = rail.name }) do
     if r.position.x == rail.position.x and r.position.y == rail.position.y and r.direction == rail.direction then
       return r
@@ -1316,7 +1303,7 @@ FARL.calculate_rail_data = function(self)
           d_lane = -1 * d_lane
         end
 
-        local new_curve = { name = rail.name, type = rail.type, direction = rail.direction, force = rail.force }
+        local new_curve = { name = rail.name, type = rail.type, direction = rail.direction, force = rail.force } --luacheck: ignore
         local right = original_dir % 2 == 0 and s_lane * 2 or s_lane
         --left hand turns need to go back, moving right already moves the diagonal rail part
         local forward = input == 2 and (s_lane - d_lane) * 2 or (d_lane - s_lane) * 2
@@ -1741,9 +1728,9 @@ end
 FARL.getGhostPath = function(self)
   local next = {name = "entity-ghost", ghost_name = self.lastrail.name, ghost_type = self.lastrail.type, position = self.lastrail.position, direction=self.lastrail.direction}
   local dir = self.direction
-  local count, limit = 0, 30
+  local count = 0
   local ghostPath = {}
-  local prevDir, input = dir, 1
+  local input
   local already_on_path = {}
   while next do --and count < limit do
     next, dir, input = self:getConnectedGhostRail(next, dir)
@@ -1893,7 +1880,8 @@ FARL.parseBlueprints = function(self, bp)
           local lamps = {}
           for _, l in pairs(offsets.poleEntities) do
             if l.name ~= "wooden-chest" then
-              table.insert(lamps, { name = l.name, position = subPos(l.position, offsets.pole.position), direction = l.direction, pickup_position = l.pickup_position, drop_position = l.drop_position, request_filters = l.request_filters, recipe = l.recipe })
+              table.insert(lamps, {name = l.name, position = subPos(l.position, offsets.pole.position), direction = l.direction, pickup_position = l.pickup_position,
+                drop_position = l.drop_position, request_filters = l.request_filters, recipe = l.recipe })
             end
           end
           local railPos = mainRail.position
@@ -2445,8 +2433,13 @@ FARL.placePoleEntities = function(self, traveldir, pole)
         --debugDump(pos, true)
         local entity = { name = poleEntities[i].name, position = pos }
         if self:prepareArea(entity) then
-          local _, ent = self:genericPlace { name = poleEntities[i].name, position = pos, direction = direction, pickup_position = pickup_position, drop_position = drop_position, request_filters = poleEntities[i].request_filters, recipe  = poleEntities[i].recipe, force = self.locomotive.force }
-          --local _, ent = self:genericPlaceGhost { name = poleEntities[i].name, position = pos, direction = direction, pickup_position = pickup_position, drop_position = drop_position, request_filters = poleEntities[i].request_filters, recipe  = poleEntities[i].recipe, force = self.locomotive.force }
+          local _, ent = self:genericPlace{
+            name = poleEntities[i].name, position = pos, direction = direction, pickup_position = pickup_position,
+            drop_position = drop_position, request_filters = poleEntities[i].request_filters, recipe  = poleEntities[i].recipe, force = self.locomotive.force
+          }
+          --local _, ent = self:genericPlaceGhost {
+          --name = poleEntities[i].name, position = pos, direction = direction, pickup_position = pickup_position, drop_position = drop_position,
+          --request_filters = poleEntities[i].request_filters, recipe  = poleEntities[i].recipe, force = self.locomotive.force }
           if ent then
             self:protect(ent)
             self:removeItemFromCargo(poleEntities[i].name, 1)
@@ -2911,7 +2904,7 @@ FARL.showArea2 = function(self, area)
 end
 
 -- [traveldir][rail_type][rail_dir][input] = offset, new rail dir, new rail type
-input_to_next_rail =
+input_to_next_rail = --luacheck: allow defined top
   -- 0 to 4, 2 to 6: switch sign
   {
     -- North/South
@@ -3090,10 +3083,10 @@ input_to_next_rail =
         }
       }
     },
-  }
+}
 
 --clearArea[curveDir%4]
-clearAreas =
+clearAreas = --luacheck: allow defined top
   {
     [0] = {
       { { x = -2.5, y = -3.5 }, { x = 0.5, y = 0.5 } },
@@ -3111,4 +3104,4 @@ clearAreas =
       { { x = -3.5, y = -2.5 }, { x = 0.5, y = 0.5 } },
       { { x = -0.5, y = -0.5 }, { x = 3.5, y = 2.5 } },
     }
-  }
+}

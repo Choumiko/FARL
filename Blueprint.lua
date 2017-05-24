@@ -1,7 +1,7 @@
 --- Blueprint parsing
 --@module Blueprint
 
-Blueprint = {}
+Blueprint = {}--luacheck: allow defined top
 
 ---Group entities in the blueprint
 --@param e entities
@@ -28,7 +28,7 @@ Blueprint.group_entities = function(e)
 
     local dir = e[i].direction or 0
     local name = e[i].name
-    
+
     if name == "rail-chain-signal" and not offsets.chain then
       offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
       -- collect all poles in bp
@@ -37,7 +37,7 @@ Blueprint.group_entities = function(e)
     elseif name == "straight-rail" or name == "bi-straight-rail-wood" then
       rails = rails + 1
       if not bpType then
-          bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
+        bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
       end
       if  (bpType == "diagonal" and (dir == 3 or dir == 7)) or
         (bpType == "straight" and (dir == 0 or dir == 4)) then
@@ -51,7 +51,10 @@ Blueprint.group_entities = function(e)
       local e_type = game.entity_prototypes[name].type
       local rail_entities = {["wall"]=true}
       if not rail_entities[e_type] then
-        table.insert(offsets.poleEntities, {name = name, direction = dir, position = e[i].position, pickup_position = e[i].pickup_position, drop_position = e[i].drop_position, request_filters = e[i].request_filters, recipe = e[i].recipe})
+        table.insert(offsets.poleEntities, {
+          name = name, direction = dir, position = e[i].position, pickup_position = e[i].pickup_position,
+          drop_position = e[i].drop_position, request_filters = e[i].request_filters, recipe = e[i].recipe
+        })
       else
         table.insert(offsets.railEntities, {name = name, direction = dir, position = e[i].position})
       end

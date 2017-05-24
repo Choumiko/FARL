@@ -1,21 +1,21 @@
 require "util"
 
 --poleDistance = 1, side = right
-defaultsDiagonal = {
+defaultsDiagonal = {--luacheck: allow defined top
   direction = 7,
   poleEntities = {{name = "small-lamp", position = {x = -1.5, y = 1.5}}},
   pole = {name = "big-electric-pole", position = {x = 2.5, y = 2.5}},
   rails = {}, signals = {}, lanes = {}, clearance_points = {}, railEntities = {},
   boundingBox = {br = {x = 2.5, y = 4}, tl = {x = -1, y = 0}}}
 
-defaultsStraight = {
+defaultsStraight = {--luacheck: allow defined top
   direction = 0,
   poleEntities = {{name = "small-lamp", position = {x = -0.5, y = 1.5}}},
   pole = {name = "big-electric-pole", position = {x = 3, y = -1}},
   rails = {}, signals = {}, lanes = {}, clearance_points = {}, railEntities = {},
   boundingBox = {br = {x = 3, y = 0.5}, tl = {x = -0.5, y = -1}}}
 
-defaults_concrete_diag = {
+defaults_concrete_diag = {--luacheck: allow defined top
   entities = {
     {
       direction = 7,
@@ -75,7 +75,7 @@ defaults_concrete_diag = {
   }
 }
 
-defaults_concrete_vert = {
+defaults_concrete_vert = { --luacheck: allow defined top
   entities = {
     {
       entity_number = 1,
@@ -160,7 +160,7 @@ defaults_concrete_vert = {
   }
 }
 
-defaultSettings =
+defaultSettings = --luacheck: allow defined top
   {
     activeBP = {},
     bp = {diagonal=defaultsDiagonal, straight=defaultsStraight},
@@ -186,11 +186,11 @@ defaultSettings =
     concrete = true,
     railEntities = true,
     mirrorConcrete = true
-  }
+}
 
 defaultSettings.activeBP = defaultSettings.bp
 
-Settings = {
+Settings = {--luacheck: allow defined top
   loadByPlayer = function(player)
     local index = player.index
     local settings = util.table.deepcopy(defaultSettings)
