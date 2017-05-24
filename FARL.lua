@@ -188,12 +188,16 @@ function diagonal_to_real_pos(rail)--luacheck: allow defined top
     [5] = { x = -0.5, y = 0.5 },
     [7] = { x = -0.5, y = -0.5 }
   }
-  if rail.type and rail.type == "straight-rail" then
-    local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 }
-    return addPos(off, rail.position)
-  else
-    return rail.position
-  end
+if rail.type and rail.type == "straight-rail" then
+  local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 }
+  return addPos(off, rail.position)
+else
+  return rail.position
+end
+end
+
+local function get_fake_rail(rail, position)
+  return {name = rail.name, type = rail.type, direction = rail.direction, position = position or addPos(rail.position)}
 end
 
 function moveRail(rail, direction, distance)--luacheck: allow defined top
@@ -203,18 +207,18 @@ function moveRail(rail, direction, distance)--luacheck: allow defined top
     [5] = { x = -0.5, y = 0.5 },
     [7] = { x = -0.5, y = -0.5 }
   }
-  distance = (rail.type == "straight-rail" and rail.direction % 2 == 1) and distance or distance * 2
-  local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 }
-  local pos = addPos(off, rail.position)
-  pos = pos12toXY(moveposition(fixPos(pos), direction, distance))
-  local newRail = { name = rail.name, type = rail.type, direction = rail.direction, position = pos, force = rail.force }
-  if rail.type == "straight-rail" and rail.direction % 2 == 1 and distance % 2 == 1 then
-    newRail.direction = (rail.direction + 4) % 8
-  end
-  off = data[newRail.direction] or { x = 0, y = 0 }
-  pos = subPos(pos, off)
-  newRail.position = pos
-  return newRail
+distance = (rail.type == "straight-rail" and rail.direction % 2 == 1) and distance or distance * 2
+local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 }
+local pos = addPos(off, rail.position)
+pos = pos12toXY(moveposition(fixPos(pos), direction, distance))
+local newRail = get_fake_rail(rail, pos)
+if rail.type == "straight-rail" and rail.direction % 2 == 1 and distance % 2 == 1 then
+  newRail.direction = (rail.direction + 4) % 8
+end
+off = data[newRail.direction] or { x = 0, y = 0 }
+pos = subPos(pos, off)
+newRail.position = pos
+return newRail
 end
 
 function move_right_forward(pos, direction, right, forward)--luacheck: allow defined top
@@ -240,8 +244,8 @@ end
 function protectedKey(ent)--luacheck: allow defined top
   if ent.valid then
     return ent.name .. ":" .. ent.position.x .. ":" .. ent.position.y .. ":" .. ent.direction
-  end
-  return false
+end
+return false
 end
 
 function get_item_name(some_name)--luacheck: allow defined top
@@ -576,12 +580,7 @@ FARL.update = function(self, _)
             if self.settings.concrete then
               table.insert(self.concrete_queue, {
                 travelDir = newTravelDir,
-                rail = {
-                  direction = last.direction,
-                  type = last.type,
-                  name = last.name,
-                  position = addPos(last.position)
-                }
+                rail = get_fake_rail(last)
               })
             end
 
@@ -590,7 +589,7 @@ FARL.update = function(self, _)
               local c = #self.path - 1
               if c > 0 and self.path[c] and self.path[c].rail.type ~= "curved-rail" then
                 local rail = self.path[c].rail
-                table.insert(self.rail_queue, { travelDir = self.path[c].travel_dir, rail = { direction = rail.direction, type = rail.type, name = rail.name, position = addPos(rail.position) } })
+                table.insert(self.rail_queue, { travelDir = self.path[c].travel_dir, rail = get_fake_rail(rail) })
               end
             end
 
@@ -666,7 +665,7 @@ FARL.update = function(self, _)
                 local c = #self.path - lag
                 if c > 0 and self.path[c] and self.lastCurve.dist > lag then
                   local rail = self.path[c].rail
-                  rail = { direction = rail.direction, type = rail.type, name = rail.name, position = addPos(rail.position) }
+                  rail = get_fake_rail(rail)
                   table.insert(self.rail_queue, { travelDir = self.path[c].travel_dir, rail = rail })
                 end
               end
@@ -1439,7 +1438,7 @@ FARL.activate = function(self, scanForGhosts)
         local c = i
         if c > 0 and self.path[c] and self.path[c].rail.type ~= "curved-rail" then
           local rail = self.path[c].rail
-          table.insert(self.rail_queue, { travelDir = self.path[c].travel_dir, rail = { direction = rail.direction, type = rail.type, name = rail.name, position = addPos(rail.position) } })
+          table.insert(self.rail_queue, { travelDir = self.path[c].travel_dir, rail = get_fake_rail(rail) })
         end
       end
     end
@@ -1521,8 +1520,7 @@ FARL.activate = function(self, scanForGhosts)
     if self.settings.bulldozer and self.settings.concrete then
       local d = self.path[#self.path]
       --self:flyingText2(self.direction, RED,true,d.rail.position)
-      self:placeConcrete(self.direction,
-        { direction = d.rail.direction, type = d.rail.type, name = d.rail.name, position = addPos(d.rail.position) })
+      self:placeConcrete(self.direction, d.rail)
     end
     self.active = true
   end)
@@ -1586,6 +1584,9 @@ end
 FARL.deactivate = function(self, reason)
   self.active = false
   self.input = nil
+  if self.cruise then
+    self:toggleCruiseControl()
+  end
   self.cruise = false
   self.path = nil
   self.ghostProgress = nil
@@ -1664,16 +1665,16 @@ FARL.toggleCruiseControl = function(self)
   if not self.cruise then
     if self.driver and self.driver.riding_state then
       self.cruise = true
-      local input = self.input or 1
-      self.driver.riding_state = { acceleration = 1, direction = input }
+      local input = self.input or defines.riding.direction.straight
+      self.driver.riding_state = { acceleration = defines.riding.acceleration.accelerating, direction = input }
       GUI.updateGui(self)
     end
     return
   else
     if self.driver and self.driver.riding_state then
       self.cruise = false
-      local input = self.input or 1
-      self.driver.riding_state = { acceleration = self.driver.riding_state.acceleration, direction = input }
+      local input = self.input or defines.riding.direction.straight
+      self.driver.riding_state = { acceleration = defines.riding.acceleration.nothing, direction = input }
       GUI.updateGui(self)
     end
     return
@@ -2027,8 +2028,7 @@ end
 
 FARL.placeRails = function(self, nextRail, newTravelDir)
   local newDir = nextRail.direction
-  local newPos = nextRail.position
-  local newRail = { name = nextRail.name, position = newPos, direction = newDir, type = nextRail.type }
+  local newRail = get_fake_rail(nextRail)
 
   if newRail.type == "curved-rail" then
     self:prepareAreaForCurve(newRail)
@@ -2067,9 +2067,6 @@ FARL.placeRails = function(self, nextRail, newTravelDir)
   if canplace and hasRail then
     newRail.force = self.locomotive.force
     local _, ent = self:genericPlace(newRail)
-    if self.settings.electric then
-      remote.call("dim_trains", "railCreated", newPos)
-    end
     if ent then
       self:removeItemFromCargo(removeItem, removeAmount)
     else
@@ -2265,7 +2262,7 @@ end
 FARL.placeParallelTrack = function(self, traveldir, lastRail, lane_index)
   local s_lane = self.settings.activeBP.straight.lanes[lane_index]
   local d_lane = self.settings.activeBP.diagonal.lanes[lane_index]
-  local new_rail = { name = lastRail.name, type = lastRail.type, direction = lastRail.direction, force = lastRail.force, position = lastRail.position }
+  local new_rail = get_fake_rail(lastRail)
   local lane = self.lanes["d" .. traveldir % 2]["i0"]["l" .. lane_index]
   local right = traveldir % 2 == 1 and d_lane or s_lane
   local lag = math.min(lane.lag, self.lanes["d" .. traveldir % 2]["i2"]["l" .. lane_index].lag)
