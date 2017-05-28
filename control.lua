@@ -571,10 +571,10 @@ function on_player_switched(event)--luacheck: allow defined top
       end
     end
   end)
-  if not status then
-    debugDump("Unexpected error:",true)
-    debugDump(err,true)
-  end
+if not status then
+  debugDump("Unexpected error:",true)
+  debugDump(err,true)
+end
 end
 
 if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then

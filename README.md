@@ -42,6 +42,10 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+1.0.9
+
+ - fixed error with AAI Industries
+
 1.0.8
 
  - fixed error when starting on a different rail than the selected one

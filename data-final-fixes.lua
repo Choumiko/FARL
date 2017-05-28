@@ -2,6 +2,7 @@ require "lib"
 
 local metarecipe = copyPrototype("recipe", "inserter", "farl-meta")
 metarecipe.ingredients = {}
+metarecipe.normal = {ingredients = {}, result="inserter"}
 metarecipe.enabled = false
 metarecipe.hidden = true
 
@@ -12,6 +13,7 @@ local vanilla = {["small-electric-pole"]=true, ["medium-electric-pole"]=true, ["
 
 for name, _ in pairs(vanilla) do
   table.insert(metarecipe.ingredients, {name, data.raw["electric-pole"][name].maximum_wire_distance*10})
+  table.insert(metarecipe.normal.ingredients, {name, data.raw["electric-pole"][name].maximum_wire_distance*10})
 end
 
 for _, ent in pairs(data.raw["electric-pole"]) do
@@ -36,6 +38,7 @@ for _, ent in pairs(data.raw["electric-pole"]) do
     end
     if item_name then
       table.insert(metarecipe.ingredients, {item_name, ent.maximum_wire_distance*10})
+      table.insert(metarecipe.normal.ingredients, {item_name, ent.maximum_wire_distance*10})
     end
   end
 end
@@ -83,4 +86,5 @@ for wagonName, wagon in pairs(data.raw["cargo-wagon"]) do
   else
     addFarlCategory(wagon.equipment_grid)
   end
-end]]--
+end
+]]--
