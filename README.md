@@ -42,6 +42,12 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+
+1.0.10
+
+ - fixed stupid recipe for the vanilla inserter, this also fixes conflicts with Angels Petrochem/Refining
+ - fixed FARL picking up dirt, grass, etc. tiles if Dectorio is installed
+
 1.0.9
 
  - fixed error with AAI Industries

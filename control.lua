@@ -1,3 +1,4 @@
+require 'stdlib/string'
 require "Settings"
 require "FARL"
 require "GUI"
