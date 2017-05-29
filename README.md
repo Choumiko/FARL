@@ -42,7 +42,10 @@ FARL stores the names in global and only removes them if the interface is used o
 
 
 #Changelog
+1.0.11
 
+ - fixed error when adding FARL to an existing save
+ 
 1.0.10
 
  - fixed stupid recipe for the vanilla inserter, this also fixes conflicts with Angels Petrochem/Refining

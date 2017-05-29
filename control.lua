@@ -359,7 +359,7 @@ local function on_configuration_changed(data)
         end
       end
     else
-      debugDump("FARL version: "..newVersion,true)
+      debugDump("FARL version: "..tostring(newVersion),true)
     end
     on_init()
     global.version = newVersion
