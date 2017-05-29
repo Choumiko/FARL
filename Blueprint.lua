@@ -35,7 +35,7 @@ Blueprint.group_entities = function(e)
             -- collect all poles in bp
         elseif prototype and prototype.type == "electric-pole" then
             table.insert(poles, {name = name, direction = dir, position = e[i].position})
-        elseif name == "straight-rail" or name == "bi-straight-rail-wood" then
+        elseif prototype and prototype.type == "straight-rail" then
             rails = rails + 1
             if not bpType then
                 bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"

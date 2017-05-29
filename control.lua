@@ -24,9 +24,9 @@ local function setMetatables()
 end
 
 local function getRailTypes()
-    if not global.rails then
-        init_global()
-    end
+    global.rails = {}
+    global.rails_by_index = {}
+    global.rails_localised = {}
     local rails_by_item = {}
     local railstring = ""
     for name, proto in pairs(game.entity_prototypes) do
