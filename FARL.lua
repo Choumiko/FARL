@@ -371,7 +371,7 @@ FARL.update = function(self, _)
             return true
         end
         local firstWagon = self.frontmover and self.train.carriages[1] or self.train.carriages[#self.train.carriages]
-        if Position.distance(self.lastrail.position, firstWagon.position) < 6 then
+        if Position.distance_squared(self.lastrail.position, firstWagon.position) < 36 then
             --log("start update")
             --debugDump(#self.path, true)
             --if not self.last_moved then self.last_moved = game.tick end
@@ -980,7 +980,6 @@ FARL.pickupItems = function(self, area)
 end
 
 FARL.find_tile = function(self, sarea1, sarea2, travel_dir)
-    log(serpent.block({sarea1, sarea2}))
     local tpos1 = move_right_forward(sarea1, travel_dir, -1, 0)
     local tpos2 = move_right_forward(sarea2, travel_dir, 1, 0)
     local tile1 = self.surface.get_tile(tpos1.x, tpos1.y)
@@ -1104,7 +1103,9 @@ FARL.getGhostRail = function(self, lastRail, travelDir, input)
 
     local name = data.type == "straight-rail" and self.settings.rail.straight or self.settings.rail.curved
     local newTravelDir = (travelDir + FARL.input2dir[input]) % 8
-    return newTravelDir, { name = "entity-ghost", ghost_name = name, ghost_type = data.type, position = Position.add(lastRail.position, data.offset), direction = data.direction, type = "entity-ghost" }
+    return newTravelDir, { name = "entity-ghost", ghost_name = name, ghost_type = data.type, position = Position.add(lastRail.position, data.offset),
+        direction = data.direction, type = "entity-ghost"
+    }
 end
 
 FARL.cruiseControl = function(self)

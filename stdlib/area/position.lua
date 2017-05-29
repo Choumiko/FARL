@@ -6,7 +6,8 @@
 -- @see defines.direction
 
 local fail_if_missing = require 'stdlib/core'['fail_if_missing']
-
+local math = math
+local abs, floor, ceil, sqrt = math.abs, math.floor, math.ceil, math.sqrt
 Position = {} --luacheck: allow defined top
 
 --- Creates a table representing the position from x and y
@@ -139,7 +140,7 @@ function Position.distance(pos1, pos2)
     fail_if_missing(pos1, 'missing first position argument')
     fail_if_missing(pos2, 'missing second position argument')
 
-    return math.sqrt(Position.distance_squared(pos1, pos2))
+    return sqrt(Position.distance_squared(pos1, pos2))
 end
 
 --- Calculates the manhatten distance between two positions
@@ -152,7 +153,7 @@ function Position.manhattan_distance(pos1, pos2)
     pos1 = Position.to_table(pos1)
     pos2 = Position.to_table(pos2)
 
-    return math.abs(pos2.x - pos1.x) + math.abs(pos2.y - pos1.y)
+    return abs(pos2.x - pos1.x) + abs(pos2.y - pos1.y)
 end
 
 --- Machine Epsilon
@@ -170,7 +171,6 @@ function Position.equals(pos1, pos2)
     if pos1 == pos2 then return true end
 
     local epsilon = Position.epsilon
-    local abs = math.abs
     if #pos1 == 2 and #pos2 == 2 then
         return abs(pos1[1] - pos2[1]) < epsilon and abs(pos1[2] - pos2[2]) < epsilon
     elseif #pos1 == 2 and #pos2 == 0 then
@@ -190,7 +190,10 @@ end
 -- @treturn LuaPosition the converted position
 function Position.to_table(pos_arr)
     fail_if_missing(pos_arr, 'missing position argument')
-
+    if not pos_arr.x or not pos_arr.x then
+      error("Invalid position\n" .. debug.traceback())
+    end
+    --log(serpent.line(pos_arr))
     if #pos_arr == 2 then
         return { x = pos_arr[1], y = pos_arr[2] }
     end
@@ -262,8 +265,8 @@ function Position.center(pos)
     else
         x, y = pos.x, pos.y
     end
-    x = x >= 0 and math.floor(x) + 0.5 or math.ceil(x) - 0.5
-    y = y >= 0 and math.floor(y) + 0.5 or math.ceil(y) - 0.5
+    x = x >= 0 and floor(x) + 0.5 or ceil(x) - 0.5
+    y = y >= 0 and floor(y) + 0.5 or ceil(y) - 0.5
     return {x = x, y = y}
 end
 
