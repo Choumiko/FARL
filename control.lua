@@ -2,16 +2,18 @@ require "Settings"
 require "FARL"
 require "GUI"
 
+local v = require 'semver'
+
 MOD_NAME = "FARL"--luacheck: allow defined top
 debugButton = false--luacheck: allow defined top
 godmode = false--luacheck: allow defined top
 
-function resetMetatable(o, mt)--luacheck: allow defined top
+local function resetMetatable(o, mt)
   setmetatable(o,{__index=mt})
   return o
 end
 
-function setMetatables()--luacheck: allow defined top
+local function setMetatables()
   for i, farl in pairs(global.farl) do
     global.farl[i] = resetMetatable(farl, FARL)
   end
@@ -63,7 +65,7 @@ local function getRailTypes()
   return railstring
 end
 
-function isFARLLocomotive(loco)--luacheck: allow defined top
+function isFARLLocomotive(loco) --luacheck: allow defined top
   if not loco or not loco.valid or not loco.type == "locomotive" then
     return false
   end
@@ -197,21 +199,26 @@ local function on_configuration_changed(data)
   end
   if data.mod_changes[MOD_NAME] then
     local newVersion = data.mod_changes[MOD_NAME].new_version
+    newVersion = v(newVersion)
     local oldVersion = data.mod_changes[MOD_NAME].old_version
     if oldVersion then
-      debugDump("FARL version changed from "..oldVersion.." to "..newVersion,true)
+      oldVersion = v(oldVersion)
+      log(tostring(oldVersion) .. ' < '  .. tostring(newVersion) .. ' ' .. tostring(oldVersion < newVersion))
+      log(tostring(oldVersion) .. ' == ' .. tostring(newVersion) .. ' ' .. tostring(oldVersion == newVersion))
+      log(tostring(oldVersion) .. ' > ' .. tostring(newVersion) .. ' ' .. tostring(oldVersion > newVersion))
+      debugDump("FARL version changed from ".. tostring(oldVersion) .." to ".. tostring(newVersion), true)
       if oldVersion > newVersion then
         debugDump("Downgrading FARL, reset settings",true)
         global = {}
         on_init()
       else
-        if oldVersion < "0.5.13" then
+        if oldVersion < v'0.5.13' then
           debugDump("Reset settings",true)
           global = {}
         end
         on_init()
-        if oldVersion > "0.5.13" then
-          if oldVersion < "0.5.19" then
+        if oldVersion > v'0.5.13' then
+          if oldVersion < v'0.5.19' then
             for _, p_settings in pairs(global.players) do
               if p_settings.bulldozer == nil then p_settings.bulldozer = false end
               if p_settings.maintenance == nil then p_settings.maintenance = false end
@@ -231,7 +238,7 @@ local function on_configuration_changed(data)
               end
             end
           end
-          if oldVersion < "0.5.21" then
+          if oldVersion < v'0.5.21' then
             local tmp = {}
             local tmpBps = {}
             for _, player in pairs(game.players) do
@@ -248,7 +255,7 @@ local function on_configuration_changed(data)
             global.savedBlueprints = tmpBps
           end
 
-          if oldVersion < "0.5.24" then
+          if oldVersion < v'0.5.24' then
             global.overlayStack = global.overlayStack or {}
             for i=#global.farl, 1, -1 do
               local farl = global.farl[i]
@@ -262,7 +269,7 @@ local function on_configuration_changed(data)
             end
           end
 
-          if oldVersion < "0.5.26" then
+          if oldVersion < v'0.5.26' then
             for _, psettings in pairs(global.players) do
               if psettings.mirrorConcrete == nil then
                 psettings.mirrorConcrete = true
@@ -270,12 +277,12 @@ local function on_configuration_changed(data)
             end
           end
 
-          if oldVersion < "0.5.35" then
+          if oldVersion < v'0.5.35' then
             global.concrete = nil
             global.tiles = nil
           end
 
-          if oldVersion < "0.5.36" then
+          if oldVersion < v'0.5.36' then
             for _, psettings in pairs(global.players) do
               if psettings.wooden == nil then
                 psettings.wooden = false
@@ -283,7 +290,7 @@ local function on_configuration_changed(data)
             end
           end
 
-          if oldVersion < "0.6.1" then
+          if oldVersion < v'0.6.1' then
             local newFarls = {}
             if global.farl then
               for _, farl in pairs(global.farl) do
@@ -299,7 +306,7 @@ local function on_configuration_changed(data)
             end
           end
 
-          if oldVersion < "0.7.1" then
+          if oldVersion < v'0.7.1' then
             if global.destroyNextTick then
               for _, pis in pairs(global.destroyNextTick) do
                 for _, pi in pairs(pis) do
@@ -323,7 +330,7 @@ local function on_configuration_changed(data)
               end
             end
           end
-          if oldVersion < "1.0.6" then
+          if oldVersion < v'1.0.6' then
             getRailTypes()
             for _, psettings in pairs(global.players) do
               if psettings.signalEveryPole == nil then
@@ -331,7 +338,7 @@ local function on_configuration_changed(data)
               end
             end
           end
-          if oldVersion < "1.0.7" then
+          if oldVersion < v'1.0.7' then
             local railstring = getRailTypes()
             global.electricInstalled = nil
             for _, psettings in pairs(global.players) do
@@ -345,7 +352,7 @@ local function on_configuration_changed(data)
             log(serpent.block(global.rails_by_index, {name="rails_by_index"}))
             log(serpent.block(global.rails_localised, {name="rails_localised"}))
           end
-          if oldVersion < "1.0.10" then
+          if oldVersion < v'1.0.10' then
             global.electric_poles = nil
           end
         end
@@ -561,10 +568,10 @@ function on_player_switched(event)--luacheck: allow defined top
       end
     end
   end)
-if not status then
-  debugDump("Unexpected error:",true)
-  debugDump(err,true)
-end
+  if not status then
+    debugDump("Unexpected error:",true)
+    debugDump(err,true)
+  end
 end
 
 if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then
@@ -687,8 +694,8 @@ remote.add_interface("farl",
         availableWater = tprops.available_water,
         temperature = tprops.temperature
       }
-      for k,v in pairs(properties) do
-        player.print(k.." "..v)
+      for k,p in pairs(properties) do
+        player.print(k.." "..p)
       end
     end,
 
