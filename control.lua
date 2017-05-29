@@ -69,18 +69,18 @@ end
 function isFARLLocomotive(loco) --luacheck: allow defined top
   if not loco or not loco.valid or not loco.type == "locomotive" then
     return false
-	end
-	if loco.name == "farl" then
-	  return true
-	end
-	if loco.grid then
-  	for _, equipment in pairs(loco.grid.equipment) do
-    	if equipment.name == "farl-roboport" then
-      	return true
-	    end
-  	end
-	end
-	return false
+end
+if loco.name == "farl" then
+  return true
+end
+if loco.grid then
+  for _, equipment in pairs(loco.grid.equipment) do
+    if equipment.name == "farl-roboport" then
+      return true
+    end
+  end
+end
+return false
 end
 
 local function on_tick(event)
@@ -504,7 +504,7 @@ function debugDump(var, force) --luacheck: allow defined top
     local tick = game and game.tick or 0
     log(debug.traceback())
     log(tick .. " " .. msg)
-	end
+end
 end
 
 function debugLog(var, prepend)--luacheck: allow defined top
@@ -570,10 +570,10 @@ function on_player_switched(event)--luacheck: allow defined top
       end
     end
   end)
-	if not status then
-  	debugDump("Unexpected error:",true)
-	  debugDump(err,true)
-	end
+if not status then
+  debugDump("Unexpected error:",true)
+  debugDump(err,true)
+end
 end
 
 if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then
@@ -584,11 +584,11 @@ remote.add_interface("farl",
   {
     railInfo = function(rail)
       rail = rail or game.player.selected
-      debugDump(rail.name.."@ ".. Position.tostring(rail.position).." dir:"..rail.direction.." realPos: "..Position.tostring(diagonal_to_real_pos(rail)),true)
+      debugDump(rail.name.."@ ".. Position.tostring(rail.position).." dir:"..rail.direction.." realPos: "..Position.tostring(FARL.diagonal_to_real_pos(rail)),true)
       if type(global.railInfoLast) == "table" and global.railInfoLast.valid then
         local pos = global.railInfoLast.position
         local diff=Position.subtract(rail.position,pos)
-        local rdiff = Position.subtract(diagonal_to_real_pos(rail),diagonal_to_real_pos(global.railInfoLast))
+        local rdiff = Position.subtract(FARL.diagonal_to_real_pos(rail),FARL.diagonal_to_real_pos(global.railInfoLast))
         debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
         debugDump("real Offset: x="..rdiff.x..",y="..rdiff.y,true)
         debugDump("Distance (util): "..util.distance(pos, rail.position),true)
