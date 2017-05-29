@@ -2506,7 +2506,7 @@ end
 
 FARL.findClosestPole = function(self, minPos)
   local name = self.settings.activeBP.diagonal.pole.name
-  local reach = global.electric_poles[name]
+  local reach = game.entity_prototypes[name].max_wire_distance
   local tmp, ret, minDist = minPos, false, 100
   for _, p in pairs(self.surface.find_entities_filtered { area = expandPos(tmp, reach), name = name }) do
     local dist = distance(p.position, tmp)
@@ -2534,7 +2534,7 @@ end
 
 FARL.getBestPole = function(self, lastPole, rails)
   local name = self.settings.activeBP.diagonal.pole.name
-  local reach = global.electric_poles[name]
+  local reach = game.entity_prototypes[name].max_wire_distance
   local max = -1
   local maxPole, maxRail
   local points = {}
@@ -2679,7 +2679,7 @@ end
 
 FARL.findLastPole = function(self, rail)
   local name = self.settings.activeBP.diagonal.pole.name
-  local reach = global.electric_poles[name]
+  local reach = game.entity_prototypes[name].max_wire_distance
   local min, pole = 900, nil
   local pos = rail and rail.position or self.locomotive.position
   for _, p in pairs(self.surface.find_entities_filtered { area = expandPos(pos, reach), name = name }) do

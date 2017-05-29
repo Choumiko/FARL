@@ -20,15 +20,6 @@ function setMetatables()--luacheck: allow defined top
   end
 end
 
-local function getMetaItemData()
-  game.forces.player.recipes["farl-meta"].reload()
-  local metaitem = game.forces.player.recipes["farl-meta"].ingredients
-  global.electric_poles = {}
-  for _, ent in pairs(metaitem) do
-    global.electric_poles[ent.name] = ent.amount/10
-  end
-end
-
 local function getRailTypes()
   if not global.rails then
     init_global()
@@ -149,7 +140,6 @@ function init_global() --luacheck: allow defined top
   godmode = global.godmode
   global.overlayStack = global.overlayStack or {}
   global.statistics = global.statistics or {}
-  global.electric_poles = global.electric_poles or {}
   global.trigger_events = global.trigger_events or {}
   global.version = global.version or "0.5.35"
   global.railString = global.railString or "rail"
@@ -193,7 +183,6 @@ local function on_init()
   init_forces()
   init_players()
   setMetatables()
-  getMetaItemData()
   getRailTypes()
 end
 
@@ -356,6 +345,9 @@ local function on_configuration_changed(data)
             log(serpent.block(global.rails_by_index, {name="rails_by_index"}))
             log(serpent.block(global.rails_localised, {name="rails_localised"}))
           end
+          if oldVersion < "1.0.10" then
+            global.electric_poles = nil
+          end
         end
       end
     else
@@ -388,8 +380,6 @@ local function on_configuration_changed(data)
     end
   end
   global.railString = railstring
-  --some mod changed, readd poles, concrete
-  getMetaItemData()
   setMetatables()
   for _,s in pairs(global.players) do
     s:checkMods()

@@ -20,6 +20,7 @@ Blueprint.group_entities = function(e)
   local box = {tl={x=0,y=0}, br={x=0,y=0}}
   for i=1,#e do
     local position = diagonal_to_real_pos(e[i])
+    local prototype = game.entity_prototypes[e[i].name]
     if box.tl.x > position.x then box.tl.x = position.x end
     if box.tl.y > position.y then box.tl.y = position.y end
 
@@ -32,7 +33,7 @@ Blueprint.group_entities = function(e)
     if name == "rail-chain-signal" and not offsets.chain then
       offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
       -- collect all poles in bp
-    elseif global.electric_poles[e[i].name] then
+    elseif prototype and prototype.type == "electric-pole" then
       table.insert(poles, {name = name, direction = dir, position = e[i].position})
     elseif name == "straight-rail" or name == "bi-straight-rail-wood" then
       rails = rails + 1
@@ -67,8 +68,8 @@ Blueprint.get_max_pole = function(poles, offsets)
   local max = 0
   local max_index
   for i,p in pairs(poles) do
-    if global.electric_poles[p.name] > max then
-      max = global.electric_poles[p.name]
+    if game.entity_prototypes[p.name].max_wire_distance > max then
+      max = game.entity_prototypes[p.name].max_wire_distance
       max_index = i
     end
   end
