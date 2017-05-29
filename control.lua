@@ -502,6 +502,7 @@ function debugDump(var, force) --luacheck: allow defined top
       player.print(msg)
     end
     local tick = game and game.tick or 0
+    log(debug.traceback())
     log(tick .. " " .. msg)
   end
 end
@@ -583,11 +584,11 @@ remote.add_interface("farl",
   {
     railInfo = function(rail)
       rail = rail or game.player.selected
-      debugDump(rail.name.."@"..pos2Str(rail.position).." dir:"..rail.direction.." realPos:"..pos2Str(diagonal_to_real_pos(rail)),true)
+      debugDump(rail.name.."@ ".. Position.tostring(rail.position).." dir:"..rail.direction.." realPos: "..Position.tostring(diagonal_to_real_pos(rail)),true)
       if type(global.railInfoLast) == "table" and global.railInfoLast.valid then
         local pos = global.railInfoLast.position
-        local diff=subPos(rail.position,pos)
-        local rdiff = subPos(diagonal_to_real_pos(rail),diagonal_to_real_pos(global.railInfoLast))
+        local diff=Position.subtract(rail.position,pos)
+        local rdiff = Position.subtract(diagonal_to_real_pos(rail),diagonal_to_real_pos(global.railInfoLast))
         debugDump("Offset from last: x="..diff.x..",y="..diff.y,true)
         debugDump("real Offset: x="..rdiff.x..",y="..rdiff.y,true)
         debugDump("Distance (util): "..util.distance(pos, rail.position),true)
@@ -677,7 +678,7 @@ remote.add_interface("farl",
     end,
 
     revive = function(player)
-      for _, entity in pairs(player.surface.find_entities_filtered{area = expandPos(player.position,50), type = "entity-ghost"}) do
+      for _, entity in pairs(player.surface.find_entities_filtered{area = Position.expand_to_area(player.position,50), type = "entity-ghost"}) do
         entity.revive()
       end
     end,
