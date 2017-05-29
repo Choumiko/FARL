@@ -69,18 +69,18 @@ end
 function isFARLLocomotive(loco) --luacheck: allow defined top
   if not loco or not loco.valid or not loco.type == "locomotive" then
     return false
-  end
-  if loco.name == "farl" then
-    return true
-  end
-  if loco.grid then
-    for _, equipment in pairs(loco.grid.equipment) do
-      if equipment.name == "farl-roboport" then
-        return true
-      end
-    end
-  end
-  return false
+	end
+	if loco.name == "farl" then
+	  return true
+	end
+	if loco.grid then
+  	for _, equipment in pairs(loco.grid.equipment) do
+    	if equipment.name == "farl-roboport" then
+      	return true
+	    end
+  	end
+	end
+	return false
 end
 
 local function on_tick(event)
@@ -504,7 +504,7 @@ function debugDump(var, force) --luacheck: allow defined top
     local tick = game and game.tick or 0
     log(debug.traceback())
     log(tick .. " " .. msg)
-  end
+	end
 end
 
 function debugLog(var, prepend)--luacheck: allow defined top
@@ -570,10 +570,10 @@ function on_player_switched(event)--luacheck: allow defined top
       end
     end
   end)
-  if not status then
-    debugDump("Unexpected error:",true)
-    debugDump(err,true)
-  end
+	if not status then
+  	debugDump("Unexpected error:",true)
+	  debugDump(err,true)
+	end
 end
 
 if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then
@@ -663,12 +663,6 @@ remote.add_interface("farl",
       for i=1,#items do
         game.player.insert{name=items[i], count=count[i]}
       end
-    end,
-
-    place_signal = function(rail, travel_dir, end_of_rail)
-      local signal = get_signal_for_rail(rail, travel_dir, end_of_rail)
-      signal.force  = rail.force
-      rail.surface.create_entity(signal)
     end,
 
     debuglog = function()

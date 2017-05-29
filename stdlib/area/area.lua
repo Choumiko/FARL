@@ -20,12 +20,6 @@ function Area.construct(x1, y1, x2, y2)
     return { left_top = Position.construct(x1, y1), right_bottom = Position.construct(x2, y2) }
 end
 
-function Area.construct_from_positions(pos1, pos2)
-    fail_if_missing(pos1, 'missing pos1 value')
-    fail_if_missing(pos2, 'missing pos2 value')
-    return Area.construct( pos1.x, pos1.y, pos2.x, pos2.y)
-end
-
 --- Returns the size of the space contained in the 2d area
 -- @tparam LuaBoundingBox area the area
 -- @treturn number the size of the area

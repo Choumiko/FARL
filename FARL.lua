@@ -71,6 +71,15 @@ real_signalOffset = --luacheck: allow defined top
       [5] = { x = 1, y = -1 }
     },
 }
+
+local diagonal_data =
+  {
+    [1] = { x = 0.5, y = -0.5 },
+    [3] = { x = 0.5, y = 0.5 },
+    [5] = { x = -0.5, y = 0.5 },
+    [7] = { x = -0.5, y = -0.5 }
+  }
+
 -- [traveldir%2][raildir]
 --[[local signalOffsetCurves =
 {
@@ -84,12 +93,12 @@ local math = math
 local random, floor, ceil = math.random, math.floor, math.ceil
 local abs, min, max = math.abs, math.min, math.max
 
-function round(num, idp)--luacheck: allow defined top
+local function round(num, idp)
   local mult = 10 ^ (idp or 0)
   return floor(num * mult + 0.5) / mult
 end
 
-function get_signal_weight(rail, settings)--luacheck: allow defined top
+local function get_signal_weight(rail, settings)
   local weight = rail.name == settings.rail.curved and 3 or 1
   if rail.name ~= settings.rail.curved and rail.direction % 2 == 1 then
     return 0.75
@@ -103,7 +112,7 @@ for i = 0, 7 do
   rot[rad] = { cos = math.cos(rad), sin = math.sin(rad) }
 end
 
-function rotate(pos, rad)--luacheck: allow defined top
+local function rotate(pos, rad)
   if not rot[rad] then error("rot[" .. rad .. "]", 2) end
   local cos, sin = rot[rad].cos, rot[rad].sin
   local r = { { x = cos, y = -sin }, { x = sin, y = cos } }
@@ -114,51 +123,41 @@ function rotate(pos, rad)--luacheck: allow defined top
 end
 
 function diagonal_to_real_pos(rail)--luacheck: allow defined top
-  local data = {
-    [1] = { x = 0.5, y = -0.5 },
-    [3] = { x = 0.5, y = 0.5 },
-    [5] = { x = -0.5, y = 0.5 },
-    [7] = { x = -0.5, y = -0.5 }
-  }
-if rail.type and rail.type == "straight-rail" then
-  local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 }
-  return Position.add(off, rail.position)
-else
-  return rail.position
-end
+  local data = diagonal_data
+  if rail.type and rail.type == "straight-rail" then
+    local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 } --fix for diagonal rails??!
+    return Position.add(off, rail.position)
+  else
+    return rail.position
+  end
 end
 
 local function get_fake_rail(rail, position)
   return {name = rail.name, type = rail.type, direction = rail.direction, position = position or Position.copy(rail.position)}
 end
 
-function moveRail(rail, direction, distance)--luacheck: allow defined top
-  local data = {
-    [1] = { x = 0.5, y = -0.5 },
-    [3] = { x = 0.5, y = 0.5 },
-    [5] = { x = -0.5, y = 0.5 },
-    [7] = { x = -0.5, y = -0.5 }
-  }
-distance = (rail.type == "straight-rail" and rail.direction % 2 == 1) and distance or distance * 2
-local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 }
-local pos = Position.add(off, rail.position)
-pos = Position.translate(pos, direction, distance)
-local newRail = get_fake_rail(rail, pos)
-if rail.type == "straight-rail" and rail.direction % 2 == 1 and distance % 2 == 1 then
-  newRail.direction = (rail.direction + 4) % 8
-end
-off = data[newRail.direction] or { x = 0, y = 0 }
-pos = Position.subtract(pos, off)
-newRail.position = pos
-return newRail
+local function moveRail(rail, direction, distance)
+  local data = diagonal_data
+  distance = (rail.type == "straight-rail" and rail.direction % 2 == 1) and distance or distance * 2
+  local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 }
+  local pos = Position.add(off, rail.position)
+  pos = Position.translate(pos, direction, distance)
+  local newRail = get_fake_rail(rail, pos)
+  if rail.type == "straight-rail" and rail.direction % 2 == 1 and distance % 2 == 1 then
+    newRail.direction = (rail.direction + 4) % 8
+  end
+  off = data[newRail.direction] or { x = 0, y = 0 }
+  pos = Position.subtract(pos, off)
+  newRail.position = pos
+  return newRail
 end
 
-function move_right_forward(pos, direction, right, forward)--luacheck: allow defined top
+local function move_right_forward(pos, direction, right, forward)
   local dir = (direction + 2) % 8
   return Position.translate(Position.translate(pos, dir, right), direction, forward)
 end
 
-function get_signal_for_rail(rail, traveldir, end_of_rail)--luacheck: allow defined top
+local function get_signal_for_rail(rail, traveldir, end_of_rail)
   local rail_pos = diagonal_to_real_pos(rail)
   local offset = real_signalOffset[traveldir][rail.direction]
   local pos = Position.add(rail_pos, offset)
@@ -2311,19 +2310,7 @@ FARL.calcPole = function(self, lastrail, traveldir)
         offset = FARL.mirrorEntity(offset, traveldir)
       end
       if diagonal then
-        local x, y = 0, 0
-        -- 1 +x -y
-        if lastrail.direction == 1 then
-          x, y = 0.5, -0.5
-        elseif lastrail.direction == 3 then
-          x, y = 0.5, 0.5
-          -- 5 -x +y
-        elseif lastrail.direction == 5 then
-          x, y = -0.5, 0.5
-        elseif lastrail.direction == 7 then
-          x, y = -0.5, -0.5
-        end
-        local railPos = { x = x, y = y }
+        local railPos = diagonal_data[lastrail.direction] or { x = 0, y = 0 }
         offset = Position.add(railPos, offset)
       end
       return offset
