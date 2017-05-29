@@ -1,16 +1,16 @@
 data:extend
-  {
     {
-      type = "equipment-category",
-      name = "farl-equipment"
-    },
-    {
-      type = "equipment-grid",
-      name = "farl-equipment-grid",
-      width = 2,
-      height = 2,
-      equipment_categories = {"farl-equipment"},
-    },--[[
+        {
+            type = "equipment-category",
+            name = "farl-equipment"
+        },
+        {
+            type = "equipment-grid",
+            name = "farl-equipment-grid",
+            width = 2,
+            height = 2,
+            equipment_categories = {"farl-equipment"},
+        },--[[
     {
       type = "equipment-grid",
       name = "farl-equipment-grid-wagon",
@@ -31,9 +31,9 @@ farlRoboport.categories = {"farl-equipment"}
 
 local farlRoboportRecipe = copyPrototype("recipe", "personal-roboport-equipment", "farl-roboport", true)
 farlRoboportRecipe.ingredients = {
-  {"iron-gear-wheel", 5},
-  {"electronic-circuit", 5},
-  {"steel-plate", 5},
+    {"iron-gear-wheel", 5},
+    {"electronic-circuit", 5},
+    {"steel-plate", 5},
 }
 
 
