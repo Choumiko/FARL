@@ -1761,11 +1761,11 @@ end]]--
 --parse blueprints
 -- chain signal: needs direction == 4, defines track that FARL drives on
 --normal signals: define signal position for other tracks
-FARL.parseBlueprints = function(self, bp)
-    for j = 1, #bp do
-        local e = bp[j].get_blueprint_entities()
+FARL.parseBlueprints = function(self, blueprints)
+    for j = 1, #blueprints do
+        local e = blueprints[j].get_blueprint_entities()
         if e then
-            local bpType, rails, poles, box, offsets = Blueprint.group_entities(e)
+            local bpType, rails, poles, box, offsets = Blueprint.group_entities(blueprints[j])
             if not bpType then
                 --self:print(rails)
                 return
@@ -1813,7 +1813,7 @@ FARL.parseBlueprints = function(self, bp)
                     for _, re in pairs(offsets.railEntities) do
                         table.insert(railEntities, { name = re.name, position = Position.subtract(re.position, railPos), direction = re.direction })
                     end
-                    local concrete = bp[j].get_blueprint_tiles()
+                    local concrete = blueprints[j].get_blueprint_tiles()
                     if concrete then
                         local off = { x = 0.5, y = 0.5 }
                         local pos = Position.subtract(railPos, off)

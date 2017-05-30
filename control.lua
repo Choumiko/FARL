@@ -1,4 +1,5 @@
 require 'stdlib/string'
+require 'stdlib/table'
 require "Settings"
 require "FARL"
 require "GUI"
@@ -359,7 +360,7 @@ local function on_configuration_changed(data)
                 end
             end
         else
-            debugDump("FARL version: "..newVersion,true)
+            debugDump("FARL version: ".. tostring(newVersion), true)
         end
         on_init()
         global.version = newVersion
@@ -743,3 +744,5 @@ remote.add_interface("farl",
             return trigger_events
         end
     })
+
+commands.add_command('farl_compare_blueprints', '', Blueprint.compare)
