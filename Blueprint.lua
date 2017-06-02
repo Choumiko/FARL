@@ -50,7 +50,7 @@ Blueprint.group_entities = function(bp)
             offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
             -- collect all poles in bp
         elseif prototype and prototype.type == "electric-pole" then
-            table.insert(poles, {name = name, direction = dir, position = e[i].position})
+            table.insert(poles, {name = name, direction = dir, position = e[i].position, distance_to_chain = 0})
         elseif prototype and prototype.type == "straight-rail" then
             rails = rails + 1
             if not bpType then
@@ -77,15 +77,28 @@ Blueprint.group_entities = function(bp)
             end
         end
     end
+    if offsets.chain then
+        local chain_position = offsets.chain.position
+        for _, pole in pairs(poles) do
+            pole.distance_to_chain = Position.distance_squared(chain_position, pole.position)
+        end
+    end
     return bpType, rails, poles, box, offsets
 end
 
 Blueprint.get_max_pole = function(poles, offsets)
     local max = 0
     local max_index
+    local min_distance = math.huge
     for i,p in pairs(poles) do
-        if game.entity_prototypes[p.name].max_wire_distance > max then
-            max = game.entity_prototypes[p.name].max_wire_distance
+        local wire_distance = game.entity_prototypes[p.name].max_wire_distance
+        --choose pole closer to the chainsignal as the main pole in case of a tie
+        if wire_distance == max and p.distance_to_chain < min_distance then
+            min_distance = p.distance_to_chain
+            max_index = i
+        end
+        if wire_distance > max then
+            max = wire_distance
             max_index = i
         end
     end

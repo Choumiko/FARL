@@ -1770,14 +1770,14 @@ FARL.parseBlueprints = function(self, blueprints)
                 --self:print(rails)
                 return
             end
-            if #poles > 0 then
-                Blueprint.get_max_pole(poles, offsets)
-            end
             if rails == 1 and not offsets.chain then
                 local rail = offsets.rails[1]
                 local traveldir = bpType == "straight" and 0 or 1
                 local c = FARL.signalOffset[traveldir][rail.direction]
                 offsets.chain = { direction = c.dir, name = "rail-chain-signal", position = Position.add(rail.position, c.pos) }
+            end
+            if #poles > 0 then
+                Blueprint.get_max_pole(poles, offsets)
             end
             if offsets.chain and offsets.pole and bpType then
                 local mainRail = false

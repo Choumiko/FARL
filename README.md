@@ -39,6 +39,7 @@ FARL stores the names in global and only removes them if the interface is used o
 1.1.0
 
  - FARL now accepts blueprints in any rotation (horizontal/vertical), the chainsignal can be placed to allow travel in any direction
+ - In blueprints with multiple electric poles with the same wire reach distance, FARL will use the pole closest to the chainsignal to connect the circuit wires 
  
 1.0.11
 
