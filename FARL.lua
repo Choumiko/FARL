@@ -850,7 +850,7 @@ FARL.replaceWater = function(self, tiles, w, dw)
             self.surface.set_tiles(tiles)
             self:removeItemFromCargo("landfill", lfills)
         else
-            self:print({ "msg-not-enough-concrete", { "item-name.landfill" } })
+            self:print_out_of_item("landfill")
         end
     end
 end
@@ -925,7 +925,7 @@ FARL.placeConcrete = function(self, dir, rail)
                 global.statistics[self.locomotive.force.name].created[name] = stat + c
             end
         else
-            self:print({ "msg-not-enough-concrete", { "item-name." .. get_item_name(name) } })
+            self:print_out_of_item(name)
         end
     end
 end
@@ -1272,6 +1272,7 @@ FARL.activate = function(self, scanForGhosts)
         self.protected_tiles = {}
         self.protected_tiles[self.protected_index] = {}
         self.frontmover = false
+        self.last_message = {}
         --self.previews = {}
         --      self.last_signal = {}
         --      self.fake_signal_in = false
@@ -1554,6 +1555,7 @@ FARL.deactivate = function(self, reason)
     self.concrete_queue = {}
     self.rail_queue = {}
     self.startedBy = nil
+    self.last_message = {}
     --    self.previews = self.previews or {}
     --    for _, p in pairs(self.previews) do
     --      if p then
@@ -1690,7 +1692,7 @@ FARL.removeItemFromCargo = function(self, item, count, current_count)
     local item_name = get_item_name(item)
     local removed = self.train.remove_item({ name = item_name, count = count })
     if removed == current_count then
-        self:flyingText({ "", "Out of ", item_name }, YELLOW, true)
+        self:print_out_of_item(item)
     end
     return removed
 end
@@ -1702,7 +1704,7 @@ FARL.getCargoCount = function(self, item)
     if name then
         count = self.train.get_item_count(name)
         if count == 0 then
-            self:flyingText({ "", "Out of ", name }, YELLOW, true)
+            self:print_out_of_item(name)
         end
     else
         self:print("No item found for: " .. item)
@@ -2756,13 +2758,23 @@ FARL.getConnectedGhostRail = function(self, rail, travelDir, straight_only)
     return ret
 end
 
-FARL.print = function(self, msg)
+FARL.print_out_of_item = function(self, item)
+    local tick = game.tick
+    if not self.last_message[item] or tick >= self.last_message[item] then
+        local name = game.entity_prototypes[item] and game.entity_prototypes[item].localised_name or game.item_prototypes[item].localised_name
+        local msg = { "msg-out-of-item", name }
+        self:print(msg, YELLOW)
+        self.last_message[item] = tick + 300
+    end
+end
+
+FARL.print = function(self, msg, color)
     if self.driver and self.driver.name ~= "farl_player" then
-        self.driver.print(msg)
+        self.driver.print( msg )
     elseif self.startedBy and self.startedBy.valid then
-        self.startedBy.print({"", "FARL '", self.locomotive.backer_name,"': ",msg})
+        self.startedBy.print( { "", "FARL '", self.locomotive.backer_name,"': ",msg } )
     else
-        self:flyingText(msg, RED, true)
+        self:flyingText( msg, color or RED, true )
     end
 end
 

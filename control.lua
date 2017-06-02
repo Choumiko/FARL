@@ -363,6 +363,9 @@ local function on_configuration_changed(data)
                                 psettings.place_ghosts = true
                             end
                         end
+                        for _, farl in pairs(global.farl) do
+                            farl.last_message = farl.last_message or {}
+                        end
                     end
                 end
             end
