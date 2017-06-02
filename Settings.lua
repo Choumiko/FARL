@@ -185,7 +185,8 @@ defaultSettings = --luacheck: allow defined top
         parallelTracks = true,
         concrete = true,
         railEntities = true,
-        mirrorConcrete = true
+        mirrorConcrete = true,
+        place_ghosts = true
 }
 
 defaultSettings.activeBP = defaultSettings.bp

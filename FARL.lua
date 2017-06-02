@@ -553,12 +553,9 @@ FARL.update = function(self, _)
                             if last.type == "curved-rail" then
                                 self.signalCount.main = self.signalCount.main - self.lanes.max_lag[newTravelDir % 2] - get_signal_weight(last, self.settings)
                             end
-                            if self:getCargoCount("rail-signal") > 0 then
-                                if self:placeSignal(newTravelDir, nextRail) then
-                                    self.signalCount.main = 0
-                                end
-                            else
-                                self:flyingText({ "", "Out of ", "rail-signal" }, YELLOW, true)
+
+                            if self:placeSignal(newTravelDir, nextRail) then
+                                self.signalCount.main = 0
                             end
                         end
 
@@ -1391,10 +1388,8 @@ FARL.activate = function(self, scanForGhosts)
             for i = signal_index + 1, c do
                 local rail = self.path[i].rail
                 local dir = self.path[i].travel_dir
-                if self:getCargoCount("rail-signal") > 0 then
-                    if self:placeSignal(dir, rail) then self.signalCount.main = 0 end
-                else
-                    self:flyingText({ "", "Out of ", "rail-signal" }, YELLOW, true)
+                if self:placeSignal(dir, rail) then
+                    self.signalCount.main = 0
                 end
                 self.signalCount.main = self.signalCount.main + get_signal_weight(rail, self.settings)
             end
@@ -1720,7 +1715,7 @@ FARL.genericCanPlace = function(self, arg)
     end
 end
 
-FARL.genericPlace = function(self, arg, ignore)
+FARL.genericPlace = function(self, arg, ignore, place_ghost)
     local canPlace
     if not ignore then
         canPlace = self:genericCanPlace(arg)
@@ -1731,15 +1726,21 @@ FARL.genericPlace = function(self, arg, ignore)
     if canPlace then
         local force = arg.force or self.locomotive.force
         arg.force = force
-        entity = self.surface.create_entity(arg)
+        if not place_ghost then
+            entity = self.surface.create_entity(arg)
+        else
+            entity = self.surface.create_entity(FARL.get_ghost(arg))
+        end
         --apiCalls.create = apiCalls.create + 1
     end
     if entity then
-        if trigger_events[entity.name] or entity.type == "electric-pole" then
+        if entity.type ~= "entity_ghost" and (trigger_events[entity.name] or entity.type == "electric-pole") then
             script.raise_event(defines.events.on_robot_built_entity, { created_entity = entity })
         end
-        local stat = global.statistics[entity.force.name].created[entity.name] or 0
-        global.statistics[entity.force.name].created[entity.name] = stat + 1
+        if entity.type ~= "entity_ghost" then
+            local stat = global.statistics[entity.force.name].created[entity.name] or 0
+            global.statistics[entity.force.name].created[entity.name] = stat + 1
+        end
         self:protect(entity)
         --local diff = Position.subtract(arg.position, entity.position)
         --if diff.x ~= 0 or diff.y~= 0 then
@@ -1750,13 +1751,14 @@ FARL.genericPlace = function(self, arg, ignore)
     end
     return canPlace, entity
 end
---[[
-FARL.genericPlaceGhost = function(self, arg, ignore)
-  local ghostEntity = util.table.deepcopy(arg)
-  ghostEntity.inner_name = arg.name
-  ghostEntity.name = "entity-ghost"
-  return self:genericPlace(ghostEntity, true)
-end]]--
+
+FARL.get_ghost = function(entity)
+    local ghostEntity = table.deepcopy(entity)
+    ghostEntity.inner_name = entity.name
+    ghostEntity.name = "entity-ghost"
+    ghostEntity.expires = false
+    return ghostEntity
+end
 
 --parse blueprints
 -- chain signal: needs direction == 4, defines track that FARL drives on
@@ -2213,10 +2215,8 @@ FARL.placeParallelTrack = function(self, traveldir, lastRail, lane_index)
         self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(new_rail, self.settings)
         --self.lanes[lane_index].lastrail = ent or new_rail
         if self.settings.signals then
-            if self:getCargoCount("rail-signal") > 0 then
-                if self:placeParallelSignals(traveldir, new_rail, lane_index) then self.signalCount[lane_index] = 0 end
-            else
-                self:flyingText({ "", "Out of ", "rail-signal" }, YELLOW, true)
+            if self:placeParallelSignals(traveldir, new_rail, lane_index) then
+                self.signalCount[lane_index] = 0
             end
         end
         --      if global.fake_signals then
@@ -2240,25 +2240,31 @@ end
 FARL.placeParallelSignals = function(self, traveldir, rail, lane_index)
     --if self.signalCount[lane_index] > self.settings.signalDistance and rail.name ~= self.settings.rail.curved then
     if self.signal_in[lane_index] and self.signal_in[lane_index] < 1 and rail.type ~= "curved-rail" then
-        local signals = traveldir % 2 == 0 and self.settings.activeBP.straight.signals or self.settings.activeBP.diagonal.signals
-        if signals and type(signals) == "table" and signals[lane_index] then
-            local signal_data = signals[lane_index]
-            local end_of_rail = signal_data.reverse
-            local signal_traveldir = signal_data.reverse and Position.opposite_direction(traveldir) or traveldir
-            local signal = get_signal_for_rail(rail, signal_traveldir, end_of_rail)
-            signal.force = self.locomotive.force
+        local cargo_count = self:getCargoCount("rail-signal")
+        local place_ghost = self.settings.place_ghosts and cargo_count == 0
+        if self.settings.place_ghosts or cargo_count > 0 then
+            local signals = traveldir % 2 == 0 and self.settings.activeBP.straight.signals or self.settings.activeBP.diagonal.signals
+            if signals and type(signals) == "table" and signals[lane_index] then
+                local signal_data = signals[lane_index]
+                local end_of_rail = signal_data.reverse
+                local signal_traveldir = signal_data.reverse and Position.opposite_direction(traveldir) or traveldir
+                local signal = get_signal_for_rail(rail, signal_traveldir, end_of_rail)
+                signal.force = self.locomotive.force
 
-            self:prepareArea(signal)
-            --local success, entity = self:genericPlaceGhost(signal)
-            local success, entity = self:genericPlace(signal)
-            if entity then
-                self:protect(entity)
-                self:removeItemFromCargo(signal.name, 1)
-                self.signal_in[lane_index] = false
-                return success, entity
-            else
-                --self:print("Can't place signal@"..Position.tostring(pos))
-                return success, entity
+                self:prepareArea(signal)
+                --local success, entity = self:genericPlaceGhost(signal)
+                local success, entity = self:genericPlace(signal, false, place_ghost)
+                if entity then
+                    self:protect(entity)
+                    if entity.type ~= "entity-ghost" then
+                        self:removeItemFromCargo(signal.name, 1)
+                    end
+                    self.signal_in[lane_index] = false
+                    return success, entity
+                else
+                    --self:print("Can't place signal@"..Position.tostring(pos))
+                    return success, entity
+                end
             end
         end
     end
@@ -2368,7 +2374,7 @@ FARL.placeRailEntities = function(self, traveldir, rail)
                 --debugDump(pos, true)
                 local entity = { name = railEntities[i].name, position = pos }
                 if self:prepareArea(entity) then
-                    local _, ent = self:genericPlace { name = railEntities[i].name, position = pos, direction = 0, force = self.locomotive.force }
+                    local _, ent = self:genericPlace( { name = railEntities[i].name, position = pos, direction = 0, force = self.locomotive.force }, false )
                     --local _, ent = self:genericPlaceGhost { name = railEntities[i].name, position = pos, direction = 0, force = self.locomotive.force }
                     if ent then
                         self:protect(ent)
@@ -2533,26 +2539,31 @@ end
 
 FARL.placeSignal = function(self, traveldir, rail)
     if self.signalCount.main > self.settings.signalDistance and rail.type ~= "curved-rail" then
-        --debugDump(self.signalCount,true)
-        local signal = get_signal_for_rail(rail, traveldir)
-        signal.force = self.locomotive.force
-        self:prepareArea(signal)
-        local success, entity = self:genericPlace(signal)
-        if entity then
-            self:protect(entity)
-            self:removeItemFromCargo(signal.name, 1)
-
-            --reset lane counter, so that it lines up
-            self.signal_in = self.signal_in or {}
-            local bptype = rail.direction % 2 == 1 and "diagonal" or "straight"
-            for i, _ in pairs(self.settings.activeBP[bptype].lanes) do
-                local lane_data = self.lanes["d" .. self.direction % 2]["i0"]["l" .. i]
-                self.signal_in[i] = abs(lane_data.lag) + 1
+        local cargo_count = self:getCargoCount("rail-signal")
+        local place_ghost = self.settings.place_ghosts and cargo_count == 0
+        if self.settings.place_ghosts or cargo_count > 0 then
+            --debugDump(self.signalCount,true)
+            local signal = get_signal_for_rail(rail, traveldir)
+            signal.force = self.locomotive.force
+            self:prepareArea(signal)
+            local success, entity = self:genericPlace(signal, false, place_ghost)
+            if entity then
+                self:protect(entity)
+                if entity.type ~= "entity-ghost" then
+                    self:removeItemFromCargo(signal.name, 1)
+                end
+                --reset lane counter, so that it lines up
+                self.signal_in = self.signal_in or {}
+                local bptype = rail.direction % 2 == 1 and "diagonal" or "straight"
+                for i, _ in pairs(self.settings.activeBP[bptype].lanes) do
+                    local lane_data = self.lanes["d" .. self.direction % 2]["i0"]["l" .. i]
+                    self.signal_in[i] = abs(lane_data.lag) + 1
+                end
+                return success, entity
+            else
+                --self:print("Can't place signal@"..Position.tostring(pos))
+                return success, entity
             end
-            return success, entity
-        else
-            --self:print("Can't place signal@"..Position.tostring(pos))
-            return success, entity
         end
     end
     return nil

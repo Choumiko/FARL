@@ -180,7 +180,8 @@ GUI = {--luacheck: allow defined top
             local i = event.element.name:match("save_bp_(%w*)")
             GUI.save_bp(event,farl, player,tonumber(i))
         elseif name == "signals" or name == "poles" or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
-            or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" or name == "mirrorConcrete" or name == "signalEveryPole" then
+            or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" or name == "mirrorConcrete"
+            or name == "signalEveryPole" or name == "place_ghosts" then
             psettings[name] = not psettings[name]
             if name == "poles" then
                 if psettings[name] and farl.active then
@@ -339,6 +340,9 @@ GUI = {--luacheck: allow defined top
             GUI.addPlaceHolder(settings)
 
             GUI.add(settings,{type="checkbox", name="railEntities", caption={"stg-rail-entities"}}, "railEntities")
+            GUI.addPlaceHolder(settings)
+
+            GUI.add(settings, { type = "checkbox", name="place_ghosts", caption = {"stg-place-ghosts"}}, "place_ghosts")
             GUI.addPlaceHolder(settings)
 
             GUI.add(settings, {type="checkbox", name="mirrorConcrete", caption="Mirror concrete"}, "mirrorConcrete")

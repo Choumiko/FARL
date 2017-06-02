@@ -357,13 +357,20 @@ local function on_configuration_changed(data)
                     if oldVersion < v'1.0.10' then
                         global.electric_poles = nil
                     end
+                    if oldVersion < v'1.1.0' then
+                        for _, psettings in pairs(global.players) do
+                            if psettings.place_ghosts == nil then
+                                psettings.place_ghosts = true
+                            end
+                        end
+                    end
                 end
             end
         else
             debugDump("FARL version: ".. tostring(newVersion), true)
         end
         on_init()
-        global.version = newVersion
+        global.version = tostring(newVersion)
     end
     for name, _ in pairs(global.trigger_events) do
         if not game.entity_prototypes[name] then
