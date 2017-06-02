@@ -744,5 +744,3 @@ remote.add_interface("farl",
             return trigger_events
         end
     })
-
-commands.add_command('farl_compare_blueprints', '', Blueprint.compare)

@@ -35,13 +35,11 @@ If FARL should no longer keep on raising the events use this command (probably n
 To make it work just add FARL as an optional dependency in your info.json and do the remote.call in on_configuration_changed.
 FARL stores the names in global and only removes them if the interface is used or the entity doesn't exist anymore (checked in on_configuration_changed)
 
-#Known Issues
-
- - when activating FARL on a different rail type than the one currently selected it won't start. Move FARL all the way to the end of the track and start again.
- Will be fixed in the next release (1.0.8)
-
-
 #Changelog
+1.1.0
+
+ - FARL now accepts blueprints in any rotation (horizontal/vertical), the chainsignal can be placed to allow travel in any direction
+ 
 1.0.11
 
  - fixed error when adding FARL to an existing save
