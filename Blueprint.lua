@@ -16,9 +16,9 @@ Blueprint.group_entities = function(bp)
         if e[i].name == "rail-chain-signal" then
             local dir = e[i].direction or 0
             --local _, name = table.find(defines.direction, function(v, _, direction) return v == direction end, (dir + 4) % 8)
-            --game.print("Found chainsignal for driving due " .. tostring(name))
+            --game.print(string.format('Found chainsignal for driving due %s, %d', tostring(name), dir))
             if not (dir == 4 or dir == 5) then
-                local rot = (dir % 2 == 0) and math.abs(4 - dir ) * 45 or math.abs(5 - dir ) * 45
+                local rot = (dir % 2 == 0) and (4 - dir ) * 45 or (5 - dir ) * 45
                 --game.print(string.format("Rotating blueprint by %d degrees (dir: %d)", rot, dir))
                 Blueprint.rotate(bp,rot)
                 e = bp.get_blueprint_entities()
@@ -47,6 +47,7 @@ Blueprint.group_entities = function(bp)
         local name = e[i].name
 
         if name == "rail-chain-signal" and not offsets.chain then
+          --game.print(string.format('chain2 dir: %d position: %s', e[i].direction, Position.tostring(e[i].position)))
             offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
             -- collect all poles in bp
         elseif prototype and prototype.type == "electric-pole" then
@@ -116,20 +117,28 @@ Blueprint.rotate = function(bp, degree)
     local tiles = bp.get_blueprint_tiles()
     local rad = math.rad(degree)
     local cos, sin = math.cos(rad), math.sin(rad)
-    if degree == 180 then
+    if math.abs(degree) == 180 then
         sin = 0
         cos = -1
+    elseif degree == 90 then
+      sin = 1
+      cos = 0
+    elseif degree == -90 then
+      sin = -1
+      cos = 0
     end
     local rotate = function(pos)
         return { x = cos * pos.x - sin * pos.y, y = sin * pos.x + cos * pos.y }
     end
     --local r = { { x = cos, y = -sin }, { x = sin, y = cos } } --counter clockwise
+    --game.print(string.format('degree: %s, cos: %s, sin: %s', degree, cos, sin))
     local x, y
     for _, entity in pairs(entities) do
         x, y = entity.position.x, entity.position.y
         entity.position.x = cos * x - sin * y
         entity.position.y = sin * x + cos * y
-        entity.direction = entity.direction and ( entity.direction - degree / 45 ) % 8 or ( -degree / 45 ) % 8
+        entity.direction = entity.direction or 0
+        entity.direction = ( entity.direction + degree / 45 ) % 8
         entity.pickup_position = entity.pickup_position and rotate(entity.pickup_position) or nil
         entity.drop_position = entity.drop_position and rotate(entity.drop_position) or nil
     end
