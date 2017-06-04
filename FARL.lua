@@ -2240,11 +2240,18 @@ FARL.placeParallelTrack = function(self, traveldir, lastRail, lane_index)
         --        end
         --      end
         if not ent then
-            self:print("Failed to create track @" .. Position.tostring(new_rail.position))
-            log("failed")
-            log(serpent.line(new_rail, {comment=false}))
-            self:flyingText2("E", RED, true, new_rail.position)
-            return new_rail
+            local placed_rail = self.surface.find_entity(new_rail.name, new_rail.position)
+            log('searched rail')
+            if not placed_rail then
+                self:print("Failed to create track @" .. Position.tostring(new_rail.position))
+                log("not found")
+                log(serpent.line(new_rail, {comment=false}))
+                self:flyingText2("E", RED, true, new_rail.position)
+                return new_rail
+            else
+                log('found')
+                return ent
+            end
         else
             self:removeItemFromCargo(ent.name, 1)
             return ent
@@ -2522,14 +2529,23 @@ FARL.placePole = function(self, polePos, poleDir)
     --local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     --debugDump(Position.distance(pole.position, self.lastPole.position),true)
     local canPlace = self:prepareArea({ name = name, position = polePos })
-    if not canPlace and self.surface.count_entities_filtered { area = Position.expand_to_area(polePos, 0.6), name = name } > 1 then
-        canPlace = true
-        debugLog("--found pole@" .. Position.tostring(polePos))
+    local placed_pole
+    if not canPlace then
+        placed_pole =  self.surface.find_entity(name, polePos)
+        if placed_pole then
+            log("found pole @" .. Position.tostring(polePos))
+            canPlace = true
+        end
     end
     local cargo_count = self:getCargoCount(name)
     local place_ghost = self.settings.place_ghosts and cargo_count == 0
     if canPlace and (self.settings.place_ghosts or cargo_count > 0) then
-        local _, pole = self:genericPlace( { name = name, position = polePos, force = self.locomotive.force }, false, place_ghost)
+        local _, pole
+        if not placed_pole then
+            _, pole = self:genericPlace( { name = name, position = polePos, force = self.locomotive.force }, false, place_ghost)
+        else
+            pole = placed_pole
+        end
         if pole then
             debugLog("--Placed pole@" .. Position.tostring(polePos))
             if self.settings.poleEntities then
