@@ -357,7 +357,7 @@ local function on_configuration_changed(data)
                     if oldVersion < v'1.0.10' then
                         global.electric_poles = nil
                     end
-                    if oldVersion < v'1.1.0' then
+                    if oldVersion < v'1.1.1' then
                         for _, psettings in pairs(global.players) do
                             if psettings.place_ghosts == nil then
                                 psettings.place_ghosts = true
