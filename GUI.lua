@@ -75,7 +75,7 @@ GUI = {--luacheck: allow defined top
     end,
 
     addButton = function(parent, e, bind)
-        e.type = "button"
+        e.type = e.type or "button"
         if bind then
             GUI.callbacks[e.name] = bind
         end
@@ -115,7 +115,7 @@ GUI = {--luacheck: allow defined top
         local buttons = GUI.add(rows, {type="table", name="buttons", colspan=span})
         GUI.addButton(buttons, {name="start"}, GUI.toggleStart)
         GUI.addButton(buttons, {name="cc"}, GUI.toggleCC)
-        GUI.addButton(buttons, {name="settings", caption={"text-settings"}}, GUI.toggleSettingsWindow)
+        GUI.create_settings_button(player, true)
         if debugButton then
             GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
         end
@@ -129,9 +129,9 @@ GUI = {--luacheck: allow defined top
         GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
         GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
         GUI.add(rows, {type="checkbox", name="concrete", caption={"tgl-concrete"}}, "concrete")
-        GUI.add(rows,{type="checkbox", name="bulldozer", caption={"tgl-bulldozer"}, state=psettings.bulldozer},GUI.toggleBulldozer)
-        GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance},GUI.toggleMaintenance)
-        GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}}, "bridge")
+        GUI.add(rows,{type="checkbox", name="bulldozer", caption={"tgl-bulldozer"}, state=psettings.bulldozer, tooltip={"farl_tooltip_bulldozer"}},GUI.toggleBulldozer)
+        GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance, tooltip={"farl_tooltip_maintenance"}},GUI.toggleMaintenance)
+        GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}, tooltip={"farl_tooltip_bridge"}}, "bridge")
     end,
 
     --  createAutopilotGui = function(entity, player)
@@ -302,6 +302,16 @@ GUI = {--luacheck: allow defined top
         farl:toggleCruiseControl()
     end,
 
+    create_settings_button = function(player, sprite)
+        local buttons = player.gui.left.farl.rows.buttons
+        if buttons.settings and buttons.settings.valid then buttons.settings.destroy() end
+        if sprite then
+            return GUI.addButton(buttons, {type = "sprite-button", name = "settings", sprite = "farl_settings", style = "farl_button" }, GUI.toggleSettingsWindow)
+        else
+            return GUI.addButton(buttons, {name = "settings", caption = {"text-save"}}, GUI.toggleSettingsWindow)
+        end
+    end,
+
     toggleSettingsWindow = function(_, farl, player)
         local row = player.gui.left.farl.rows
         local psettings = Settings.loadByPlayer(player)
@@ -310,12 +320,12 @@ GUI = {--luacheck: allow defined top
             local sDistance = tonumber(s.signalDistance.text) or psettings.signalDistance
             local railType = tonumber(s.railType.selected_index) or 1
             sDistance = sDistance < 0 and 0 or sDistance
-            player.gui.left.farl.rows.buttons.settings.caption={"text-settings"}
+            GUI.create_settings_button(player, true)
             GUI.saveSettings({signalDistance = sDistance, railType = railType}, player, farl)
             row.settings.destroy()
         else
             local settings = row.add({type="table", name="settings", colspan=2})
-            player.gui.left.farl.rows.buttons.settings.caption={"text-save"}
+            GUI.create_settings_button(player)
 
             GUI.add(settings,{type="checkbox", name="dropWood", caption={"stg-dropWood"}}, "dropWood")
             GUI.add(settings,{type="checkbox", name="collectWood", caption={"stg-collectWood"}}, "collectWood")
@@ -336,13 +346,13 @@ GUI = {--luacheck: allow defined top
             GUI.add(settings, {type="label", caption={"stg-poleSide"}})
             GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=psettings.flipPoles})
 
-            GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}},"poleEntities")
+            GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}, tooltip={"farl_tooltip_place_pole_entities"}},"poleEntities")
             GUI.addPlaceHolder(settings)
 
-            GUI.add(settings,{type="checkbox", name="railEntities", caption={"stg-rail-entities"}}, "railEntities")
+            GUI.add(settings,{type="checkbox", name="railEntities", caption={"stg-rail-entities"}, tooltip={"farl_tooltip_place_walls"}}, "railEntities")
             GUI.addPlaceHolder(settings)
 
-            GUI.add(settings, { type = "checkbox", name="place_ghosts", caption = {"stg-place-ghosts"}}, "place_ghosts")
+            GUI.add(settings, { type = "checkbox", name="place_ghosts", caption = {"stg-place-ghosts"}, tooltip={"farl_tooltip_place_ghosts"}}, "place_ghosts")
             GUI.addPlaceHolder(settings)
 
             GUI.add(settings, {type="checkbox", name="mirrorConcrete", caption="Mirror concrete"}, "mirrorConcrete")
@@ -387,7 +397,7 @@ GUI = {--luacheck: allow defined top
         end
     end,
 
-    findBlueprintsInHotbar = function(player)
+    findBlueprintsInHotbar = function(player, type)
         local blueprints = {}
         if player ~= nil then
             local hotbar = player.controller_type == defines.controllers.character and player.get_inventory(defines.inventory.player_quickbar) or player.get_inventory(defines.inventory.god_quickbar)
@@ -395,7 +405,11 @@ GUI = {--luacheck: allow defined top
                 for i=1,#hotbar do
                     local itemStack = hotbar[i]
                     if itemStack and itemStack.valid_for_read and itemStack.type == "blueprint" then
-                        table.insert(blueprints, itemStack)
+                        if  ( type and type == 'empty' and not itemStack.is_blueprint_setup() )
+                            or  ( type and type == 'setup' and itemStack.is_blueprint_setup() )
+                            or  not type then
+                            table.insert(blueprints, itemStack)
+                        end
                     end
                 end
             end
@@ -403,41 +417,40 @@ GUI = {--luacheck: allow defined top
         return blueprints
     end,
 
-    findSetupBlueprintsInHotbar = function(player)
-        local blueprints = GUI.findBlueprintsInHotbar(player)
-        if blueprints ~= nil then
-            local ret = {}
-            for _, blueprint in pairs(blueprints) do
-                if blueprint.is_blueprint_setup() then
-                    table.insert(ret, blueprint)
-                end
-            end
-            return ret
-        end
-    end,
-
     readBlueprint = function(_, farl, player)
         local status, err = pcall(function()
-            local bp = GUI.findSetupBlueprintsInHotbar(player)
-            if bp then
-                if #bp > 2 then
-                    farl:print({"msg-error-too-many-bps"})
-                    return
-                end
-                if #bp == 0 then
-                    farl:print({ "msg-error-no-blueprint" })
-                    return
-                end
-                local was_active = farl.active
-                farl:deactivate()
-                farl:parseBlueprints(bp)
-                GUI.destroyGui(player)
-                GUI.createGui(player)
-                if was_active then
-                    farl:activate()
-                end
+            local bp = {}
+            local cursor = player.cursor_stack.valid_for_read and player.cursor_stack
+            local read_from_cursor = false
+            local read_blueprints = farl.read_blueprints
+            if cursor and cursor.type == "blueprint" and cursor.is_blueprint_setup() then
+                table.insert(bp, cursor)
+                read_from_cursor = true
+                read_blueprints = read_blueprints + 1
+            else
+                bp = GUI.findBlueprintsInHotbar(player, 'setup')
+            end
+            if #bp > 2 then
+                farl:print({"msg-error-too-many-bps"})
                 return
             end
+            if #bp == 0 then
+                farl:print({ "msg-error-no-blueprint" })
+                return
+            end
+            local was_active = farl.active
+            farl:deactivate()
+            farl:parseBlueprints(bp)
+            if not read_from_cursor or read_blueprints == 2 then
+                read_blueprints = 0
+                GUI.destroyGui(player)
+                GUI.createGui(player)
+            end
+            if was_active then
+                farl:activate()
+            end
+            farl.read_blueprints = read_blueprints
+            return
         end)
         if not status then
             debugDump("Error: "..err,true)
@@ -488,24 +501,21 @@ GUI = {--luacheck: allow defined top
     end,
 
     createBlueprint = function(bp_table, farl, player)
-        local blueprints = GUI.findBlueprintsInHotbar(player)
-        local bp = false
-        if blueprints ~= nil then
-            for _, blueprint in pairs(blueprints) do
-                if not blueprint.is_blueprint_setup() then
-                    bp = blueprint
-                    break
-                end
-            end
-            if bp then
-                bp.set_blueprint_entities(util.table.deepcopy(bp_table.entities))
-                bp.set_blueprint_tiles(util.table.deepcopy(bp_table.tiles))
-                local icons = {[1]={index = 1, signal={name = "rail", type="item"}},[2]={index = 2, signal={name = "farl", type="item"}}}
-                --TODO fix error
-                pcall(function() bp.blueprint_icons = icons end)
-            else
-                farl:print({"msg-no-empty-blueprint"})
-            end
+        local cursor = player.cursor_stack.valid_for_read and player.cursor_stack
+        local blueprints = {}
+        if cursor and cursor.type == "blueprint" then
+            table.insert(blueprints, cursor)
+        else
+            blueprints = GUI.findBlueprintsInHotbar(player, 'empty')
+        end
+        if #blueprints > 0 then
+            local bp = blueprints[1]
+            bp.set_blueprint_entities(bp_table.entities)
+            bp.set_blueprint_tiles(bp_table.tiles)
+            local icons = {[1]={index = 1, signal={name = "rail", type="item"}},[2]={index = 2, signal={name = "farl", type="item"}}}
+            bp.blueprint_icons = icons
+        else
+            farl:print({"msg-no-empty-blueprint"})
         end
     end,
 

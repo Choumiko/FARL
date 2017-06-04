@@ -278,6 +278,7 @@ FARL.onPlayerEnter = function(player, loco)
         farl.driver = player
         farl.settings = Settings.loadByPlayer(player)
         farl.cheat_mode = player.cheat_mode
+        farl.read_blueprints = 0
 
         if farl.settings.bulldozer and not farl:bulldozerModeAllowed() then
             farl.settings.bulldozer = false
@@ -301,6 +302,7 @@ FARL.onPlayerLeave = function(player)
             f.lastMove = nil
             f.railBelow = nil
             f.next_rail = nil
+            f.read_blueprints = 0
 
             if remote.interfaces.YARM and remote.interfaces.YARM.show_expando and f.settings.YARM_old_expando and player.name ~= "farl_player" then
                 remote.call("YARM", "show_expando", player.index)
@@ -1556,6 +1558,7 @@ FARL.deactivate = function(self, reason)
     self.rail_queue = {}
     self.startedBy = nil
     self.last_message = {}
+    self.read_blueprints = 0
     --    self.previews = self.previews or {}
     --    for _, p in pairs(self.previews) do
     --      if p then

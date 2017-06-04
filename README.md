@@ -38,8 +38,10 @@ FARL stores the names in global and only removes them if the interface is used o
 #Changelog
 1.1.0
 
- - Added an option to place ghosts when running out of items, defaults to true, ghosts for rails and concrete etc. are not created 
+ - Added an option to place ghosts when running out of items, defaults to true, ghosts for rails and concrete are not created 
  - FARL now accepts blueprints in any rotation (horizontal/vertical), the chainsignal can be placed to allow travel in any direction
+ - clicking the Read button with a blueprint reads the blueprint from the cursor instead of searching the hotbar
+ - clicking the Vertical/Diagonal button with a blueprint writes the FARL blueprint to it
  - In blueprints with multiple electric poles with the same wire reach distance, FARL will use the pole closest to the chainsignal to connect the circuit wires 
  
 1.0.11
