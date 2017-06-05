@@ -292,12 +292,6 @@ GUI = {--luacheck: allow defined top
         end
     end,
 
-    toggleWires = function(event, _, player)
-        local psettings = Settings.loadByPlayer(player)
-        psettings.ccWires = psettings.ccWires % 3 + 1
-        event.element.caption = GUI.ccWires[psettings.ccWires]
-    end,
-
     toggleCC = function(_, farl, _)
         farl:toggleCruiseControl()
     end,
@@ -319,9 +313,10 @@ GUI = {--luacheck: allow defined top
             local s = row.settings
             local sDistance = tonumber(s.signalDistance.text) or psettings.signalDistance
             local railType = tonumber(s.railType.selected_index) or 1
+            local wire = tonumber(s.row3.ccNetWires.selected_index)
             sDistance = sDistance < 0 and 0 or sDistance
             GUI.create_settings_button(player, true)
-            GUI.saveSettings({signalDistance = sDistance, railType = railType}, player, farl)
+            GUI.saveSettings({ signalDistance = sDistance, railType = railType, ccWires = wire }, player, farl)
             row.settings.destroy()
         else
             local settings = row.add({type="table", name="settings", colspan=2})
@@ -364,7 +359,7 @@ GUI = {--luacheck: allow defined top
             GUI.add(settings, {type="checkbox", name="ccNet", caption={"stg-ccNet"}, state=psettings.ccNet})
             local row2 = GUI.add(settings, {type="table", name="row3", colspan=2})
             GUI.add(row2, {type="label", caption={"stg-ccNetWire"}})
-            GUI.addButton(row2, {name="ccNetWires", caption=GUI.ccWires[psettings.ccWires]}, GUI.toggleWires)
+            GUI.add(row2, { type = "drop-down", name = "ccNetWires", items = GUI.ccWires, selected_index = psettings.ccWires } )
 
             GUI.addLabel(settings, {caption={"stg-stored-blueprints"}})
             local stored_bp = GUI.add(settings,{type="table", colspan=3})
@@ -569,7 +564,6 @@ GUI.callbacks = {
     debug = GUI.debugInfo,
     bulldozer = GUI.toggleBulldozer,
     maintenance = GUI.toggleMaintenance,
-    ccNetWires = GUI.toggleWires,
     blueprint = GUI.readBlueprint,
     bpClear = GUI.clearBlueprints,
     blueprint_concrete_vertical = GUI.create_concrete_vertical,

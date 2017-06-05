@@ -36,6 +36,10 @@ To make it work just add FARL as an optional dependency in your info.json and do
 FARL stores the names in global and only removes them if the interface is used or the entity doesn't exist anymore (checked in on_configuration_changed)
 
 #Changelog
+1.1.2
+
+ - changed wire selection from button to drop-down
+
 1.1.1
 
  - Added an option to place ghosts when running out of items, defaults to true, ghosts for rails and concrete are not created 
