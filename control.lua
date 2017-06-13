@@ -367,6 +367,13 @@ local function on_configuration_changed(data)
                             farl.last_message = farl.last_message or {}
                         end
                     end
+                    if oldVersion < v'1.1.2' then
+                        for _, farl in pairs(global.farl) do
+                            if farl.locomotive and farl.locomotive.valid then
+                                FARL.setup(farl.locomotive)
+                            end
+                        end
+                    end
                 end
             end
         else

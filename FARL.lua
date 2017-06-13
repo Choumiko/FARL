@@ -258,16 +258,31 @@ end
 
 FARL.setup = function(loco)
     local farl = FARL.findByLocomotive(loco)
-    if farl and not farl.active then
-        farl.train = loco.train
-        farl.frontmover = false
-        farl.locomotive = loco
-        for _, l in pairs(farl.train.locomotives.front_movers) do
-            if l == loco then
-                farl.frontmover = true
-                break
+    if farl then
+        if not farl.active then
+            farl.train = loco.train
+            farl.frontmover = false
+            farl.locomotive = loco
+            for _, l in pairs(farl.train.locomotives.front_movers) do
+                if l == loco then
+                    farl.frontmover = true
+                    break
+                end
             end
         end
+        farl.max_speed = math.huge
+        farl.max_speed_loco = false
+        for _, l in pairs(farl.train.locomotives.front_movers) do
+            if l.prototype.speed < farl.max_speed then
+                farl.max_speed = l.prototype.speed
+                farl.max_speed_burner = l.burner
+            end
+
+        end
+        for _, l in pairs(farl.train.locomotives.back_movers) do
+            farl.max_speed = l.prototype.speed < farl.max_speed and l.prototype.speed or farl.max_speed
+        end
+        log('max :' .. farl.max_speed)
     end
     return farl
 end
@@ -702,6 +717,7 @@ end
 FARL.removeTrees = function(self, area)
     --apiCalls.count.tree = apiCalls.count.tree + 1
     local amount, name, proto
+    --log(game.tick .. ' removeTrees start ' .. tostring(self.surface.count_entities_filtered { area = area, type = "tree" }))
     for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "tree" }) do
         --for _, entity in pairs(self:find_entities_filtered({ area = area, type = "tree" }, "removeTrees")) do
         local stat = global.statistics[self.locomotive.force.name].removed["tree-01"] or 0
@@ -736,6 +752,7 @@ FARL.removeTrees = function(self, area)
         end
         entity.die() -- using die() here, because destroy() doesn't leave tree stumps
     end
+    --log(game.tick .. ' removeTrees end')
 end
 
 FARL.removeStone = function(self, area)
@@ -1112,7 +1129,9 @@ FARL.cruiseControl = function(self)
     local acc = self.frontmover and defines.riding.acceleration.accelerating or defines.riding.acceleration.reversing
     local decc = self.frontmover and defines.riding.acceleration.reversing or defines.riding.acceleration.accelerating
     local speed = abs(self.train.speed)
-    local limit = self.active and self.settings.cruiseSpeed or 0.9
+    local modifier = self.max_speed_burner.currently_burning and self.max_speed_burner.currently_burning.fuel_top_speed_multiplier or 1
+    local limit = self.active and self.settings.cruiseSpeed or self.max_speed
+    limit = limit * (modifier + 0.01)
     if self.cruise then
         if self.cruiseInterrupt == 2 then
             self:toggleCruiseControl()
@@ -1275,6 +1294,7 @@ FARL.activate = function(self, scanForGhosts)
         self.protected_tiles[self.protected_index] = {}
         self.frontmover = false
         self.last_message = {}
+        self.cheat_mode = self.driver and self.driver.cheat_mode or false
         --self.previews = {}
         --      self.last_signal = {}
         --      self.fake_signal_in = false
