@@ -1837,6 +1837,7 @@ FARL.parseBlueprints = function(self, blueprints)
                 end
                 if mainRail then
                     local lamps = {}
+                    -- make positions relative to the main pole
                     for _, l in pairs(offsets.poleEntities) do
                         if l.name ~= "wooden-chest" then
                             table.insert(lamps, {name = l.name, position = Position.subtract(l.position, offsets.pole.position), direction = l.direction, pickup_position = l.pickup_position,
@@ -1847,7 +1848,24 @@ FARL.parseBlueprints = function(self, blueprints)
                     if bpType == "diagonal" then
                         railPos = FARL.diagonal_to_real_pos(mainRail)
                     end
+                    --log(serpent.block(railPos))
+                    --log(serpent.block(offsets.pole.position))
+                    --local y_offset = offsets.pole.position.y - railPos.y
+                    --local x_offset = offsets.pole.position.x - railPos.x
                     offsets.pole.position = Position.subtract(offsets.pole.position, railPos)
+                    log(serpent.block(offsets.pole.position))
+                    local y_offset = offsets.pole.position.y
+                    local x_offset = offsets.pole.position.x
+                    log(string.format('x offset: %s', x_offset))
+                    log(string.format('y offset: %s', y_offset))
+                    --move main pole next to the main rail
+                    if bpType == "straight" then
+                        offsets.pole.position = Position.translate(offsets.pole.position, defines.direction.north, y_offset)
+                    else
+                        local distance = (y_offset - x_offset) / 2
+                        log(string.format('y offset: %s', distance))
+                        offsets.pole.position = Position.translate(offsets.pole.position, defines.direction.northeast, distance)
+                    end
                     local railEntities = {}
                     for _, re in pairs(offsets.railEntities) do
                         table.insert(railEntities, { name = re.name, position = Position.subtract(re.position, railPos), direction = re.direction })

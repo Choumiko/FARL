@@ -13,7 +13,7 @@ SED_EXPRS := -e 's/{{MOD_NAME}}/$(PACKAGE_NAME)/g'
 SED_EXPRS += -e 's/{{VERSION}}/$(VERSION_STRING)/g'
 
 all: clean verify package remove_mod install_mod
-release: clean verify package install_mod tag
+release: clean verify package remove_mod install_mod tag
 package-copy: $(PKG_DIRS) $(PKG_FILES)
 	mkdir -p $(OUTPUT_DIR)
 ifneq ($(PKG_COPY),)
