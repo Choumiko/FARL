@@ -2439,7 +2439,7 @@ FARL.placeRailEntities = function(self, traveldir, rail)
 end
 
 FARL.connectCCNet = function(self, pole)
-    if self.settings.ccNet and pole.neighbours.copper[1] and self.ccNetPole then
+    if self.settings.ccNet and pole.neighbours.copper[1] and self.ccNetPole and self.ccNetPole.valid then
         if (self.settings.ccWires == 1 and self:getCargoCount("red-wire") > 0)
             or (self.settings.ccWires == 2 and self:getCargoCount("green-wire") > 0)
             or (self.settings.ccWires == 3 and (self:getCargoCount("red-wire") > 0 or self:getCargoCount("green-wire") > 0)) then
