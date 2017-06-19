@@ -428,35 +428,6 @@ FARL.update = function(self, _)
                         return true
                     end
                 end
-                --TODO add preview for direction change
-
-                --          for i, pi in pairs( {0, 2} ) do
-                --            if self.previews[i] then
-                --              for _, r in pairs(self.previews[i]) do
-                --                if r and r.valid then
-                --                  r.destroy()
-                --                end
-                --              end
-                --            end
-                --            self.previews[i] = {}
-                --            local d, r = self:getRail(nextRail, newTravelDir, pi)
-                --            if r.name == self.settings.rail.straight then
-                --              d, r = self:getRail(r, newTravelDir, pi)
-                --            end
-                --            local entity = r
-                --            local new_entity = {
-                --              name = "entity-ghost",
-                --              inner_name = "farl-" .. entity.name,
-                --              position = entity.position,
-                --              direction = entity.direction,
-                --              force = self.locomotive.force
-                --            }
-                --            r = self.surface.create_entity(new_entity)
-                --            if r.valid then
-                --              r.time_to_live = 60 * 5
-                --              table.insert(self.previews[i], r)
-                --            end
-                --          end
 
                 --log("start placeRails")
                 local dir_, last = self:placeRails(nextRail, newTravelDir)
@@ -868,8 +839,6 @@ FARL.replaceWater = function(self, tiles, w, dw)
         if self:getCargoCount("landfill") >= lfills then
             self.surface.set_tiles(tiles)
             self:removeItemFromCargo("landfill", lfills)
-        else
-            self:print_out_of_item("landfill")
         end
     end
 end
@@ -943,8 +912,6 @@ FARL.placeConcrete = function(self, dir, rail)
                 local stat = global.statistics[self.locomotive.force.name].created[name] or 0
                 global.statistics[self.locomotive.force.name].created[name] = stat + c
             end
-        else
-            self:print_out_of_item(name)
         end
     end
 end
@@ -2818,7 +2785,9 @@ end
 FARL.print_out_of_item = function(self, item)
     local tick = game.tick
     if not self.last_message[item] or tick >= self.last_message[item] then
-        local name = game.entity_prototypes[item] and game.entity_prototypes[item].localised_name or game.item_prototypes[item].localised_name
+        local name = game.entity_prototypes[item] and game.entity_prototypes[item].localised_name
+            or game.item_prototypes[item] and game.item_prototypes[item].localised_name
+            or game.tile_prototypes[item] and game.tile_prototypes[item].localised_name
         local msg = { "msg-out-of-item", name }
         self:print(msg, YELLOW)
         self.last_message[item] = tick + 300

@@ -42,6 +42,7 @@ FARL stores the names in global and only removes them if the interface is used o
  - changed wire selection from button to drop-down
  - cruise control adjusts max speed based on fuel type
  - fixed error trying to connect red/green wires to non existing pole
+ - fixed error when out of concrete/stonepath with blueprints containing tiles
 
 1.1.1
 
