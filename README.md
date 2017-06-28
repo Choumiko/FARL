@@ -36,7 +36,10 @@ To make it work just add FARL as an optional dependency in your info.json and do
 FARL stores the names in global and only removes them if the interface is used or the entity doesn't exist anymore (checked in on_configuration_changed)
 
 #Changelog
+1.1.3
 
+ - fixed desync when FARL removes stones/trees with results with probability != 1
+  
 1.1.2
 
  - changed wire selection from button to drop-down

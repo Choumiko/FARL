@@ -6,7 +6,7 @@ require "Blueprint"
 trigger_events = {} --luacheck: allow defined top
 
 local math = math
-local random, floor, ceil = math.random, math.floor, math.ceil
+local floor, ceil = math.floor, math.ceil
 local abs, min, max = math.abs, math.min, math.max
 
 local function round(num, idp)
@@ -688,6 +688,7 @@ end
 FARL.removeTrees = function(self, area)
     --apiCalls.count.tree = apiCalls.count.tree + 1
     local amount, name, proto
+    local random = math.random
     --log(game.tick .. ' removeTrees start ' .. tostring(self.surface.count_entities_filtered { area = area, type = "tree" }))
     for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "tree" }) do
         --for _, entity in pairs(self:find_entities_filtered({ area = area, type = "tree" }, "removeTrees")) do
@@ -728,6 +729,7 @@ end
 
 FARL.removeStone = function(self, area)
     local amount, name, proto
+    local random = math.random
     for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "simple-entity", force = "neutral" }) do
         proto = entity.prototype.mineable_properties
         if proto and proto.minable and proto.products then
