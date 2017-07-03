@@ -182,7 +182,14 @@ local function init_forces()
     end
 end
 
+local function register_events()
+    if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then
+        script.on_event(remote.call("fat", "get_player_switched_event"), on_player_switched)
+    end
+end
+
 local function on_init()
+    register_events()
     init_global()
     init_forces()
     init_players()
@@ -191,12 +198,9 @@ local function on_init()
 end
 
 local function on_load()
+    register_events()
     setMetatables()
     godmode = global.godmode
-
-    if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then
-        script.on_event(remote.call("fat", "get_player_switched_event"), on_player_switched)
-    end
 end
 
 local function on_configuration_changed(data)
