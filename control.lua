@@ -193,6 +193,10 @@ end
 local function on_load()
     setMetatables()
     godmode = global.godmode
+
+    if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then
+        script.on_event(remote.call("fat", "get_player_switched_event"), on_player_switched)
+    end
 end
 
 local function on_configuration_changed(data)
@@ -395,7 +399,7 @@ local function on_configuration_changed(data)
 
     local railstring = getRailTypes()
     --rails where added/removed, reset to index 1
-    log(string.format("%s == %s", railstring, global.railString))
+    --log(string.format("%s == %s", railstring, global.railString))
     if railstring ~= global.railString then
         for i, psettings in pairs(global.players) do
             if psettings.railType ~= 1 then
@@ -592,10 +596,6 @@ if not status then
     debugDump("Unexpected error:",true)
     debugDump(err,true)
 end
-end
-
-if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then
-    script.on_event(remote.call("fat", "get_player_switched_event"), on_player_switched)
 end
 
 remote.add_interface("farl",
