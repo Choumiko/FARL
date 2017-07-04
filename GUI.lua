@@ -218,12 +218,14 @@ GUI = {--luacheck: allow defined top
             end
             GUI.destroyGui(player)
             local ghostPlayer = player.surface.create_entity({name="farl_player", position=player.position, force=player.force})
-            ghostPlayer.cheat_mode = player.cheat_mode
+            --ghostPlayer.cheat_mode = player.cheat_mode
             loco.passenger = ghostPlayer
+
             farl.driver = ghostPlayer
             farl.settings = util.table.deepcopy(Settings.loadByPlayer(player))
             farl.settings.player = ghostPlayer
             farl.startedBy = player
+            farl.cheat_mode = player.cheat_mode
         end
         farl:activate()
         if farl.active then

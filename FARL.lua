@@ -1263,7 +1263,11 @@ FARL.activate = function(self, scanForGhosts)
         self.protected_tiles[self.protected_index] = {}
         self.frontmover = false
         self.last_message = {}
-        self.cheat_mode = self.driver and self.driver.cheat_mode or false
+        if (self.driver and self.driver.name ~= "farl_player") then
+            self.cheat_mode =  self.driver.cheat_mode or false
+        else
+            self.cheat_mode = self.startedBy and self.startedBy.cheat_mode or false
+        end
         --self.previews = {}
         --      self.last_signal = {}
         --      self.fake_signal_in = false
