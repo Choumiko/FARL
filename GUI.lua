@@ -218,7 +218,6 @@ GUI = {--luacheck: allow defined top
             end
             GUI.destroyGui(player)
             local ghostPlayer = player.surface.create_entity({name="farl_player", position=player.position, force=player.force})
-            --ghostPlayer.cheat_mode = player.cheat_mode
             loco.passenger = ghostPlayer
 
             farl.driver = ghostPlayer
@@ -352,7 +351,7 @@ GUI = {--luacheck: allow defined top
             GUI.add(settings, { type = "checkbox", name="place_ghosts", caption = {"stg-place-ghosts"}, tooltip={"farl_tooltip_place_ghosts"}}, "place_ghosts")
             GUI.addPlaceHolder(settings)
 
-            GUI.add(settings, {type="checkbox", name="mirrorConcrete", caption="Mirror concrete"}, "mirrorConcrete")
+            GUI.add(settings, {type="checkbox", name="mirrorConcrete", caption= {"stg-mirror-concrete"}, "mirrorConcrete")
             GUI.addPlaceHolder(settings)
 
             --GUI.add(settings,{type="checkbox", name="parallelTracks", caption={"stg-parallel-tracks"}}, "parallelTracks")
