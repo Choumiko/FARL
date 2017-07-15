@@ -703,15 +703,24 @@ FARL.removeTrees = function(self, area)
                         if product.name == "raw-wood" then
                             self:addItemToCargo("raw-wood", 1)
                         else
-                            if product.probability == 1 or (product.probability >= random()) then
-                                name = product.name
-                            end
-                            if name then
-                                if product.amount_max == product.amount_min then
-                                    amount = product.amount_max
-                                else
-                                    amount = random(product.amount_min, product.amount_max)
+                            if product.propbability then
+                                if product.probability == 1 or (product.probability >= random()) then
+                                    name = product.name
                                 end
+                                if name then
+                                    if product.amount_max == product.amount_min then
+                                        amount = product.amount_max
+                                    else
+                                        amount = random(product.amount_min, product.amount_max)
+                                    end
+                                    if amount and amount > 0 then
+                                        self:addItemToCargo(name, ceil(amount/2))
+                                    end
+                                    name = false
+                                end
+                            elseif product.name and product.amount then
+                                name = product.name
+                                amount = product.amount
                                 if amount and amount > 0 then
                                     self:addItemToCargo(name, ceil(amount/2))
                                 end
@@ -736,19 +745,29 @@ FARL.removeStone = function(self, area)
             if entity.destroy() and not(godmode or self.cheat_mode) and self.settings.collectWood then
                 local products = proto.products
                 for _, product in pairs(products) do
-                    log(serpent.block(product))
+                    --log(serpent.block(product))
                     if product.type == "item" then
-                        if product.probability == 1 or (product.probability >= random()) then
-                            name = product.name
-                        end
-                        if name then
-                            if product.amount_max == product.amount_min then
-                                amount = product.amount_max
-                            else
-                                amount = random(product.amount_min, product.amount_max)
+                        if product.propbability then
+                            if product.probability == 1 or (product.probability >= random()) then
+                                name = product.name
                             end
+                            if name then
+                                if product.amount_max == product.amount_min then
+                                    amount = product.amount_max
+                                else
+                                    amount = random(product.amount_min, product.amount_max)
+                                end
+                                if amount and amount > 0 then
+                                    --log(string.format("added %s %s", amount, name))
+                                    self:addItemToCargo(name, ceil(amount/2))
+                                end
+                                name = false
+                            end
+                        elseif product.name and product.amount then
+                            name = product.name
+                            amount = product.amount
                             if amount and amount > 0 then
-                                log(string.format("added %s %s", amount, name))
+                                --log(string.format("added %s %s", amount, name))
                                 self:addItemToCargo(name, ceil(amount/2))
                             end
                             name = false

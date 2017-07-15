@@ -26,10 +26,10 @@
 Modded rails should work out of the box, as soon as updating FARL to at least 1.0.6
 
 There are 2 remote functions to tell FARL whether it should raise on_robot_built_entity/on_robot_pre_mined events for a specific entity:
-- `remote.call("farl", "add_entity_to_trigger", "entity-name")`
+ - `remote.call("farl", "add_entity_to_trigger", "entity-name")`
 
 If FARL should no longer keep on raising the events use this command (probably never):
-- `remote.call("farl", "remove_entity_from_trigger", "entity-name")`
+ - `remote.call("farl", "remove_entity_from_trigger", "entity-name")`
  
 To make it work just add FARL as an optional dependency in your info.json and do the remote.call in on_configuration_changed.
 FARL stores the names in global and only removes them if the interface is used or the entity doesn't exist anymore (checked in on_configuration_changed)
@@ -37,6 +37,7 @@ FARL stores the names in global and only removes them if the interface is used o
 # Changelog
 1.1.7
 
+ - fixed error when removing stones that don't have a drop probability
  - added missing locale key
 
 1.1.6
