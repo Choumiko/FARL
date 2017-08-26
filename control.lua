@@ -4,6 +4,10 @@ require "Settings"
 require "FARL"
 require "GUI"
 
+
+require("mod-gui")
+local modGui = _G.mod_gui
+
 local v = require 'semver'
 
 MOD_NAME = "FARL"--luacheck: allow defined top
@@ -429,6 +433,11 @@ local function on_force_created(event)
 end
 
 local function on_gui_click(event)
+	if event.element.name == "farl_button" then
+		farl_button_click(event)
+		return
+	end
+
     local status, err = pcall(function()
         local index = event.player_index
         local player = game.players[index]
@@ -476,20 +485,34 @@ end
 function on_player_driving_changed_state(event)--luacheck: allow defined top
     local player = game.players[event.player_index]
     if isFARLLocomotive(player.vehicle) then
-        if player.gui.left.farl == nil then
-            local farl = FARL.onPlayerEnter(player)
-            GUI.createGui(player)
-            if farl then
-                GUI.updateGui(farl)
-            end
-        end
+		if modGui.get_button_flow(player).farl_button == nil then
+			GUI.createButton(player)
+		end
     end
-    if player.vehicle == nil and player.gui.left.farl ~= nil then
+    if player.vehicle == nil and (modGui.get_button_flow(player).farl_button ~= nil) then
         FARL.onPlayerLeave(player)
         debugDump("onPlayerLeave (driving state changed)")
-        GUI.destroyGui(player)
+		if player.gui.left.farl ~= nil then
+			GUI.destroyGui(player)
+		end
+		GUI.destroyButton(player)
     end
 end
+
+
+function farl_button_click (event)
+    local player = game.players[event.player_index]
+	if player.gui.left.farl == nil then
+		local farl = FARL.onPlayerEnter(player)
+		GUI.createGui(player)
+		if farl then
+			GUI.updateGui(farl)
+		end
+	else
+		GUI.destroyGui(player)
+	end
+end
+
 
 --function on_player_placed_equipment(event)
 --  local player = game.players[event.player_index]
