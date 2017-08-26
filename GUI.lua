@@ -6,6 +6,10 @@ function endsWith(haystack,needle)--luacheck: allow defined top
     return needle=='' or string.sub(haystack,-string.len(needle))==needle
 end
 
+
+require("mod-gui")
+local modGui = _G.mod_gui
+
 GUI = {--luacheck: allow defined top
 
     ccWires = {
@@ -102,7 +106,28 @@ GUI = {--luacheck: allow defined top
         end
     end,
 
+    createButton = function(player)
+		local buttons = modGui.get_button_flow(player)
+			if not buttons.farl_button then
+				buttons.add({
+					type = "sprite-button",
+					name = "farl_button",
+					sprite = "item/farl",
+					style = modGui.button_style,
+					tooltip = {"farl_tooltip_button"}
+				})
+			end
+	end,
+	
+    destroyButton = function(player)
+		local buttons = modGui.get_button_flow(player)
+			if buttons.farl_button then
+				buttons.farl_button.destroy()
+			end
+	end,
+
     createGui = function(player)
+	
         if player.gui.left.farl ~= nil then return end
         local psettings = Settings.loadByPlayer(player)
         --GUI.init(player)
