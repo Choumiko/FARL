@@ -35,6 +35,10 @@ To make it work just add FARL as an optional dependency in your info.json and do
 FARL stores the names in global and only removes them if the interface is used or the entity doesn't exist anymore (checked in on_configuration_changed)
 
 # Changelog
+1.1.8
+
+ - fixed FARL not properly detecting some modded rails 
+
 1.1.7
 
  - fixed error when removing stones that don't have a drop probability
