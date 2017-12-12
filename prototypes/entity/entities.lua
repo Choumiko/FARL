@@ -48,6 +48,7 @@ data:extend({{
     collision_box = {{-0.35, -0.35}, {0.35, 0.35}},
     selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
     inventory_size = 1,
+    icon_size = 32,
     picture =
     {
         filename = "__FARL__/graphics/rm_Overlay.png",

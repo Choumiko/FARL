@@ -4,6 +4,7 @@ data:extend(
             type = "item-with-entity-data",
             name = "farl",
             icon = "__FARL__/graphics/icons/farl.png",
+            icon_size = 32,
             flags = {"goes-to-quickbar"},
             subgroup = "transport",
             order = "a[train-system]-fb[locomotive]",
