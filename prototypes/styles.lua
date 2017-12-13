@@ -44,7 +44,7 @@ data.raw["gui-style"].default["farl_textfield_small"] =
 data.raw["gui-style"].default["farl_button"] =
     {
         type = "button_style",
-        parent = "button_style",
+        parent = "button",
         font = "farl-small-bold",
         --maximal_height = 33,
         minimal_height = 33,
@@ -70,7 +70,7 @@ data.raw["gui-style"].default["farl_button"] =
 data.raw["gui-style"].default["farl_checkbox"] =
     {
         type = "checkbox_style",
-        parent = "checkbox_style",
+        parent = "checkbox",
         font = "farl-small",
     }
 
