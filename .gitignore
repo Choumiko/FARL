@@ -4,3 +4,4 @@ factorio_mods
 *.iml
 /.buildpath
 /.project
+/.settings
