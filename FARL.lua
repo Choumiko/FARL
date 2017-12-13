@@ -837,7 +837,7 @@ FARL.fillWater = function(self, area)
                         else
                             dw = dw + 1
                         end
-                        table.insert(tiles, { name = "grass", position = { x, y } })
+                        table.insert(tiles, { name = "grass-1", position = { x, y } })
                     end
                 end
             end

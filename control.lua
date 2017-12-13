@@ -564,8 +564,9 @@ script.on_event(defines.events.on_force_created, on_force_created)
 
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event(defines.events.on_gui_click, on_gui_click)
+script.on_event(defines.events.on_gui_checked_state_changed, on_gui_click)
 
-script.on_event(defines.events.on_preplayer_mined_item, on_preplayer_mined_item)
+script.on_event(defines.events.on_pre_player_mined_item, on_preplayer_mined_item)
 script.on_event(defines.events.on_entity_died, on_entity_died)
 
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)

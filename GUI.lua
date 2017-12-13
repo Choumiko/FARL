@@ -107,19 +107,19 @@ GUI = {--luacheck: allow defined top
         local psettings = Settings.loadByPlayer(player)
         --GUI.init(player)
         local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farl"})
-        local rows = GUI.add(farl, {type="table", name="rows", colspan=1})
+        local rows = GUI.add(farl, {type="table", name="rows", column_count=1})
         local span = 3
         if debugButton then
             span = span+1
         end
-        local buttons = GUI.add(rows, {type="table", name="buttons", colspan=span})
+        local buttons = GUI.add(rows, {type="table", name="buttons", column_count=span})
         GUI.addButton(buttons, {name="start"}, GUI.toggleStart)
         GUI.addButton(buttons, {name="cc"}, GUI.toggleCC)
         GUI.create_settings_button(player, true)
         if debugButton then
             GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
         end
-        local progressBar = GUI.add(rows,{type = "progressbar", name = "pathProgress", size = 200, value = 0.5, style = "production_progressbar_style"})
+        local progressBar = GUI.add(rows,{type = "progressbar", name = "pathProgress", size = 200, value = 0.5, style = "production_progressbar"})
         progressBar.style.maximal_width = 150
         progressBar.style.visible = false
         local progressLabel = GUI.addLabel(rows,{caption="", name = "pathLabel"})
@@ -320,7 +320,7 @@ GUI = {--luacheck: allow defined top
             GUI.saveSettings({ signalDistance = sDistance, railType = railType, ccWires = wire }, player, farl)
             row.settings.destroy()
         else
-            local settings = row.add({type="table", name="settings", colspan=2})
+            local settings = row.add({type="table", name="settings", column_count=2})
             GUI.create_settings_button(player)
 
             GUI.add(settings,{type="checkbox", name="dropWood", caption={"stg-dropWood"}}, "dropWood")
@@ -358,12 +358,12 @@ GUI = {--luacheck: allow defined top
             --GUI.addPlaceHolder(settings)
 
             GUI.add(settings, {type="checkbox", name="ccNet", caption={"stg-ccNet"}, state=psettings.ccNet})
-            local row2 = GUI.add(settings, {type="table", name="row3", colspan=2})
+            local row2 = GUI.add(settings, {type="table", name="row3", column_count=2})
             GUI.add(row2, {type="label", caption={"stg-ccNetWire"}})
             GUI.add(row2, { type = "drop-down", name = "ccNetWires", items = GUI.ccWires, selected_index = psettings.ccWires } )
 
             GUI.addLabel(settings, {caption={"stg-stored-blueprints"}})
-            local stored_bp = GUI.add(settings,{type="table", colspan=3})
+            local stored_bp = GUI.add(settings,{type="table", column_count=3})
 
             local bps = global.savedBlueprints[player.index]
             for i=1,3 do
@@ -381,7 +381,7 @@ GUI = {--luacheck: allow defined top
             end
 
             GUI.add(settings, {type="label", caption={"stg-blueprint"}})
-            local row3 = GUI.add(settings, {type="table", name="row4", colspan=2})
+            local row3 = GUI.add(settings, {type="table", name="row4", column_count=2})
             GUI.addButton(row3, {name="blueprint", caption={"stg-blueprint-read"}}, GUI.readBlueprint)
             GUI.addButton(row3, {name="bpClear", caption={"stg-blueprint-clear"}}, GUI.clearBlueprints)
             GUI.add(settings, {type="label", caption={"stg-blueprint-write"}})
