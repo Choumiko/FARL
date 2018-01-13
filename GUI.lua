@@ -214,11 +214,11 @@ GUI = {--luacheck: allow defined top
             --          return
             --        end
             if player.vehicle and farlLoco == player.vehicle then
-                loco.passenger = nil
+                loco.set_driver(nil)
             end
             GUI.destroyGui(player)
             local ghostPlayer = player.surface.create_entity({name="farl_player", position=player.position, force=player.force})
-            loco.passenger = ghostPlayer
+            loco.set_driver(ghostPlayer)
 
             farl.driver = ghostPlayer
             farl.settings = util.table.deepcopy(Settings.loadByPlayer(player))

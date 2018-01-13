@@ -6,7 +6,7 @@ OUTPUT_DIR := build/$(OUTPUT_NAME)
 
 PKG_COPY := $(wildcard *.md) graphics locale
 
-SED_FILES := $(shell find . -iname '*.json' -type f -not -path "./build/*") $(shell find . -iname '*.lua' -type f -not -path "./build/*")
+SED_FILES := $(shell find . -iname '*.json' -type f -not -path "./build/*") $(shell find . -iname '*.lua' -type f -not -path "./build/*") $(shell find . -iname 'changelog.txt' -type f -not -path "./build/*")
 OUT_FILES := $(SED_FILES:%=$(OUTPUT_DIR)/%)
 
 SED_EXPRS := -e 's/{{MOD_NAME}}/$(PACKAGE_NAME)/g'

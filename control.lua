@@ -72,18 +72,18 @@ end
 function isFARLLocomotive(loco) --luacheck: allow defined top
     if not loco or not loco.valid or not loco.type == "locomotive" then
         return false
-end
-if loco.name == "farl" then
-    return true
-end
-if loco.grid then
-    for _, equipment in pairs(loco.grid.equipment) do
-        if equipment.name == "farl-roboport" then
-            return true
+    end
+    if loco.name == "farl" then
+        return true
+    end
+    if loco.grid then
+        for _, equipment in pairs(loco.grid.equipment) do
+            if equipment.name == "farl-roboport" then
+                return true
+            end
         end
     end
-end
-return false
+    return false
 end
 
 local function on_tick(event)
