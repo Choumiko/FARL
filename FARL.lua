@@ -282,33 +282,44 @@ FARL.setup = function(loco)
         for _, l in pairs(farl.train.locomotives.back_movers) do
             farl.max_speed = l.prototype.speed < farl.max_speed and l.prototype.speed or farl.max_speed
         end
-        log('max :' .. farl.max_speed)
+        --log('max :' .. farl.max_speed)
     end
     return farl
 end
 
 FARL.onPlayerEnter = function(player, loco)
-    local farl = FARL.setup(loco or player.vehicle)
-    if farl and not farl.active then
-        farl.driver = player
-        farl.settings = Settings.loadByPlayer(player)
-        farl.cheat_mode = player.cheat_mode
-        farl.read_blueprints = 0
+    --TODO fix train/farl tracking
+    local status, err = pcall(function()
+        local farl = FARL.setup(loco or player.vehicle)
+        if farl and not farl.active then
+            farl.driver = player
+            farl.settings = Settings.loadByPlayer(player)
+            farl.cheat_mode = player.cheat_mode
+            farl.read_blueprints = 0
 
-        if farl.settings.bulldozer and not farl:bulldozerModeAllowed() then
-            farl.settings.bulldozer = false
-            farl:print({ "msg-bulldozer-error" })
-            farl:print({ "msg-bulldozer-disabled" })
+            if farl.settings.bulldozer and not farl:bulldozerModeAllowed() then
+                farl.settings.bulldozer = false
+                farl:print({ "msg-bulldozer-error" })
+                farl:print({ "msg-bulldozer-disabled" })
+            end
+            if remote.interfaces.YARM and remote.interfaces.YARM.hide_expando and player.name ~= "farl_player" then
+                farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", player.index)
+            end
+            global.activeFarls[FARL.getIdFromTrain(farl.train)] = farl
+            return farl
         end
-        if remote.interfaces.YARM and remote.interfaces.YARM.hide_expando and player.name ~= "farl_player" then
-            farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", player.index)
-        end
-        global.activeFarls[FARL.getIdFromTrain(farl.train)] = farl
-        return farl
+    end)
+    if not status then
+        debugDump("Unexpected error:",true)
+        debugDump(err,true)
+    else
+        return err
     end
 end
 
 FARL.onPlayerLeave = function(player)
+    --TODO fix train/farl tracking
+    local status, err = pcall(function()
     for _, f in pairs(global.farl) do
         if f.driver and f.driver == player then
             f:deactivate()
@@ -325,6 +336,11 @@ FARL.onPlayerLeave = function(player)
             --f.settings = false
             break
         end
+    end
+    end)
+    if not status then
+        debugDump("Unexpected error:",true)
+        debugDump(err,true)
     end
     --debugDump(apiCalls,true)
     --apiCalls = {find={item=0,tree=0,stone=0,other=0},canplace=0,create=0,count={item=0,tree=0,stone=0,other=0}}
