@@ -16,10 +16,10 @@ Blueprint.group_entities = function(bp)
         if e[i].name == "rail-chain-signal" then
             local dir = e[i].direction or 0
             --local _, name = table.find(defines.direction, function(v, _, direction) return v == direction end, (dir + 4) % 8)
-            --game.print(string.format('Found chainsignal for driving due %s, %d', tostring(name), dir))
+            --log(string.format('Found chainsignal for driving due %s, %d', tostring(name), dir))
             if not (dir == 4 or dir == 5) then
                 local rot = (dir % 2 == 0) and (4 - dir ) * 45 or (5 - dir ) * 45
-                --game.print(string.format("Rotating blueprint by %d degrees (dir: %d)", rot, dir))
+                --log(string.format("Rotating blueprint by %d degrees (dir: %d)", rot, dir))
                 Blueprint.rotate(bp,rot)
                 e = bp.get_blueprint_entities()
             end

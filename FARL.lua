@@ -1860,6 +1860,8 @@ FARL.parseBlueprints = function(self, blueprints)
                     --log(serpent.block(offsets.pole.position))
                     --local y_offset = offsets.pole.position.y - railPos.y
                     --local x_offset = offsets.pole.position.x - railPos.x
+                    --log(string.format('Pole: %s', Position.tostring(offsets.pole.position)))
+                    --log(string.format('Rail: %s', Position.tostring(railPos)))
                     offsets.pole.position = Position.subtract(offsets.pole.position, railPos)
                     log(serpent.block(offsets.pole.position))
                     local y_offset = offsets.pole.position.y
@@ -1870,7 +1872,7 @@ FARL.parseBlueprints = function(self, blueprints)
                     if bpType == "straight" then
                         offsets.pole.position = Position.translate(offsets.pole.position, defines.direction.north, y_offset)
                     else
-                        local distance = (y_offset - x_offset) / 2
+                        local distance = math.ceil((y_offset - x_offset) / 2)
                         log(string.format('y offset: %s', distance))
                         offsets.pole.position = Position.translate(offsets.pole.position, defines.direction.northeast, distance)
                     end
