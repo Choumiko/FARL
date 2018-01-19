@@ -35,6 +35,7 @@ To make it work just add FARL as an optional dependency in your info.json and do
 FARL stores the names in global and only removes them if the interface is used or the entity doesn't exist anymore (checked in on_configuration_changed)
 
 # Changelog
+2.0.0 and above: see ingame changelog
 1.1.8
 
  - fixed FARL not properly detecting some modded rails 
