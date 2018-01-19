@@ -582,9 +582,14 @@ end)
 
 script.on_event("toggle-train-control", function(event)
     if not game.active_mods["Honk"] and not game.active_mods["Honck"] then
-        local vehicle = game.players[event.player_index].vehicle
+        local player = game.players[event.player_index]
+        local vehicle = player.vehicle
         if vehicle and vehicle.type == "locomotive" then
             vehicle.train.manual_mode = not vehicle.train.manual_mode
+            if player.mod_settings.farl_display_messages.value then
+                local mode = vehicle.train.manual_mode and {"gui-train.manual-mode"} or {"gui-train.automatic-mode"}
+                player.print({"msg-train-toggled", mode})
+            end
         end
     end
 end)

@@ -3,6 +3,8 @@ Version: 2.0.3
 Date: 19. 01. 2018
   Bugfixes:
     - Fixed poles not being placed correctly when driving diagonally
+  Changes:
+    - Added option to display a message when using the hotkey to toggle between automatic and manual mode
 ---------------------------------------------------------------------------------------------------
 Version: 2.0.2
 Date: 13. 01. 2018
