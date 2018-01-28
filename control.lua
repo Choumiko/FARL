@@ -1,6 +1,6 @@
 require 'stdlib/string'
 require 'stdlib/table'
-require "Settings"
+require "FarlSettings"
 require "FARL"
 require "GUI"
 
