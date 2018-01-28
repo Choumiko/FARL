@@ -431,6 +431,7 @@ local function on_force_created(event)
 end
 
 local function on_gui_click(event)
+    if event.button ~= defines.mouse_button_type.left then return end -- handle LMB only
     local status, err = pcall(function()
         local index = event.player_index
         local player = game.players[index]
@@ -564,7 +565,10 @@ script.on_event(defines.events.on_force_created, on_force_created)
 
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event(defines.events.on_gui_click, on_gui_click)
-script.on_event(defines.events.on_gui_checked_state_changed, on_gui_click)
+
+-- TODO: remove
+-- why do we need this?
+-- script.on_event(defines.events.on_gui_checked_state_changed, on_gui_click)
 
 script.on_event(defines.events.on_pre_player_mined_item, on_preplayer_mined_item)
 script.on_event(defines.events.on_entity_died, on_entity_died)
