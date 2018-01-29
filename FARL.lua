@@ -55,6 +55,7 @@ local function protectedKey(ent)
 end
 
 local function get_item_name(some_name)
+    if not some_name then return end
     local name = false
     local count = 1
     if game.item_prototypes[some_name] then
@@ -73,7 +74,7 @@ local function get_item_name(some_name)
         end
     elseif game.tile_prototypes[some_name] then
         name = game.tile_prototypes[some_name].items_to_place_this and next(game.tile_prototypes[some_name].items_to_place_this)
-        if name == "landfill" then
+        if name == "landfill" or name == "fertiliser" then
             name = false
         end
     end
@@ -320,23 +321,23 @@ end
 FARL.onPlayerLeave = function(player)
     --TODO fix train/farl tracking
     local status, err = pcall(function()
-    for _, f in pairs(global.farl) do
-        if f.driver and f.driver == player then
-            f:deactivate()
-            global.activeFarls[FARL.getIdFromTrain(f.train)] = nil
-            f.driver = false
-            f.lastMove = nil
-            f.railBelow = nil
-            f.next_rail = nil
-            f.read_blueprints = 0
+        for _, f in pairs(global.farl) do
+            if f.driver and f.driver == player then
+                f:deactivate()
+                global.activeFarls[FARL.getIdFromTrain(f.train)] = nil
+                f.driver = false
+                f.lastMove = nil
+                f.railBelow = nil
+                f.next_rail = nil
+                f.read_blueprints = 0
 
-            if remote.interfaces.YARM and remote.interfaces.YARM.show_expando and f.settings.YARM_old_expando and player.name ~= "farl_player" then
-                remote.call("YARM", "show_expando", player.index)
+                if remote.interfaces.YARM and remote.interfaces.YARM.show_expando and f.settings.YARM_old_expando and player.name ~= "farl_player" then
+                    remote.call("YARM", "show_expando", player.index)
+                end
+                --f.settings = false
+                break
             end
-            --f.settings = false
-            break
         end
-    end
     end)
     if not status then
         debugDump("Unexpected error:",true)
@@ -928,7 +929,7 @@ FARL.placeConcrete = function(self, dir, rail)
                 else
                     dw = dw + 1
                 end
-                table.insert(tiles, { name = "grass", position = { pos.x, pos.y } })
+                table.insert(tiles, { name = "grass-1", position = { pos.x, pos.y } })
                 table.insert(pave[name], entity)
             end
         elseif tileName ~= name and tileName ~= "out-of-map" then
@@ -977,9 +978,11 @@ FARL.removeConcrete = function(self, area)
 
         for name, c in pairs(counts) do
             local item = get_item_name(name)
-            self:addItemToCargo(item, c, true)
-            local stat = global.statistics[self.locomotive.force.name].removed[item] or 0
-            global.statistics[self.locomotive.force.name].removed[item] = stat + c
+            if item then
+                self:addItemToCargo(item, c, true)
+                local stat = global.statistics[self.locomotive.force.name].removed[item] or 0
+                global.statistics[self.locomotive.force.name].removed[item] = stat + c
+            end
         end
     end)
     if not status then
@@ -1307,7 +1310,7 @@ FARL.activate = function(self, scanForGhosts)
         --      self.last_signal = {}
         --      self.fake_signal_in = false
         --      self.fake_signalCount = {main=0}
-        self.replace_tile = "grass"
+        self.replace_tile = "grass-1"
         self.lastCurve = { dist = 20, input = false, direction = 0, blocked = {}, curveblock = 0 }
         for _, l in pairs(self.train.locomotives.front_movers) do
             if l == self.locomotive then
@@ -1698,6 +1701,10 @@ FARL.getGhostPath = function(self)
 end
 
 FARL.addItemToCargo = function(self, item, count, place_result)
+    --TODO fix this
+    if not item then
+        return
+    end
     local item2, count2 = get_item_name(item)
     count = count or 1
     if not game.item_prototypes[item] then

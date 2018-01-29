@@ -129,8 +129,8 @@ GUI = {--luacheck: allow defined top
         GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
         GUI.add(rows, {type="checkbox", name="poles", caption={"tgl-poles"}}, "poles")
         GUI.add(rows, {type="checkbox", name="concrete", caption={"tgl-concrete"}}, "concrete")
-        GUI.add(rows,{type="checkbox", name="bulldozer", caption={"tgl-bulldozer"}, state=psettings.bulldozer, tooltip={"farl_tooltip_bulldozer"}},GUI.toggleBulldozer)
-        GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance, tooltip={"farl_tooltip_maintenance"}},GUI.toggleMaintenance)
+        GUI.add(rows,{type="checkbox", name="bulldozer", caption={"tgl-bulldozer"}, state=psettings.bulldozer, tooltip={"farl_tooltip_bulldozer"}})
+        GUI.add(rows,{type="checkbox", name="maintenance", caption={"tgl-maintenance"}, state=psettings.maintenance, tooltip={"farl_tooltip_maintenance"}})
         GUI.add(rows, {type="checkbox", name="bridge", caption={"tgl-bridge"}, tooltip={"farl_tooltip_bridge"}}, "bridge")
     end,
 
@@ -169,17 +169,28 @@ GUI = {--luacheck: allow defined top
         if GUI.callbacks[name] then
             return GUI.callbacks[name](event, farl, player)
         end
-        local psettings = Settings.loadByPlayer(player)
         if name == "debug" then
             saveVar(global,"debug")
             farl:debugInfo()
-        elseif startsWith(event.element.name,"load_bp_") then
-            local i = event.element.name:match("load_bp_(%w*)")
+        elseif startsWith(name,"load_bp_") then
+            local i = name:match("load_bp_(%w*)")
             GUI.load_bp(event,farl, player,tonumber(i))
-        elseif startsWith(event.element.name,"save_bp_") then
-            local i = event.element.name:match("save_bp_(%w*)")
+        elseif startsWith(name,"save_bp_") then
+            local i = name:match("save_bp_(%w*)")
             GUI.save_bp(event,farl, player,tonumber(i))
-        elseif name == "signals" or name == "poles" or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
+        end
+    end,
+
+    on_gui_checked_state_changed = function(event, farl, player)
+        local name = event.element.name
+        if name == "bulldozer" then
+            return GUI.toggleBulldozer(event, farl, player)
+        end
+        if name == "maintenance" then
+            return GUI.toggleMaintenance(event, farl, player)
+        end
+        local psettings = Settings.loadByPlayer(player)
+        if name == "signals" or name == "poles" or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
             or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" or name == "mirrorConcrete"
             or name == "signalEveryPole" or name == "place_ghosts" then
             psettings[name] = not psettings[name]
@@ -563,8 +574,6 @@ GUI.callbacks = {
     cc = GUI.toggleCC,
     settings = GUI.toggleSettingsWindow,
     debug = GUI.debugInfo,
-    bulldozer = GUI.toggleBulldozer,
-    maintenance = GUI.toggleMaintenance,
     blueprint = GUI.readBlueprint,
     bpClear = GUI.clearBlueprints,
     blueprint_concrete_vertical = GUI.create_concrete_vertical,

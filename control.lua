@@ -1,6 +1,6 @@
 require 'stdlib/string'
 require 'stdlib/table'
-require "Settings"
+require "FarlSettings"
 require "FARL"
 require "GUI"
 
@@ -451,6 +451,27 @@ local function on_gui_click(event)
     end
 end
 
+local function on_gui_checked_state_changed(event)
+    local status, err = pcall(function()
+        local index = event.player_index
+        local player = game.players[index]
+        if player.gui.left.farl ~= nil then
+            local farl = FARL.findByPlayer(player)
+            if farl then
+                GUI.on_gui_checked_state_changed(event, farl, player)
+                GUI.updateGui(farl)
+            else
+                player.print("Gui without train, wrooong!")
+                GUI.destroyGui(player)
+            end
+        end
+    end)
+    if not status then
+        debugDump("Unexpected error:",true)
+        debugDump(err,true)
+    end
+end
+
 function on_preplayer_mined_item(event)--luacheck: allow defined top
     local ent = event.entity
     if ent.type == "locomotive" or ent.type == "cargo-wagon" then
@@ -564,7 +585,7 @@ script.on_event(defines.events.on_force_created, on_force_created)
 
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event(defines.events.on_gui_click, on_gui_click)
-script.on_event(defines.events.on_gui_checked_state_changed, on_gui_click)
+script.on_event(defines.events.on_gui_checked_state_changed, on_gui_checked_state_changed)
 
 script.on_event(defines.events.on_pre_player_mined_item, on_preplayer_mined_item)
 script.on_event(defines.events.on_entity_died, on_entity_died)
