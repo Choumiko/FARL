@@ -1324,11 +1324,11 @@ FARL.activate = function(self, scanForGhosts)
             self.ghostPath = self:getGhostPath()
         end
         if self.ghostPath then
-            if self.confirmed == nil then
+            if self.confirmed == nil and self.driver.name ~= "farl_player" then
                 GUI.createPopup(self.driver)
                 return
             end
-            if self.confirmed == true then
+            if self.confirmed == true or self.driver.name == "farl_player" then
                 self.ghostProgressStart = #self.ghostPath
                 self.ghostProgress = 0
                 for _, data in pairs(self.ghostPath) do

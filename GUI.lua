@@ -236,6 +236,10 @@ GUI = {--luacheck: allow defined top
             farl.settings.player = ghostPlayer
             farl.startedBy = player
             farl.cheat_mode = player.cheat_mode
+            global.activeFarls[FARL.getIdFromTrain(farl.train)] = farl
+            farl.direction = farl:calcTrainDir()
+            farl.lastrail = farl:findLastRail()
+            farl.ghostPath = farl:getGhostPath()
         end
         farl:activate()
         if farl.active then
