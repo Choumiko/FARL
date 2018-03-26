@@ -854,7 +854,7 @@ FARL.fillWater = function(self, area)
                         else
                             dw = dw + 1
                         end
-                        table.insert(tiles, { name = "grass-1", position = { x, y } })
+                        table.insert(tiles, { old_tile = tileName, name = "grass-1", position = { x=x, y=y } })
                     end
                 end
             end
@@ -877,6 +877,15 @@ FARL.replaceWater = function(self, tiles, w, dw)
         if self:getCargoCount("landfill") >= lfills then
             self.surface.set_tiles(tiles)
             self:removeItemFromCargo("landfill", lfills)
+            log("built tile")
+            script.raise_event(defines.events.on_player_built_tile,
+            {
+                player_index = nil,
+                surface_index = self.surface,
+                tiles = tiles,
+                item = game.item_prototypes['landfill'],
+                --stack = nil,
+            })
         end
     end
 end

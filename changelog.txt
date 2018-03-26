@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------------------------------
 Version: 2.0.5
 Date: 26. 03. 2018
+  Changes:
+    - Added support for NiceFill mod when using "bridge water" option
   Bugfixes:
     - Fixed autopilot not working with ghost driver
 ---------------------------------------------------------------------------------------------------
