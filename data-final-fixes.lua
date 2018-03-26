@@ -23,18 +23,18 @@ end
 if data.raw["locomotive"]["locomotive"].equipment_grid and not data.raw["locomotive"]["farl"].equipment_grid then
     data.raw["locomotive"]["farl"].equipment_grid = data.raw["locomotive"]["locomotive"].equipment_grid
 end
-
-for locoName, loco in pairs(data.raw.locomotive) do
-    if locoName ~= "farl" then
-        if not loco.equipment_grid then
-            loco.equipment_grid = "farl-equipment-grid"
-        else
-            addFarlCategory(loco.equipment_grid)
+if settings.startup["farl_enable_module"].value then
+    for locoName, loco in pairs(data.raw.locomotive) do
+        if locoName ~= "farl" then
+            if not loco.equipment_grid then
+                loco.equipment_grid = "farl-equipment-grid"
+            else
+                addFarlCategory(loco.equipment_grid)
+            end
         end
+        --log("Loco: " .. locoName .. " " .. serpent.line(loco.equipment_grid, {comment=false}))
     end
-    --log("Loco: " .. locoName .. " " .. serpent.line(loco.equipment_grid, {comment=false}))
 end
-
 --[[
 
 for wagonName, wagon in pairs(data.raw["cargo-wagon"]) do

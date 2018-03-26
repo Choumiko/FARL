@@ -6,5 +6,12 @@ data:extend({
         setting_type = "runtime-per-user",
         default_value = false,
         order = "a"
+    },
+    {
+        type = "bool-setting",
+        name = prefix .. "enable_module",
+        setting_type = "startup",
+        default_value = true,
+        order = "a"
     }
 })

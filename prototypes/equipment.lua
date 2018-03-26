@@ -1,3 +1,7 @@
+if not settings.startup["farl_enable_module"].value then
+    return
+end
+
 data:extend
     {
         {
