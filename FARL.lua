@@ -973,10 +973,18 @@ FARL.removeConcrete = function(self, area)
         for x = st.x, ft.x, 1 do
             for y = st.y, ft.y, 1 do
                 local tileName = self.surface.get_tile(x, y).name
+                local tile_proto = game.tile_prototypes[tileName]
                 -- check that tile is placeable by the player
-                local itemsToPlace = game.tile_prototypes[tileName].items_to_place_this
+                local itemsToPlace = tile_proto.items_to_place_this
                 local toPlace = itemsToPlace and next(itemsToPlace)
-                if (toPlace and toPlace ~= "landfill" and toPlace ~= "bi-adv-fertiliser" and not string.starts_with(toPlace, 'dect-base')) and not self:is_protected_tile({ x = x, y = y }) then
+                if (toPlace and toPlace ~= "landfill" and toPlace ~= "bi-adv-fertiliser"
+                    and not self:is_protected_tile({ x = x, y = y })
+                    and tile_proto.can_be_part_of_blueprint
+                    --[[
+                    and not string.starts_with(toPlace, 'dect-base')
+                    and not string.starts_with(toPlace, 'dect-alien')
+                    ]]--
+                ) then
                     counts[tileName] = counts[tileName] or 0
                     table.insert(tiles, { name = self.replace_tile, position = { x, y } })
                     counts[tileName] = counts[tileName] + 1

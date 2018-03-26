@@ -5,6 +5,7 @@ Date: 26. 03. 2018
     - Added support for NiceFill mod when using "bridge water" option
   Bugfixes:
     - Fixed autopilot not working with ghost driver
+    - Fixed wierd interaction between Alien Biomes, Dectorio and FARL. Only blueprintable tiles will be removed in maintenance mode
 ---------------------------------------------------------------------------------------------------
 Version: 2.0.4
 Date: 29. 01. 2018
