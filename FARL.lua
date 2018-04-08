@@ -877,15 +877,16 @@ FARL.replaceWater = function(self, tiles, w, dw)
         if self:getCargoCount("landfill") >= lfills then
             self.surface.set_tiles(tiles)
             self:removeItemFromCargo("landfill", lfills)
-            log("built tile")
-            script.raise_event(defines.events.on_player_built_tile,
-            {
-                player_index = nil,
-                surface_index = self.surface,
+            local event = {
+                player_index = ((self.driver and self.driver.valid and self.driver.name ~= "farl_player") and (self.driver.index)) or ((self.startedBy and self.startedBy.valid) and self.startedBy.index),
+                surface_index = self.surface.index,
                 tiles = tiles,
                 item = game.item_prototypes['landfill'],
                 --stack = nil,
-            })
+            }
+            event.player_index = event.player_index or 1
+            --log(serpent.block(event))
+            script.raise_event(defines.events.on_player_built_tile, event)
         end
     end
 end
