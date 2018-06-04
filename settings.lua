@@ -13,5 +13,12 @@ data:extend({
         setting_type = "startup",
         default_value = true,
         order = "a"
+    },
+    {
+        type = "bool-setting",
+        name = prefix .. "free_wires",
+        setting_type = "runtime-global",
+        default_value = false,
+        order = "a"
     }
 })

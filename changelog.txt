@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.2
 Date: 04. 06. 2018
+  Changes:
+    - Added mod setting to make red and green wires placed by FARL free (defaults to false)
   Bugfixes:
     - Fixed Dectorio landscape tiles being picked up by FARL
 ---------------------------------------------------------------------------------------------------

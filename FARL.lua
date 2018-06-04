@@ -2494,9 +2494,10 @@ end
 
 FARL.connectCCNet = function(self, pole)
     if self.settings.ccNet and pole.neighbours.copper[1] and self.ccNetPole and self.ccNetPole.valid then
-        if (self.settings.ccWires == 1 and self:getCargoCount("red-wire") > 0)
-            or (self.settings.ccWires == 2 and self:getCargoCount("green-wire") > 0)
-            or (self.settings.ccWires == 3 and (self:getCargoCount("red-wire") > 0 or self:getCargoCount("green-wire") > 0)) then
+        if settings.global.farl_free_wires.value
+            or ((self.settings.ccWires == 1 and self:getCargoCount("red-wire") > 0)
+                or (self.settings.ccWires == 2 and self:getCargoCount("green-wire") > 0)
+                or (self.settings.ccWires == 3 and (self:getCargoCount("red-wire") > 0 or self:getCargoCount("green-wire") > 0))) then
             local c
             local items
             if self.settings.ccWires == 1 then
@@ -2510,9 +2511,11 @@ FARL.connectCCNet = function(self, pole)
                 items = { "red-wire", "green-wire" }
             end
             for i = 1, #c do
-                if self:getCargoCount(items[i]) > 0 then
+                if settings.global.farl_free_wires.value or self:getCargoCount(items[i]) > 0 then
                     pole.connect_neighbour({ target_entity = self.ccNetPole, wire = c[i] })
-                    self:removeItemFromCargo(items[i], 1)
+                    if not settings.global.farl_free_wires.value then
+                        self:removeItemFromCargo(items[i], 1)
+                    end
                 end
             end
         end
