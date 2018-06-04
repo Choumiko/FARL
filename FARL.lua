@@ -979,6 +979,7 @@ FARL.removeConcrete = function(self, area)
                 local itemsToPlace = tile_proto.items_to_place_this
                 local toPlace = itemsToPlace and next(itemsToPlace)
                 if (toPlace and toPlace ~= "landfill" and toPlace ~= "bi-adv-fertiliser"
+                    and (not string.starts_with(toPlace, 'dect-base') and not string.starts_with(toPlace, 'dect-alien'))
                     and not self:is_protected_tile({ x = x, y = y })
                     and tile_proto.can_be_part_of_blueprint
                     --[[
