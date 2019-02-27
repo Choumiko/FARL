@@ -6,6 +6,32 @@ function endsWith(haystack,needle)--luacheck: allow defined top
     return needle=='' or string.sub(haystack,-string.len(needle))==needle
 end
 
+isValidSlot = function(slot, state)--luacheck: allow defined top
+    if not slot or not slot.valid_for_read then return false end
+
+    --if state then
+    if state == "empty" then
+        return not slot.is_blueprint_setup()
+    elseif state == "setup" then
+        return slot.is_blueprint_setup()
+    end
+    --end
+    return true
+end
+
+getBlueprints = function(book, state)--luacheck: allow defined top
+    local main = book.get_inventory(defines.inventory.item_main)
+    local count = 0
+    local bps = {}
+    for i=1, #main do
+        if isValidSlot(main[i], state) then
+            count = count + 1
+            table.insert(bps, main[i])
+        end
+    end
+    return bps, count
+end
+
 GUI = {--luacheck: allow defined top
 
     ccWires = {
@@ -121,9 +147,9 @@ GUI = {--luacheck: allow defined top
         end
         local progressBar = GUI.add(rows,{type = "progressbar", name = "pathProgress", size = 200, value = 0.5, style = "production_progressbar"})
         progressBar.style.maximal_width = 150
-        progressBar.style.visible = false
+        progressBar.visible = false
         local progressLabel = GUI.addLabel(rows,{caption="", name = "pathLabel"})
-        progressLabel.style.visible = false
+        progressLabel.visible = false
         GUI.add(rows, {type = "flow", direction="vertical", name = "farlConfirm"})
 
         GUI.add(rows, {type="checkbox", name="signals", caption={"tgl-signal"}}, "signals")
@@ -408,38 +434,48 @@ GUI = {--luacheck: allow defined top
         end
     end,
 
-    findBlueprintsInHotbar = function(player, type)
+    findBlueprintsInHotbar = function(player)
+        player.print("Cant read from the quickbar currently. Click the Read button with a blueprint or a blueprint book.")
+        player.print("(Reading from the quickbar will be reenabled as soon as the API allows it")
         local blueprints = {}
-        if player ~= nil then
-            local hotbar = player.controller_type == defines.controllers.character and player.get_inventory(defines.inventory.player_quickbar) or player.get_inventory(defines.inventory.god_quickbar)
-            if hotbar ~= nil then
-                for i=1,#hotbar do
-                    local itemStack = hotbar[i]
-                    if itemStack and itemStack.valid_for_read and itemStack.type == "blueprint" then
-                        if  ( type and type == 'empty' and not itemStack.is_blueprint_setup() )
-                            or  ( type and type == 'setup' and itemStack.is_blueprint_setup() )
-                            or  not type then
-                            table.insert(blueprints, itemStack)
-                        end
-                    end
-                end
-            end
-        end
         return blueprints
+            --        if player ~= nil then
+            --            local hotbar = player.controller_type == defines.controllers.character and player.get_inventory(defines.inventory.player_main) or player.get_inventory(defines.inventory.god_main)
+            --            if hotbar ~= nil then
+            --                for i=1,#hotbar do
+            --                    local itemStack = hotbar[i]
+            --                    if itemStack and itemStack.valid_for_read and itemStack.type == "blueprint" then
+            --                        if  ( type and type == 'empty' and not itemStack.is_blueprint_setup() )
+            --                            or  ( type and type == 'setup' and itemStack.is_blueprint_setup() )
+            --                            or  not type then
+            --                            table.insert(blueprints, itemStack)
+            --                        end
+            --                    end
+            --                end
+            --            end
+            --        end
+            --        return blueprints
     end,
 
     readBlueprint = function(_, farl, player)
         local status, err = pcall(function()
             local bp = {}
             local cursor = player.cursor_stack.valid_for_read and player.cursor_stack
-            local read_from_cursor = false
+            local read_from_cursor, count
             local read_blueprints = farl.read_blueprints
-            if cursor and cursor.type == "blueprint" and cursor.is_blueprint_setup() then
+            if cursor and cursor.is_blueprint and cursor.is_blueprint_setup() then
                 table.insert(bp, cursor)
                 read_from_cursor = true
                 read_blueprints = read_blueprints + 1
+            elseif cursor and cursor.is_blueprint_book then
+                bp, count =  getBlueprints(cursor, 'setup')
+                read_from_cursor = true
+                read_blueprints = read_blueprints + count
             else
-                bp = GUI.findBlueprintsInHotbar(player, 'setup')
+                farl:print("Cant read from the quickbar currently. Click the Read button with a blueprint or a blueprint book.")
+                farl:print("(Reading from the quickbar will be reenabled as soon as the API allows it")
+                return
+                --bp = GUI.findBlueprintsInHotbar(player, 'setup')
             end
             if #bp > 2 then
                 farl:print({"msg-error-too-many-bps"})
@@ -517,7 +553,9 @@ GUI = {--luacheck: allow defined top
         if cursor and cursor.type == "blueprint" then
             table.insert(blueprints, cursor)
         else
-            blueprints = GUI.findBlueprintsInHotbar(player, 'empty')
+            farl:print("Click this button with an empty blueprint")
+            --blueprints = GUI.findBlueprintsInHotbar(player, 'empty')
+            return
         end
         if #blueprints > 0 then
             local bp = blueprints[1]
@@ -553,13 +591,13 @@ GUI = {--luacheck: allow defined top
             farlGui.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
             guiPlayer.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
             if farl.ghostProgress then
-                farlGui.pathProgress.style.visible = true
+                farlGui.pathProgress.visible = true
                 farlGui.pathProgress.value = farl.ghostProgress / farl.ghostProgressStart
-                farlGui.pathLabel.style.visible = true
+                farlGui.pathLabel.visible = true
                 farlGui.pathLabel.caption = farl.ghostProgress .. "/" .. farl.ghostProgressStart
             else
-                farlGui.pathProgress.style.visible = false
-                farlGui.pathLabel.style.visible = false
+                farlGui.pathProgress.visible = false
+                farlGui.pathLabel.visible = false
                 farlGui.pathProgress.value = 0
                 farlGui.pathLabel.caption = "-/-"
             end

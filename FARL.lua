@@ -994,7 +994,6 @@ FARL.removeConcrete = function(self, area)
             end
         end
         self.surface.set_tiles(tiles)
-
         for name, c in pairs(counts) do
             local item = get_item_name(name)
             if item then
@@ -1721,6 +1720,7 @@ end
 
 FARL.addItemToCargo = function(self, item, count, place_result)
     --TODO fix this
+    --local original_item = item
     if not item then
         return
     end
@@ -1730,7 +1730,10 @@ FARL.addItemToCargo = function(self, item, count, place_result)
         item = item2
         count = count2
     end
-
+    if not item then
+        --log("No item found for " .. original_item)
+        return
+    end
     local itemStack = {name = item, count = count}
     local remaining = count - self.train.insert(itemStack)
 
