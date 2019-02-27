@@ -40,7 +40,10 @@ local function getRailTypes()
         end
         if proto.type == "curved-rail" then
             for _, item in pairs(proto.items_to_place_this) do
-                if game.entity_prototypes[item.place_result.name].type == "straight-rail" then
+                log(serpent.block(item))
+                local item_proto = game.item_prototypes[item.name]
+                log(serpent.block(item_proto.place_result.name))
+                if item_proto and game.entity_prototypes[item_proto.place_result.name].type == "straight-rail" then
                     rails_by_item[item.name] = rails_by_item[item.name] or {}
                     rails_by_item[item.name].curved = name
                 end
@@ -65,6 +68,7 @@ local function getRailTypes()
             railstring = railstring .. item
         end
     end
+    log(serpent.block(rails_by_item))
     global.rails = rails_by_item
     return railstring
 end

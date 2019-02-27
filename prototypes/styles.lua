@@ -26,7 +26,7 @@ data.raw["gui-style"].default["farl_label"] =
 
 data.raw["gui-style"].default["farl_textfield"] =
     {
-        type = "textfield_style",
+        type = "textbox_style",
         left_padding = 3,
         right_padding = 2,
         minimal_width = 60,
@@ -35,7 +35,7 @@ data.raw["gui-style"].default["farl_textfield"] =
 
 data.raw["gui-style"].default["farl_textfield_small"] =
     {
-        type = "textfield_style",
+        type = "textbox_style",
         left_padding = 3,
         right_padding = 2,
         minimal_width = 30,
