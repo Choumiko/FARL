@@ -5,7 +5,7 @@
 --- Returns a copy of the string with any leading or trailing whitespace from the string removed.
 -- @tparam string s the string to remove leading or trailing whitespace from
 -- @treturn string a copy of the string without leading or trailing whitespace
-function string.trim(s)
+function string.trim(s) --luacheck: ignore
     return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
 
@@ -13,7 +13,7 @@ end
 -- @tparam string s the string to check for the start substring
 -- @tparam string start the substring to test for
 -- @treturn boolean true if the start substring was found in the string
-function string.starts_with(s, start)
+function string.starts_with(s, start) --luacheck: ignore
     return string.find(s, start, 1, true) == 1
 end
 
@@ -21,7 +21,7 @@ end
 -- @tparam string s the string to check for the end substring
 -- @tparam string ends the substring to test for
 -- @treturn boolean true if the end substring was found in the string
-function string.ends_with(s, ends)
+function string.ends_with(s, ends) --luacheck: ignore
     return #s >= #ends and string.find(s, ends, #s - #ends + 1, true) and true or false
 end
 
@@ -29,14 +29,14 @@ end
 -- @tparam string s the string to check for the substring
 -- @tparam string contains the substring to test for
 -- @treturn boolean true if the substring was found in the string
-function string.contains(s, contains)
+function string.contains(s, contains) --luacheck: ignore
     return s and string.find(s, contains) ~= nil
 end
 
 --- Tests whether a string is empty
 -- @tparam string s the string to test
 -- @treturn boolean true if the string is empty
-function string.is_empty(s)
+function string.is_empty(s) --luacheck: ignore
     return s == nil or s == ''
 end
 
@@ -48,7 +48,7 @@ end
 -- @tparam[opt='.'] string sep the separator to use.
 -- @tparam[opt=false] boolean pattern whether to interpret the separator as a lua pattern or plaintext for the string split
 -- @treturn {string,...} an array of strings
-function string.split(s, sep, pattern)
+function string.split(s, sep, pattern) --luacheck: ignore
     sep = sep or "."
     sep = sep ~= "" and sep or "."
     sep = not pattern and string.gsub(sep, "([^%w])", "%%%1") or sep

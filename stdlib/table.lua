@@ -13,7 +13,7 @@
 -- @tparam function func to transform values
 -- @param[opt] ... additional arguments passed to the function
 -- @treturn table a new table containing the keys and mapped values
-function table.map(tbl, func, ...)
+function table.map(tbl, func, ...) --luacheck: ignore
     local newtbl = {}
     for i, v in pairs(tbl) do
         newtbl[i] = func(v, i, ...)
@@ -32,7 +32,7 @@ end
 -- @tparam function func to filter values
 -- @param[opt] ... additional arguments passed to the function
 -- @treturn table a new table containing the filtered key-value pairs
-function table.filter(tbl, func, ...)
+function table.filter(tbl, func, ...) --luacheck: ignore
     local newtbl = {}
     local insert = #tbl > 0
     for k, v in pairs(tbl) do
@@ -55,7 +55,7 @@ end
 -- @tparam function func to use to search for any matching element
 -- @param[opt] ... additional arguments passed to the function
 -- @return the first found value, or nil if none was found
-function table.find(tbl, func, ...)
+function table.find(tbl, func, ...) --luacheck: ignore
     for k, v in pairs(tbl) do
         if func(v, k, ...) then
             return v, k
@@ -76,7 +76,7 @@ end
 -- @tparam function func to use to search for any matching element
 -- @param[opt] ... additional arguments passed to the function
 -- @treturn boolean true if an element was found, false if none was found
-function table.any(tbl, func, ...)
+function table.any(tbl, func, ...) --luacheck: ignore
     return table.find(tbl, func, ...) ~= nil
 end
 
@@ -88,7 +88,7 @@ end
 -- @tparam function func to apply to values
 -- @param[opt] ... additional arguments passed to the function
 -- @treturn table the given table
-function table.each(tbl, func, ...)
+function table.each(tbl, func, ...) --luacheck: ignore
     for k, v in pairs(tbl) do
         if func(v, k, ...) then
             break
@@ -104,7 +104,7 @@ end
 -- @tparam array tbl to be flattened
 -- @tparam[opt] int level recursive levels, or no limit to recursion if not supplied
 -- @treturn table a new table that represents the flattened contents of the given table
-function table.flatten(tbl, level)
+function table.flatten(tbl, level) --luacheck: ignore
     local flattened = {}
     table.each(tbl,
         function(value)
@@ -129,14 +129,14 @@ end
 --- Given an array, returns the first element or nil if no element exists
 -- @tparam array tbl the array
 -- @return the first element
-function table.first(tbl)
+function table.first(tbl) --luacheck: ignore
     return tbl[1]
 end
 
 --- Given an array, returns the last element or nil if no elements exist
 -- @tparam array tbl the array
 -- @return the last element or nil
-function table.last(tbl)
+function table.last(tbl) --luacheck: ignore
     local size = #tbl
     if size == 0 then return nil end
     return tbl[size]
@@ -145,7 +145,7 @@ end
 --- Given an array of only numeric values, returns the minimum or nil if no element exists
 -- @tparam array tbl the array
 -- @treturn ?|int the minimum value
-function table.min(tbl)
+function table.min(tbl) --luacheck: ignore
     if #tbl == 0 then return nil end
 
     local min = tbl[1]
@@ -158,7 +158,7 @@ end
 ---Given an array of only numeric values, returns the maximum or nil if no element exists
 -- @tparam array tbl the array
 -- @treturn ?|int the maximum value
-function table.max(tbl)
+function table.max(tbl) --luacheck: ignore
     if #tbl == 0 then return nil end
 
     local max = tbl[1]
@@ -171,7 +171,7 @@ end
 --- Given an array of only numeric values, return the sum of all values, or 0 for empty arrays
 -- @tparam array tbl
 -- @treturn int the sum
-function table.sum(tbl)
+function table.sum(tbl) --luacheck: ignore
     local sum = 0
     for _, num in pairs(tbl) do
         sum = sum + num
@@ -182,7 +182,7 @@ end
 --- Given an array of only numeric values, returns the average or nil if no element exists
 -- @tparam array tbl the array
 -- @treturn ?|int the average value
-function table.avg(tbl)
+function table.avg(tbl) --luacheck: ignore
     local cnt = #tbl
     return cnt ~= 0 and table.sum(tbl) / cnt or nil
 end
@@ -198,7 +198,7 @@ end
 -- @tparam table tblB second table
 -- @tparam[opt=false] boolean array_merge whether to merge the tables as arrays, or associatively
 -- @treturn array|table tblA with merged values from tblB
-function table.merge(tblA, tblB, array_merge)
+function table.merge(tblA, tblB, array_merge) --luacheck: ignore
     if not tblB then
         return tblA
     end
@@ -221,7 +221,7 @@ end
 -- @usage local copy = table.deepcopy[data.raw.["stone-furnace"]["stone-furnace"]] --returns a copy of the stone furnace entity
 -- @tparam table object the table to copy
 -- @treturn table a copy of the table
-function table.deepcopy(object)
+function table.deepcopy(object) --luacheck: ignore
     local lookup_table = {}
     local function _copy(this_object)
         if type(this_object) ~= "table" then
@@ -246,7 +246,7 @@ end
 -- @tparam[opt] boolean sorted (optional) whether to sort the keys (slower) or keep the random order from pairs()
 -- @tparam[opt] boolean as_string (optional) whether to try and parse the values as strings, or leave them as their existing type
 -- @treturn array with a copy of all the values in the table
-function table.values(tbl, sorted, as_string)
+function table.values(tbl, sorted, as_string) --luacheck: ignore
     if not tbl then return {} end
     local valueset = {}
     local n = 0
@@ -284,7 +284,7 @@ end
 -- @tparam[opt] boolean sorted (optional) whether to sort the keys (slower) or keep the random order from pairs()
 -- @tparam[opt] boolean as_string (optional) whether to try and parse the keys as strings, or leave them as their existing type
 -- @treturn array an array with a copy of all the keys in the table
-function table.keys(tbl, sorted,as_string)
+function table.keys(tbl, sorted,as_string) --luacheck: ignore
     if not tbl then return {} end
     local keyset = {}
     local n = 0
@@ -325,7 +325,7 @@ end
 -- @tparam table tbl the table to remove the keys from
 -- @tparam array keys the keys to remove
 -- @treturn table tbl without the specified keys
-function table.remove_keys(tbl, keys)
+function table.remove_keys(tbl, keys) --luacheck: ignore
     for i=1, #keys do
         tbl[keys[i]] = nil
     end
