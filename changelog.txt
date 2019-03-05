@@ -2,7 +2,8 @@
 Version: 3.0.1
 Date: 05. 03. 2019
   Bugfixes:
-    - Fixed tiles being replaced with grass in maintenance mode
+    - fixed tiles being replaced with grass in maintenance mode
+    - fixed error when creating/saving a scenario
 ---------------------------------------------------------------------------------------------------
 Version: 3.0.0
 Date: 27. 02. 2019
