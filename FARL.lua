@@ -971,29 +971,41 @@ FARL.removeConcrete = function(self, area)
         local st, ft = area.left_top, area.right_bottom
 
         local counts = {}
+        local tileName, tile_proto, itemsToPlace, toPlace
         for x = st.x, ft.x, 1 do
             for y = st.y, ft.y, 1 do
-                local tileName = self.surface.get_tile(x, y).name
-                local tile_proto = game.tile_prototypes[tileName]
+                tileName = self.surface.get_tile(x, y).name
+                tile_proto = game.tile_prototypes[tileName]
                 -- check that tile is placeable by the player
-                local itemsToPlace = tile_proto.items_to_place_this
-                local toPlace = itemsToPlace and next(itemsToPlace)
-                if (toPlace and toPlace ~= "landfill" and toPlace ~= "bi-adv-fertiliser"
+                itemsToPlace = tile_proto.items_to_place_this
+                toPlace = (itemsToPlace and #itemsToPlace >= 1) and itemsToPlace[1].name
+                if (tile_proto.can_be_part_of_blueprint
+                    and toPlace and toPlace ~= "landfill" and toPlace ~= "bi-adv-fertiliser"
                     and (not string.starts_with(toPlace, 'dect-base') and not string.starts_with(toPlace, 'dect-alien'))
                     and not self:is_protected_tile({ x = x, y = y })
-                    and tile_proto.can_be_part_of_blueprint
-                    --[[
-                    and not string.starts_with(toPlace, 'dect-base')
-                    and not string.starts_with(toPlace, 'dect-alien')
-                    ]]--
                 ) then
                     counts[tileName] = counts[tileName] or 0
-                    table.insert(tiles, { name = self.replace_tile, position = { x, y } })
+                    table.insert(tiles, { name = self.replace_tile, position = { x=x, y=y } })
                     counts[tileName] = counts[tileName] + 1
                 end
             end
         end
-        self.surface.set_tiles(tiles)
+        if #tiles > 0 then
+            self.surface.set_tiles(tiles)
+
+            local event = {
+                player_index = ((self.driver and self.driver.valid and self.driver.name ~= "farl_player") and (self.driver.index)) or ((self.startedBy and self.startedBy.valid) and self.startedBy.index),
+                surface_index = self.surface.index,
+                tiles = tiles,
+                item = game.item_prototypes['landfill'],
+                --stack = nil,
+            }
+            event.player_index = event.player_index or 1
+            --log(serpent.block(event))
+            script.raise_event(defines.events.on_player_built_tile, event)
+        end
+
+
         for name, c in pairs(counts) do
             local item = get_item_name(name)
             if item then
@@ -2764,7 +2776,6 @@ FARL.debugInfo = function(self)
     log(serpent.block(self, {comment=false}))
     log(self.driver.name)
     log(self.cheat_mode)
-    log(self.settings.player.name)
     local foo = nil
     if foo then
         --if not self.active then self:activate() end

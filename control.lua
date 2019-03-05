@@ -40,9 +40,9 @@ local function getRailTypes()
         end
         if proto.type == "curved-rail" then
             for _, item in pairs(proto.items_to_place_this) do
-                log(serpent.block(item))
+                --log(serpent.block(item))
                 local item_proto = game.item_prototypes[item.name]
-                log(serpent.block(item_proto.place_result.name))
+                --log(serpent.block(item_proto.place_result.name))
                 if item_proto and game.entity_prototypes[item_proto.place_result.name].type == "straight-rail" then
                     rails_by_item[item.name] = rails_by_item[item.name] or {}
                     rails_by_item[item.name].curved = name
@@ -68,7 +68,7 @@ local function getRailTypes()
             railstring = railstring .. item
         end
     end
-    log(serpent.block(rails_by_item))
+    --log(serpent.block(rails_by_item))
     global.rails = rails_by_item
     return railstring
 end
@@ -389,6 +389,13 @@ local function on_configuration_changed(data)
                         end
                     end
                 end
+                if oldVersion < v'3.0.1' then
+                    for _, psettings in pairs(global.players) do
+                        if psettings.player then
+                            psettings.player = nil
+                        end
+                    end
+                end
             end
         else
             debugDump("FARL version: ".. tostring(newVersion), true)
@@ -557,7 +564,7 @@ function debugDump(var, force) --luacheck: allow defined top
         local tick = game and game.tick or 0
         log(debug.traceback())
         log(tick .. " " .. msg)
-end
+    end
 end
 
 function debugLog(var, prepend)--luacheck: allow defined top
@@ -772,7 +779,7 @@ remote.add_interface("farl",
 
         add_entity_to_trigger = function(name)
             global.trigger_events = global.trigger_events or {}
-            if game.entity_prototypes[name] then
+            if game.entity_prototypes[name] or game.tile_prototypes[name] then
                 trigger_events[name] = true
                 global.trigger_events[name] = true
                 log(string.format("Registered %s to trigger create/remove events", name))

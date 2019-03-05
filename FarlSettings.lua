@@ -192,13 +192,13 @@ defaultSettings = --luacheck: allow defined top
 defaultSettings.activeBP = defaultSettings.bp
 
 Settings = {--luacheck: allow defined top
+
     loadByPlayer = function(player)
         local index = player.index
         local settings = util.table.deepcopy(defaultSettings)
         if not global.players[index] then
             global.players[index] = settings
         end
-        global.players[index].player = player
         setmetatable(global.players[index], Settings)
         return global.players[index]
     end,

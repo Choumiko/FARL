@@ -259,7 +259,6 @@ GUI = {--luacheck: allow defined top
 
             farl.driver = ghostPlayer
             farl.settings = util.table.deepcopy(Settings.loadByPlayer(player))
-            farl.settings.player = ghostPlayer
             farl.startedBy = player
             farl.cheat_mode = player.cheat_mode
             global.activeFarls[FARL.getIdFromTrain(farl.train)] = farl
