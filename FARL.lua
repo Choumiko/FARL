@@ -1,7 +1,7 @@
-local Position = require 'stdlib/area/position'
-local Area = require 'stdlib/area/area'
-require "util"
-require "Blueprint"
+local Position = require '__FARL__/stdlib/area/position'
+local Area = require '__FARL__/stdlib/area/area'
+require "__core__/lualib/util"
+require "__FARL__/Blueprint"
 
 trigger_events = {} --luacheck: allow defined top
 
@@ -981,7 +981,7 @@ FARL.removeConcrete = function(self, area)
                 toPlace = (itemsToPlace and #itemsToPlace >= 1) and itemsToPlace[1].name
                 if (tile_proto.can_be_part_of_blueprint
                     and toPlace and toPlace ~= "landfill" and toPlace ~= "bi-adv-fertiliser"
-                    and (not string.starts_with(toPlace, 'dect-base') and not string.starts_with(toPlace, 'dect-alien'))
+                    and (not string.starts_with(toPlace, 'dect-base') and not string.starts_with(toPlace, 'dect-alien')) --luacheck: ignore
                     and not self:is_protected_tile({ x = x, y = y })
                 ) then
                     counts[tileName] = counts[tileName] or 0

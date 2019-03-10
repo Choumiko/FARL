@@ -1,11 +1,15 @@
-require 'stdlib/string'
-require 'stdlib/table'
-require "FarlSettings"
-require "FARL"
-require "GUI"
+require '__FARL__/stdlib/string'
+require '__FARL__/stdlib/table'
+require "__FARL__/FarlSettings"
+require "__FARL__/FARL"
+require "__FARL__/GUI"
 
-local v = require 'semver'
-
+local v = require '__FARL__/semver'
+-- position_hash = function(i,j) --luacheck: allow defined top
+-- local x = i + 1000000
+-- local y = j + 1000000
+-- return (x * 2000000) + y
+-- end
 MOD_NAME = "FARL"--luacheck: allow defined top
 debugButton = false--luacheck: allow defined top
 godmode = false--luacheck: allow defined top
@@ -525,6 +529,25 @@ function on_player_driving_changed_state(event)--luacheck: allow defined top
     end
 end
 
+local function on_pre_player_removed(event)
+    local status, err = pcall(function()
+        local pi = event.player_index
+        local player = game.get_player(pi)
+        global.players[pi] = nil
+        global.savedBlueprints[pi] = nil
+        FARL.onPlayerLeave(player)
+        for i, f in pairs(global.farl) do
+            if f.startedBy == player then
+                f:deactivate()
+            end
+        end
+    end)
+    if not status then
+        debugDump("Unexpected error:",true)
+        debugDump(err, true)
+    end
+end
+
 --function on_player_placed_equipment(event)
 --  local player = game.players[event.player_index]
 --  if event.equipment.name == "farl-roboport" and isFARLLocomotive(player.vehicle) then
@@ -603,6 +626,8 @@ script.on_event(defines.events.on_entity_died, on_entity_died)
 
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
 
+script.on_event(defines.events.on_pre_player_removed, on_pre_player_removed)
+
 --script.on_event(defines.events.on_player_placed_equipment, on_player_placed_equipment)
 --script.on_event(defines.events.on_player_removed_equipment, on_player_removed_equipment)
 
@@ -636,10 +661,10 @@ function on_player_switched(event)--luacheck: allow defined top
             end
         end
     end)
-if not status then
-    debugDump("Unexpected error:",true)
-    debugDump(err,true)
-end
+    if not status then
+        debugDump("Unexpected error:",true)
+        debugDump(err,true)
+    end
 end
 
 remote.add_interface("farl",
@@ -803,5 +828,28 @@ remote.add_interface("farl",
             global.trigger_events = global.trigger_events or {}
             trigger_events = trigger_events or {}
             return trigger_events
-        end
+        end,
+
+        -- foo = function()
+        --     local positions = {}
+        --     local some_data = {whatever=10}
+        --     log("concat start")
+        --     for i = 0, 100 do
+        --         for j = 0, 100 do
+        --             positions[i..":"..j] = some_data.whatever + i
+        --         end
+        --     end
+        --     log("concat stop")
+        --     log(positions["0:0"])
+
+        --     positions = {}
+        --     log("hash start")
+        --     for i = 0, 100 do
+        --         for j = 0, 100 do
+        --             positions[position_hash(i,j)] = some_data.whatever + i
+        --         end
+        --     end
+        --     log("hash stop")
+        --     log(positions["0:0"])
+        -- end
     })

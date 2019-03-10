@@ -5,8 +5,8 @@
 -- @see Concepts.BoundingBox
 -- @see Concepts.Position
 
-local fail_if_missing = require 'stdlib/core'['fail_if_missing']
-local Position = require 'stdlib/area/position'
+local fail_if_missing = require '__FARL__/stdlib/core'['fail_if_missing']
+local Position = require '__FARL__/stdlib/area/position'
 
 Area = {} --luacheck: allow defined top
 

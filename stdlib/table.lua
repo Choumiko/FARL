@@ -77,7 +77,7 @@ end
 -- @param[opt] ... additional arguments passed to the function
 -- @treturn boolean true if an element was found, false if none was found
 function table.any(tbl, func, ...) --luacheck: ignore
-    return table.find(tbl, func, ...) ~= nil
+    return table.find(tbl, func, ...) ~= nil --luacheck: ignore
 end
 
 --- Given a function, apply it to each element in the table. Passes the index as second argument to the function.
@@ -106,17 +106,17 @@ end
 -- @treturn table a new table that represents the flattened contents of the given table
 function table.flatten(tbl, level) --luacheck: ignore
     local flattened = {}
-    table.each(tbl,
+    table.each(tbl, --luacheck: ignore
         function(value)
             if type(value) == "table" and #value > 0 then
                 if level then
                     if level > 0 then
-                        table.merge(flattened, table.flatten(value, level - 1), true)
+                        table.merge(flattened, table.flatten(value, level - 1), true) --luacheck: ignore
                     else
                         table.insert(flattened, value)
                     end
                 else
-                    table.merge(flattened, table.flatten(value), true)
+                    table.merge(flattened, table.flatten(value), true) --luacheck: ignore
                 end
             else
                 table.insert(flattened, value)
@@ -184,7 +184,7 @@ end
 -- @treturn ?|int the average value
 function table.avg(tbl) --luacheck: ignore
     local cnt = #tbl
-    return cnt ~= 0 and table.sum(tbl) / cnt or nil
+    return cnt ~= 0 and table.sum(tbl) / cnt or nil --luacheck: ignore
 end
 
 --- Merges 2 tables, values from first get overwritten by second

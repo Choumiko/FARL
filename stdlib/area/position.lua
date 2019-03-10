@@ -5,7 +5,7 @@
 -- @see Concepts.Position
 -- @see defines.direction
 
-local fail_if_missing = require 'stdlib/core'['fail_if_missing']
+local fail_if_missing = require '__FARL__/stdlib/core'['fail_if_missing']
 local math = math
 local abs, floor, ceil, sqrt = math.abs, math.floor, math.ceil, math.sqrt
 Position = {} --luacheck: allow defined top

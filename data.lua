@@ -1,4 +1,4 @@
-require "lib"
+require "__FARL__/lib"
 
 --local fake_item = copyPrototype("item", "rail-signal", "fake-signal")
 --table.insert(fake_item.flags, "hidden")
@@ -16,12 +16,12 @@ require "lib"
 --fake_signal.red_light=nil
 
 --data:extend({fake_item, fake_signal})
-require("prototypes.equipment")
-require("prototypes.entity.entities")
-require("prototypes.entity.farl_player")
-require("prototypes.item.item")
-require("prototypes.recipe.recipe")
-require("prototypes.styles")
+require("__FARL__/prototypes/equipment")
+require("__FARL__/prototypes/entity/entities")
+require("__FARL__/prototypes/entity/farl_player")
+require("__FARL__/prototypes/item/item")
+require("__FARL__/prototypes/recipe/recipe")
+require("__FARL__/prototypes/styles")
 
 if not data.raw["custom-input"] or not data.raw["custom-input"]["toggle-train-control"] then
     data:extend({

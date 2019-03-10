@@ -1,4 +1,4 @@
-require "util"
+require "__core__/lualib/util"
 
 --poleDistance = 1, side = right
 defaultsDiagonal = {--luacheck: allow defined top

@@ -1,4 +1,4 @@
-require "lib"
+require "__FARL__/lib"
 
 local updatedGrids = {}
 
