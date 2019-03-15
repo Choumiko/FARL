@@ -693,6 +693,7 @@ FARL.prepareArea = function(self, entity, rangeOrArea)
     self:removeTrees(area)
     self:pickupItems(area)
     self:removeStone(area)
+    self:removeCliffs(area)
     --log(game.tick.." prepArea done")
     --else
     --return true
@@ -712,6 +713,7 @@ FARL.prepareAreaForCurve = function(self, newRail)
         self:removeTrees(area)
         self:pickupItems(area)
         self:removeStone(area)
+        self:removeCliffs(area)
         if self.settings.bulldozer or self.settings.maintenance then
             local types = { "straight-rail", "curved-rail", "rail-signal", "rail-chain-signal", "electric-pole", "lamp", "wall" }
             for _, t in pairs(types) do
@@ -817,6 +819,32 @@ FARL.removeStone = function(self, area)
                 global.statistics[self.locomotive.force.name].removed["stone-rock"] = stat + 1
             end
         end
+    end
+end
+
+FARL.removeCliffs = function(self, area)
+    if not self.settings.remove_cliffs then
+        return
+    end
+    local cliffs = self.surface.find_entities_filtered { area = area, type = "cliff" }
+    if #cliffs == 0 then
+        return
+    end
+    local amount = ceil(#cliffs / 3)
+    local explosives = self:getCargoCount("cliff-explosives")
+    if explosives >= amount then
+        local stat = global.statistics[self.locomotive.force.name].removed["cliff"] or 0
+        global.statistics[self.locomotive.force.name].removed["cliff"] = stat + #cliffs
+        local removed = 0
+        for _, entity in pairs(cliffs) do
+            if entity.destroy() then
+                removed = removed + 1
+            end
+            --entity.destroy{do_cliff_correction = true}
+        end
+        self:removeItemFromCargo("cliff-explosives", amount, explosives)
+    else
+        self:print_out_of_item("cliff-explosives")
     end
 end
 
@@ -1122,6 +1150,7 @@ FARL.bulldoze_area = function(self, rail, travel_dir)
             self:removeTrees(area)
             self:pickupItems(area)
             self:removeStone(area)
+            self:removeCliffs(area)
             self:removeConcrete(area)
             for _, t in pairs(types) do
                 self:removeEntitiesFiltered({ area = area, type = t }, self.protected)
@@ -2103,6 +2132,7 @@ FARL.placeRails = function(self, nextRail, newTravelDir)
             self:removeTrees(area)
             self:pickupItems(area)
             self:removeStone(area)
+            self.removeCliffs(area)
         end
     end
 

@@ -186,7 +186,8 @@ defaultSettings = --luacheck: allow defined top
         concrete = true,
         railEntities = true,
         mirrorConcrete = true,
-        place_ghosts = true
+        place_ghosts = true,
+        remove_cliffs = true,
 }
 
 defaultSettings.activeBP = defaultSettings.bp

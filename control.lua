@@ -394,6 +394,9 @@ local function on_configuration_changed(data)
                 end
                 if oldVersion < v'3.0.2' then
                     global.godmode = nil
+                    for _, psettings in pairs(global.players) do
+                        psettings.remove_cliffs = true
+                    end
                 end
             end
         else
