@@ -1,10 +1,12 @@
-local function saveVar(var, name)
+local M = {}
+
+function M.saveVar(var, name)
     var = var or global
     local n = name or ""
     game.write_file("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
 end
 
-local function debugDump(var, force)
+function M.debugDump(var, force)
     if false or force then
         local msg
         if type(var) == "string" then
@@ -21,7 +23,7 @@ local function debugDump(var, force)
     end
 end
 
-local function debugLog(var, prepend)
+function M.debugLog(var, prepend)
     if not global.debug_log then return end
     local str = prepend or ""
     for _,player in pairs(game.players) do
@@ -36,10 +38,12 @@ local function debugLog(var, prepend)
     end
 end
 
-local M = {
-    saveVar = saveVar,
-    debugDump = debugDump,
-    debugLog = debugLog,
-}
+function M.startsWith(haystack,needle)
+    return string.sub(haystack,1,string.len(needle))==needle
+end
+
+function M.endsWith(haystack,needle)
+    return needle=='' or string.sub(haystack,-string.len(needle))==needle
+end
 
 return M

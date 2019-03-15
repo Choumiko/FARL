@@ -2,9 +2,11 @@ require "__core__/lualib/util"
 local Position = require '__FARL__/stdlib/area/position'
 local Area = require '__FARL__/stdlib/area/area'
 local Blueprint = require "__FARL__/Blueprint"
-local lib = "__FARL__/lib_control"
+
+local lib = require "__FARL__/lib_control"
 local debugDump = lib.debugDump
 local debugLog = lib.debugLog
+local endsWith = lib.endsWith
 
 trigger_events = {} --luacheck: allow defined top
 

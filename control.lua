@@ -3,7 +3,7 @@ require '__FARL__/stdlib/table'
 require "__FARL__/FarlSettings"
 require "__FARL__/FARL"
 require "__FARL__/GUI"
-local lib = "__FARL__/lib_control"
+local lib = require "__FARL__/lib_control"
 local saveVar = lib.saveVar
 local debugDump = lib.debugDump
 

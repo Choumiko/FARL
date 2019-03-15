@@ -1,16 +1,9 @@
-local lib = "__FARL__/lib_control"
+local lib = require "__FARL__/lib_control"
 local saveVar = lib.saveVar
 local debugDump = lib.debugDump
+local startsWith = lib.startsWith
 
-function startsWith(haystack,needle)--luacheck: allow defined top
-    return string.sub(haystack,1,string.len(needle))==needle
-end
-
-function endsWith(haystack,needle)--luacheck: allow defined top
-    return needle=='' or string.sub(haystack,-string.len(needle))==needle
-end
-
-isValidSlot = function(slot, state)--luacheck: allow defined top
+local isValidSlot = function(slot, state)
     if not slot or not slot.valid_for_read then return false end
 
     --if state then
@@ -23,7 +16,7 @@ isValidSlot = function(slot, state)--luacheck: allow defined top
     return true
 end
 
-getBlueprints = function(book, state)--luacheck: allow defined top
+local getBlueprints = function(book, state)
     local main = book.get_inventory(defines.inventory.item_main)
     local count = 0
     local bps = {}
@@ -36,7 +29,7 @@ getBlueprints = function(book, state)--luacheck: allow defined top
     return bps, count
 end
 
-GUI = {--luacheck: allow defined top
+GUI = {
 
     ccWires = {
         {"stg-ccNetWire-red"},
@@ -185,7 +178,7 @@ GUI = {--luacheck: allow defined top
             player.gui.left.farl.destroy()
             -- if entity and isFARLLocomotive(entity) then
             --     --TODO what did i want to do?!
-            --     local farl = FARL.findByLocomotive(entity) --luacheck: no unused
+            --     local farl = FARL.findByLocomotive(entity)
             -- end
         end
     end,
