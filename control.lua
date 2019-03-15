@@ -322,7 +322,7 @@ local function on_configuration_changed(data)
                         if global.destroyNextTick then
                             for _, pis in pairs(global.destroyNextTick) do
                                 for _, pi in pairs(pis) do
-                                    GUI.destroyGui(game.players[pi])
+                                    GUI.destroyGui(game.get_player(pi))
                                 end
                             end
                             global.destroyNextTick = nil
@@ -422,7 +422,7 @@ local function on_configuration_changed(data)
     if railstring ~= global.railString then
         for i, psettings in pairs(global.players) do
             if psettings.railType ~= 1 then
-                game.players[i].print("Rail types where changed, resetting to vanilla rail.")
+                game.get_player(i).print("Rail types where changed, resetting to vanilla rail.")
             end
             psettings.railType = 1
             psettings.rail = global.rails_by_index[1]
@@ -436,7 +436,7 @@ local function on_configuration_changed(data)
 end
 
 local function on_player_created(event)
-    init_player(game.players[event.player_index])
+    init_player(game.get_player(event.player_index))
 end
 
 local function on_force_created(event)
@@ -446,7 +446,7 @@ end
 local function on_gui_click(event)
     local status, err = pcall(function()
         local index = event.player_index
-        local player = game.players[index]
+        local player = game.get_player(index)
         if player.gui.left.farl ~= nil then
             local farl = FARL.findByPlayer(player)
             if farl then
@@ -467,7 +467,7 @@ end
 local function on_gui_checked_state_changed(event)
     local status, err = pcall(function()
         local index = event.player_index
-        local player = game.players[index]
+        local player = game.get_player(index)
         if player.gui.left.farl ~= nil then
             local farl = FARL.findByPlayer(player)
             if farl then
@@ -491,7 +491,7 @@ local function on_preplayer_mined_item(event)
         for i, farl in pairs(global.farl) do
             if not farl.train or (farl.train.valid and farl.train == ent.train) or not farl.train.valid then
                 if event.player_index then
-                    local player = game.players[event.player_index]
+                    local player = game.get_player(event.player_index)
                     if farl.driver and farl.driver == player then
                         FARL.onPlayerLeave(player)
                         GUI.destroyGui(player)
@@ -510,7 +510,7 @@ local function on_entity_died(event)
 end
 
 local function on_player_driving_changed_state(event)
-    local player = game.players[event.player_index]
+    local player = game.get_player(event.player_index)
     if FARL.isFARLLocomotive(player.vehicle) then
         if player.gui.left.farl == nil then
             local farl = FARL.onPlayerEnter(player)
@@ -547,7 +547,7 @@ local function on_pre_player_removed(event)
 end
 
 --function on_player_placed_equipment(event)
---  local player = game.players[event.player_index]
+--  local player = game.get_player(event.player_index)
 --  if event.equipment.name == "farl-roboport" and isFARLLocomotive(player.vehicle) then
 --    if player.gui.left.farl == nil then
 --      FARL.onPlayerEnter(player)
@@ -557,7 +557,7 @@ end
 --end
 --
 --function on_player_removed_equipment(event)
---  local player = game.players[event.player_index]
+--  local player = game.get_player(event.player_index)
 --  if event.equipment.name == "farl-roboport" and player.gui.left.farl and player.vehicle then
 --    if not isFARLLocomotive(player.vehicle) then
 --      FARL.onPlayerLeave(player, event.tick + 5)
@@ -599,7 +599,7 @@ end)
 
 script.on_event("toggle-train-control", function(event)
     if not game.active_mods["Honk"] and not game.active_mods["Honck"] then
-        local player = game.players[event.player_index]
+        local player = game.get_player(event.player_index)
         local vehicle = player.vehicle
         if vehicle and vehicle.type == "locomotive" then
             vehicle.train.manual_mode = not vehicle.train.manual_mode
