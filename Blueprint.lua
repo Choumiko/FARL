@@ -1,7 +1,8 @@
 --- Blueprint parsing
 --@module Blueprint
 
-Blueprint = {}--luacheck: allow defined top
+local Blueprint = {}
+local Position = require '__FARL__/stdlib/area/position'
 local math = math
 ---Group entities in the blueprint
 --@param e entities
@@ -155,3 +156,5 @@ Blueprint.rotate = function(bp, degree)
     end
     --game.print("Done rotating")
 end
+
+return Blueprint

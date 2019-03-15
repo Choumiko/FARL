@@ -1,5 +1,3 @@
-require "__FARL__/lib"
-
 local updatedGrids = {}
 
 local function addFarlCategory(equipmentGridName)

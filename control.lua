@@ -3,16 +3,15 @@ require '__FARL__/stdlib/table'
 require "__FARL__/FarlSettings"
 require "__FARL__/FARL"
 require "__FARL__/GUI"
+local lib = "__FARL__/lib_control"
+local saveVar = lib.saveVar
+local debugDump = lib.debugDump
+
+local Position = require '__FARL__/stdlib/area/position'
 
 local v = require '__FARL__/semver'
--- position_hash = function(i,j) --luacheck: allow defined top
--- local x = i + 1000000
--- local y = j + 1000000
--- return (x * 2000000) + y
--- end
-MOD_NAME = "FARL"--luacheck: allow defined top
-debugButton = false--luacheck: allow defined top
-godmode = false--luacheck: allow defined top
+
+local MOD_NAME = "FARL"
 
 local function resetMetatable(o, mt)
     setmetatable(o,{__index=mt})
@@ -77,23 +76,6 @@ local function getRailTypes()
     return railstring
 end
 
-function isFARLLocomotive(loco) --luacheck: allow defined top
-    if not loco or not loco.valid or not loco.type == "locomotive" then
-        return false
-    end
-    if loco.name == "farl" then
-        return true
-    end
-    if loco.grid then
-        for _, equipment in pairs(loco.grid.equipment) do
-            if equipment.name == "farl-roboport" then
-                return true
-            end
-        end
-    end
-    return false
-end
-
 local function on_tick(event)
     local status, err = pcall(function()
         --    if event.tick % 10 == 8  then
@@ -142,7 +124,7 @@ local function on_tick(event)
     end
 end
 
-function init_global() --luacheck: allow defined top
+local function init_global()
     global = global or {}
     global.players =  global.players or {}
     global.savedBlueprints = global.savedBlueprints or {}
@@ -150,8 +132,6 @@ function init_global() --luacheck: allow defined top
     global.activeFarls = global.activeFarls or {}
     global.railInfoLast = global.railInfoLast or {}
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
-    global.godmode = false
-    godmode = global.godmode
     global.overlayStack = global.overlayStack or {}
     global.statistics = global.statistics or {}
     global.trigger_events = global.trigger_events or {}
@@ -192,6 +172,22 @@ local function init_forces()
     end
 end
 
+--when Player is in a FARL and used FatController to switch to another train
+local function on_player_switched(event)
+    local status, err = pcall(function()
+        if FARL.isFARLLocomotive(event.carriage) then
+            local farl = FARL.findByLocomotive(event.carriage)
+            if farl then
+                farl:deactivate()
+            end
+        end
+    end)
+    if not status then
+        debugDump("Unexpected error:",true)
+        debugDump(err,true)
+    end
+end
+
 local function register_events()
     if remote.interfaces.fat and remote.interfaces.fat.get_player_switched_event then
         script.on_event(remote.call("fat", "get_player_switched_event"), on_player_switched)
@@ -210,7 +206,6 @@ end
 local function on_load()
     register_events()
     setMetatables()
-    godmode = global.godmode
 end
 
 local function on_configuration_changed(data)
@@ -223,9 +218,6 @@ local function on_configuration_changed(data)
         local oldVersion = data.mod_changes[MOD_NAME].old_version
         if oldVersion then
             oldVersion = v(oldVersion)
-            log(tostring(oldVersion) .. ' < '  .. tostring(newVersion) .. ' ' .. tostring(oldVersion < newVersion))
-            log(tostring(oldVersion) .. ' == ' .. tostring(newVersion) .. ' ' .. tostring(oldVersion == newVersion))
-            log(tostring(oldVersion) .. ' > ' .. tostring(newVersion) .. ' ' .. tostring(oldVersion > newVersion))
             debugDump("FARL version changed from ".. tostring(oldVersion) .." to ".. tostring(newVersion), true)
             if oldVersion > newVersion then
                 debugDump("Downgrading FARL, reset settings",true)
@@ -400,6 +392,9 @@ local function on_configuration_changed(data)
                         end
                     end
                 end
+                if oldVersion < v'3.0.2' then
+                    global.godmode = nil
+                end
             end
         else
             debugDump("FARL version: ".. tostring(newVersion), true)
@@ -487,7 +482,7 @@ local function on_gui_checked_state_changed(event)
     end
 end
 
-function on_preplayer_mined_item(event)--luacheck: allow defined top
+local function on_preplayer_mined_item(event)
     local ent = event.entity
     if ent.type == "locomotive" or ent.type == "cargo-wagon" then
         for i, farl in pairs(global.farl) do
@@ -507,13 +502,13 @@ function on_preplayer_mined_item(event)--luacheck: allow defined top
     end
 end
 
-function on_entity_died(event)--luacheck: allow defined top
+local function on_entity_died(event)
     on_preplayer_mined_item(event)
 end
 
-function on_player_driving_changed_state(event)--luacheck: allow defined top
+local function on_player_driving_changed_state(event)
     local player = game.players[event.player_index]
-    if isFARLLocomotive(player.vehicle) then
+    if FARL.isFARLLocomotive(player.vehicle) then
         if player.gui.left.farl == nil then
             local farl = FARL.onPlayerEnter(player)
             GUI.createGui(player)
@@ -573,44 +568,6 @@ end
 --  end
 --end
 
-function debugDump(var, force) --luacheck: allow defined top
-    if false or force then
-        local msg
-        if type(var) == "string" then
-            msg = var
-        else
-            msg = serpent.dump(var, {name="var", comment=false, sparse=false, sortkeys=true})
-        end
-        for _,player in pairs(game.players) do
-            player.print(msg)
-        end
-        local tick = game and game.tick or 0
-        log(debug.traceback())
-        log(tick .. " " .. msg)
-    end
-end
-
-function debugLog(var, prepend)--luacheck: allow defined top
-    if not global.debug_log then return end
-    local str = prepend or ""
-    for _,player in pairs(game.players) do
-        local msg
-        if type(var) == "string" then
-            msg = var
-        else
-            msg = serpent.dump(var, {name="var", comment=false, sparse=false, sortkeys=true})
-        end
-        player.print(str..msg)
-        log(str..msg)
-    end
-end
-
-function saveVar(var, name)--luacheck: allow defined top
-    var = var or global
-    local n = name or ""
-    game.write_file("farl/farl"..n..".lua", serpent.block(var, {name="glob"}))
-end
-
 script.on_init(on_init)
 script.on_load(on_load)
 script.on_configuration_changed(on_configuration_changed)
@@ -650,22 +607,6 @@ script.on_event("toggle-train-control", function(event)
         end
     end
 end)
-
---when Player is in a FARL and used FatController to switch to another train
-function on_player_switched(event)--luacheck: allow defined top
-    local status, err = pcall(function()
-        if isFARLLocomotive(event.carriage) then
-            local farl = FARL.findByLocomotive(event.carriage)
-            if farl then
-                farl:deactivate()
-            end
-        end
-    end)
-    if not status then
-        debugDump("Unexpected error:",true)
-        debugDump(err,true)
-    end
-end
 
 remote.add_interface("farl",
     {
@@ -707,11 +648,6 @@ remote.add_interface("farl",
         setCurvedWeight = function(weight, player)
             local s = Settings.loadByPlayer(player)
             s.curvedWeight = weight
-        end,
-
-        godmode = function(bool)
-            global.godmode = bool
-            godmode = bool
         end,
 
         setSpeed = function(speed)

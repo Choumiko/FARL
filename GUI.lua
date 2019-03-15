@@ -1,3 +1,7 @@
+local lib = "__FARL__/lib_control"
+local saveVar = lib.saveVar
+local debugDump = lib.debugDump
+
 function startsWith(haystack,needle)--luacheck: allow defined top
     return string.sub(haystack,1,string.len(needle))==needle
 end
@@ -135,16 +139,12 @@ GUI = {--luacheck: allow defined top
         local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farl"})
         local rows = GUI.add(farl, {type="table", name="rows", column_count=1})
         local span = 3
-        if debugButton then
-            span = span+1
-        end
+
         local buttons = GUI.add(rows, {type="table", name="buttons", column_count=span})
         GUI.addButton(buttons, {name="start"}, GUI.toggleStart)
         GUI.addButton(buttons, {name="cc"}, GUI.toggleCC)
         GUI.create_settings_button(player, true)
-        if debugButton then
-            GUI.addButton(buttons,{name="debug", caption="D"},GUI.debugInfo)
-        end
+
         local progressBar = GUI.add(rows,{type = "progressbar", name = "pathProgress", size = 200, value = 0.5, style = "production_progressbar"})
         progressBar.style.maximal_width = 150
         progressBar.visible = false
@@ -179,14 +179,14 @@ GUI = {--luacheck: allow defined top
         end
     end,
 
-    destroyGui = function(player, entity)
+    destroyGui = function(player)
         if player.valid then
             if player.gui.left.farl == nil then return end
             player.gui.left.farl.destroy()
-            if entity and isFARLLocomotive(entity) then
-                --TODO what did i want to do?!
-                local farl = FARL.findByLocomotive(entity) --luacheck: no unused
-            end
+            -- if entity and isFARLLocomotive(entity) then
+            --     --TODO what did i want to do?!
+            --     local farl = FARL.findByLocomotive(entity) --luacheck: no unused
+            -- end
         end
     end,
 

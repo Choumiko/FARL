@@ -8,7 +8,7 @@
 local fail_if_missing = require '__FARL__/stdlib/core'['fail_if_missing']
 local math = math
 local abs, floor, ceil, sqrt = math.abs, math.floor, math.ceil, math.sqrt
-Position = {} --luacheck: allow defined top
+local Position = {}
 
 --- Creates a table representing the position from x and y
 -- @tparam number x x-position

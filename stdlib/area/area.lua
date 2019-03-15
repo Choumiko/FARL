@@ -8,7 +8,7 @@
 local fail_if_missing = require '__FARL__/stdlib/core'['fail_if_missing']
 local Position = require '__FARL__/stdlib/area/position'
 
-Area = {} --luacheck: allow defined top
+local Area = {}
 
 --- Creates an area from the 2 positions p1 and p2
 -- @tparam number x1 x-position of left_top, first point

@@ -220,9 +220,5 @@ Settings = {--luacheck: allow defined top
             self.railType = 1
             self.rail = global.rails_by_index[1]
         end
-    end,
-
-    dump = function(self)
-        saveVar(self, "dump"..self.player.name)
     end
 }

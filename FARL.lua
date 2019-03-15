@@ -1,7 +1,10 @@
+require "__core__/lualib/util"
 local Position = require '__FARL__/stdlib/area/position'
 local Area = require '__FARL__/stdlib/area/area'
-require "__core__/lualib/util"
-require "__FARL__/Blueprint"
+local Blueprint = require "__FARL__/Blueprint"
+local lib = "__FARL__/lib_control"
+local debugDump = lib.debugDump
+local debugLog = lib.debugLog
 
 trigger_events = {} --luacheck: allow defined top
 
@@ -85,7 +88,7 @@ end
 local RED = { r = 0.9 }
 local GREEN = { g = 0.7 }
 local YELLOW = { r = 0.8, g = 0.8 }
-FARL = {}--luacheck: allow defined top
+FARL = {}--luacheck: allow defined
 FARL.curvePositions = {
     [0] = { straight = { dir = 0, off = { x = 1, y = 3 } }, diagonal = { dir = 5, off = { x = -1, y = -3 } } },
     [1] = { straight = { dir = 0, off = { x = -1, y = 3 } }, diagonal = { dir = 3, off = { x = 1, y = -3 } } },
@@ -226,6 +229,23 @@ FARL.getIdFromTrain = function(train)
     end
 end
 
+FARL.isFARLLocomotive = function(loco)
+    if not loco or not loco.valid or not loco.type == "locomotive" then
+        return false
+    end
+    if loco.name == "farl" then
+        return true
+    end
+    if loco.grid then
+        for _, equipment in pairs(loco.grid.equipment) do
+            if equipment.name == "farl-roboport" then
+                return true
+            end
+        end
+    end
+    return false
+end
+
 FARL.newByLocomotive = function(loco)
     local new = {
         locomotive = loco,
@@ -364,7 +384,7 @@ FARL.findByPlayer = function(player)
             return FARL.new(player)
         end
     else
-        if player.opened and isFARLLocomotive(player.opened) then
+        if player.opened and FARL.isFARLLocomotive(player.opened) then
             farl = global.farl[player.opened.unit_number]
             if farl and farl.locomotive == player.opened then
                 return farl
@@ -712,7 +732,7 @@ FARL.removeTrees = function(self, area)
         local stat = global.statistics[self.locomotive.force.name].removed["tree-01"] or 0
         global.statistics[self.locomotive.force.name].removed["tree-01"] = stat + 1
         proto = entity.prototype.mineable_properties
-        if proto and proto.minable and proto.products and not(godmode or self.cheat_mode) and self.settings.collectWood then
+        if proto and proto.minable and proto.products and (not self.cheat_mode) and self.settings.collectWood then
             local products = proto.products
             if products then
                 for _, product in pairs(products) do
@@ -759,7 +779,7 @@ FARL.removeStone = function(self, area)
     for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "simple-entity", force = "neutral" }) do
         proto = entity.prototype.mineable_properties
         if proto and proto.minable and proto.products then
-            if entity.destroy() and not(godmode or self.cheat_mode) and self.settings.collectWood then
+            if entity.destroy() and self.settings.collectWood  and not self.cheat_mode then
                 local products = proto.products
                 for _, product in pairs(products) do
                     --log(serpent.block(product))
@@ -1382,9 +1402,6 @@ FARL.activate = function(self, scanForGhosts)
             self:deactivate({ "msg-error-curves" }, true)
             return
         end
-        if debugButton then
-            self:print("TrainDir: " .. self.direction)
-        end
 
         local first_carriage, bulldoze_rail
         local same_orientation = false
@@ -1663,7 +1680,7 @@ FARL.toggleCruiseControl = function(self)
 end
 
 FARL.bulldozerModeAllowed = function(self)
-    return (isFARLLocomotive(self.train.carriages[1]) and isFARLLocomotive(self.train.carriages[#self.train.carriages]))
+    return (FARL.isFARLLocomotive(self.train.carriages[1]) and FARL.isFARLLocomotive(self.train.carriages[#self.train.carriages]))
 end
 
 FARL.toggleBulldozer = function(self)
@@ -1757,7 +1774,7 @@ end
 
 FARL.removeItemFromCargo = function(self, item, count, current_count)
     count = count or 1
-    if godmode or self.cheat_mode then
+    if self.cheat_mode then
         return count
     end
     if count == 0 then return 0 end
@@ -1771,7 +1788,7 @@ end
 
 FARL.getCargoCount = function(self, item)
     local name = get_item_name(item)
-    if godmode or self.cheat_mode then return 9001 end
+    if self.cheat_mode then return 9001 end
     local count = 0
     if name then
         count = self.train.get_item_count(name)

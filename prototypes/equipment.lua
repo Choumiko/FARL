@@ -1,7 +1,7 @@
 if not settings.startup["farl_enable_module"].value then
     return
 end
-
+local copyPrototype = require "__FARL__/lib"
 data:extend
     {
         {
