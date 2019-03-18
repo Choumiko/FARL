@@ -21,6 +21,11 @@
 
 - Press J (default) to toggle trains between automatic and manual mode when inside a train
 
+### Console commands
+
+- You have to be in a FARL for them to work
+- /farl_read_bp /farl_clear_bp /farl_vertical_bp /farl_diagonal_bp
+
 ### Mod support
 
 Modded rails should work out of the box, as soon as updating FARL to at least 1.0.6

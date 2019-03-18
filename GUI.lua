@@ -379,10 +379,7 @@ GUI = {
             GUI.add(settings, {type="checkbox", name="remove_cliffs", caption={"stg-remove-cliffs"}, tooltip={ "farl_tooltip_remove_cliffs", {"item-name.cliff-explosives"}}}, "remove_cliffs")
 
             GUI.add(settings,{type="checkbox", name="railEntities", caption={"stg-rail-entities"}, tooltip={"farl_tooltip_place_walls"}}, "railEntities")
-            GUI.addPlaceHolder(settings)
-
             GUI.add(settings, { type = "checkbox", name="place_ghosts", caption = {"stg-place-ghosts"}, tooltip={"farl_tooltip_place_ghosts"}}, "place_ghosts")
-            GUI.addPlaceHolder(settings)
 
             GUI.add(settings, {type="checkbox", name="mirrorConcrete", caption= {"stg-mirror-concrete"}, "mirrorConcrete"})
             GUI.addPlaceHolder(settings)

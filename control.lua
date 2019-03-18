@@ -611,6 +611,29 @@ script.on_event("toggle-train-control", function(event)
     end
 end)
 
+
+local command_to_button = {
+    farl_read_bp = "blueprint",
+    farl_clear_bp = "bpClear",
+    farl_vertical_bp = "blueprint_concrete_vertical",
+    farl_diagonal_bp = "blueprint_concrete_diagonal"
+}
+local function farl_command(data)
+    local player = game.get_player(data.player_index)
+    if not player.vehicle or not (FARL.isFARLLocomotive(player.vehicle)) then
+        player.print("You need to be in a FARL to use this command")
+        return
+    end
+    data.element = {name = command_to_button[data.name], player_index = data.player_index}
+    log(serpent.block(data))
+    on_gui_click(data)
+end
+
+commands.add_command("farl_read_bp", "Read the blueprint/book on the cursor", farl_command)
+commands.add_command("farl_clear_bp", "Clear stored layout", farl_command)
+commands.add_command("farl_vertical_bp", "Create vertical blueprint", farl_command)
+commands.add_command("farl_diagonal_bp", "Create diagonal blueprint", farl_command)
+
 remote.add_interface("farl",
     {
         railInfo = function(rail)

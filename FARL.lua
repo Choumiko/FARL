@@ -2132,7 +2132,7 @@ FARL.placeRails = function(self, nextRail, newTravelDir)
             self:removeTrees(area)
             self:pickupItems(area)
             self:removeStone(area)
-            self.removeCliffs(area)
+            self:removeCliffs(area)
         end
     end
 
