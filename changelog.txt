@@ -1,10 +1,12 @@
 ---------------------------------------------------------------------------------------------------
 Version: 3.1.0
-Date: 05. 03. 2019
+Date: 19. 03. 2019
   Changes:
     - added option to remove cliffs, requires cliff explosives (defaults to true)
     - added console commands to read and clear blueprints, create vertical and diagonal blueprints (you have to be in a FARL for them to work)
     - /farl_read_bp /farl_clear_bp /farl_vertical_bp /farl_diagonal_bp
+  Bugfixes:
+    - fixed migration error when FARL module was disabled
 ---------------------------------------------------------------------------------------------------
 Version: 3.0.1
 Date: 05. 03. 2019

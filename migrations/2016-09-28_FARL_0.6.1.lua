@@ -5,6 +5,8 @@ for _, force in pairs(game.forces) do
     local techs = force.technologies
     local recipes = force.recipes
     if techs["rail-signals"].researched then
-        recipes["farl-roboport"].enabled = true
+        if settings.startup.farl_enable_module.value then
+            recipes["farl-roboport"].enabled = true
+        end
     end
 end

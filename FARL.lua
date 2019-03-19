@@ -7,6 +7,7 @@ local lib = require "__FARL__/lib_control"
 local debugDump = lib.debugDump
 local debugLog = lib.debugLog
 local endsWith = lib.endsWith
+--local saveVar = lib.saveVar
 
 trigger_events = {} --luacheck: allow defined top
 
@@ -837,7 +838,7 @@ FARL.removeCliffs = function(self, area)
         global.statistics[self.locomotive.force.name].removed["cliff"] = stat + #cliffs
         local removed = 0
         for _, entity in pairs(cliffs) do
-            if entity.destroy() then
+            if entity.destroy({do_cliff_correction = true}) then
                 removed = removed + 1
             end
             --entity.destroy{do_cliff_correction = true}
@@ -2076,11 +2077,13 @@ FARL.parseBlueprints = function(self, blueprints)
                         clearance_points = clearance_points,
                         railEntities = railEntities
                     }
+                    --log(serpent.block(signals))
                     blueprint.boundingBox = {
                         tl = tl,
                         br = br
                     }
                     self.settings.activeBP[bpType] = blueprint
+                    --saveVar(blueprint, "parsed_".. bpType .. "_" .. game.tick)
                     if #bp_rails > 0 then
                         self.settings.flipPoles = false
                     end

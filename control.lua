@@ -410,6 +410,16 @@ local function on_configuration_changed(data)
             global.trigger_events[name] = nil
         end
     end
+
+    if data.mod_startup_settings_changed then
+        if settings.startup.farl_enable_module.value then
+            for _, force in pairs(game.forces) do
+                if force.technologies["rail-signals"].researched then
+                    force.recipes["farl-roboport"].enabled = true
+                end
+            end
+        end
+    end
     --  if remote.interfaces["satellite-uplink"] and remote.interfaces["satellite-uplink"].add_allowed_item then
     --    log("registered")
     --    remote.call("satellite-uplink", "add_allowed_item", "rail")

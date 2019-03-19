@@ -3,6 +3,7 @@
 
 local Blueprint = {}
 local Position = require '__FARL__/stdlib/area/position'
+--local saveVar = require '__FARL__/lib_control.lua'['saveVar']
 local math = math
 ---Group entities in the blueprint
 --@param e entities
@@ -13,16 +14,24 @@ local math = math
 --@return Untyped other entities
 Blueprint.group_entities = function(bp)
     local e = bp.get_blueprint_entities()
+    --saveVar(e, "preRotate", "e")
     for i=1, #e do
         if e[i].name == "rail-chain-signal" then
             local dir = e[i].direction or 0
-            --local _, name = table.find(defines.direction, function(v, _, direction) return v == direction end, (dir + 4) % 8)
-            --log(string.format('Found chainsignal for driving due %s, %d', tostring(name), dir))
+            --local _, name = table.find(defines.direction, function(v, _, direction) return v == direction end, (dir + 4) % 8) --luacheck: ignore
+            --log(string.format('Found chainsignal for driving due %s, direction: %d', tostring(name), dir))
             if not (dir == 4 or dir == 5) then
                 local rot = (dir % 2 == 0) and (4 - dir ) * 45 or (5 - dir ) * 45
                 --log(string.format("Rotating blueprint by %d degrees (dir: %d)", rot, dir))
                 Blueprint.rotate(bp,rot)
                 e = bp.get_blueprint_entities()
+                -- for j=1, #e do
+                --     if e[j].name == "rail-chain-signal" then
+                --        _, name = table.find(defines.direction, function(v, _, direction) return v == direction end, (dir + 4) % 8) --luacheck: ignore
+                --        --log(string.format('Found chainsignal for driving due %s, direction: %d', tostring(name), dir))
+                --        break
+                --     end
+                -- end
             end
             break
         end
@@ -136,13 +145,16 @@ Blueprint.rotate = function(bp, degree)
     local x, y
     for _, entity in pairs(entities) do
         x, y = entity.position.x, entity.position.y
+        --log(serpent.block({n = entity.name, pos = entity.position, dir = entity.direction}))
         entity.position.x = cos * x - sin * y
         entity.position.y = sin * x + cos * y
         entity.direction = entity.direction or 0
         entity.direction = ( entity.direction + degree / 45 ) % 8
+        --log(serpent.block({new_pos = entity.position, dir = entity.direction}))
         entity.pickup_position = entity.pickup_position and rotate(entity.pickup_position) or nil
         entity.drop_position = entity.drop_position and rotate(entity.drop_position) or nil
     end
+    --saveVar(entities, "postRotate", "e")
     bp.set_blueprint_entities(entities)
     if tiles then
         for _, tile in pairs(tiles) do
