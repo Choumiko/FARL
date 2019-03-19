@@ -7,6 +7,7 @@ Date: 19. 03. 2019
     - /farl_read_bp /farl_clear_bp /farl_vertical_bp /farl_diagonal_bp
   Bugfixes:
     - fixed migration error when FARL module was disabled
+    - fixed error when deconstructing an active FARL
 ---------------------------------------------------------------------------------------------------
 Version: 3.0.1
 Date: 05. 03. 2019

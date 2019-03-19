@@ -515,6 +515,10 @@ local function on_preplayer_mined_item(event)
     end
 end
 
+local function on_marked_for_deconstruction(event)
+    on_preplayer_mined_item(event)
+end
+
 local function on_entity_died(event)
     on_preplayer_mined_item(event)
 end
@@ -593,6 +597,7 @@ script.on_event(defines.events.on_gui_checked_state_changed, on_gui_checked_stat
 
 script.on_event(defines.events.on_pre_player_mined_item, on_preplayer_mined_item)
 script.on_event(defines.events.on_entity_died, on_entity_died)
+script.on_event(defines.events.on_marked_for_deconstruction, on_marked_for_deconstruction)
 
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
 
