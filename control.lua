@@ -398,6 +398,18 @@ local function on_configuration_changed(data)
                         psettings.remove_cliffs = true
                     end
                 end
+                if oldVersion < v'3.1.1' then
+                    for i, farl in pairs(global.farl) do
+                        if (not farl.train or (farl.train and not farl.train.valid)) or (not farl.locomotive or (farl.locomotive and not farl.locomotive.valid)) then
+                            if farl.driver and farl.driver.valid then
+                                GUI.destroyGui(farl.driver)
+                            end
+                            farl:deactivate("Error (invalid train, id: " .. i .. ") ")
+                            global.activeFarls[i] = nil
+                            global.farl[i] = nil
+                        end
+                    end
+                end
             end
         else
             debugDump("FARL version: ".. tostring(newVersion), true)

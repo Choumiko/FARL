@@ -106,6 +106,7 @@ FARL.curvePositions = {
 FARL.input2dir = { [0] = -1, [1] = 0, [2] = 1 }
 
 --[traveldir] ={[raildir]
+-- TODO use this to get corresponding rail, instead of relying on the array order to be the same for rails and signals (messed up by 180° rotation)
 FARL.signalOffset =
     {
         [0] = {
@@ -407,7 +408,17 @@ FARL.update = function(self, _)
         if self.locomotive.valid then
             self.train = self.locomotive.train
         else
-            self:deactivate("Error (invalid train)")
+            --self:deactivate("Error (invalid train)2")
+            for i, farl in pairs(global.activeFarls) do
+                if not farl.train or (farl.train and not farl.train.valid) then
+                    if farl.driver and farl.driver.valid then
+                        GUI.destroyGui(farl.driver)
+                    end
+                    farl:deactivate("Error (invalid train): " .. i)
+                    global.activeFarls[i] = nil
+                    global.farl[i] = nil
+                end
+            end
             return true
         end
     end
