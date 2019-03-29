@@ -68,10 +68,9 @@ local function get_item_name(some_name)
         name = game.item_prototypes[some_name].name
     elseif game.entity_prototypes[some_name] then
         local entityProto = game.entity_prototypes[some_name]
-        local items = entityProto.items_to_place_this
-        local _, item = next(items)
-        name = item.name
-        if entityProto.mineable_properties and entityProto.mineable_properties.minable and entityProto.mineable_properties.products then
+        local item = entityProto.items_to_place_this and entityProto.items_to_place_this[1]
+        name = item and item.name
+        if name and entityProto.mineable_properties and entityProto.mineable_properties.minable and entityProto.mineable_properties.products then
             for _, item1 in pairs(entityProto.mineable_properties.products) do
                 if item1.name == name then
                     count = item1.amount or item1.amount_max
@@ -79,7 +78,8 @@ local function get_item_name(some_name)
             end
         end
     elseif game.tile_prototypes[some_name] then
-        name = game.tile_prototypes[some_name].items_to_place_this and next(game.tile_prototypes[some_name].items_to_place_this)
+        local tileProto = game.tile_prototypes[some_name].items_to_place_this
+        name = tileProto and tileProto[1] and tileProto[1].name
         if name == "landfill" or name == "fertiliser" then
             name = false
         end
@@ -753,10 +753,10 @@ FARL.removeTrees = function(self, area)
             if products then
                 for _, product in pairs(products) do
                     if product.type == "item" then
-                        if product.name == "raw-wood" then
-                            self:addItemToCargo("raw-wood", 1)
+                        if product.name == "wood" then
+                            self:addItemToCargo("wood", 1)
                         else
-                            if product.propbability then
+                            if product.probability then
                                 if product.probability == 1 or (product.probability >= random()) then
                                     name = product.name
                                 end
@@ -798,9 +798,8 @@ FARL.removeStone = function(self, area)
             if entity.destroy() and self.settings.collectWood  and not self.cheat_mode then
                 local products = proto.products
                 for _, product in pairs(products) do
-                    --log(serpent.block(product))
                     if product.type == "item" then
-                        if product.propbability then
+                        if product.probability then
                             if product.probability == 1 or (product.probability >= random()) then
                                 name = product.name
                             end
@@ -876,8 +875,11 @@ FARL.removeEntitiesFiltered = function(self, args)
                 item = entity.name
             else
                 if entity.prototype.items_to_place_this then
-                    local k, _ = next(entity.prototype.items_to_place_this)
-                    item = k
+                    local item_stacks = entity.prototype.items_to_place_this
+                    if item_stacks and #item_stacks > 0 then
+                        item = item_stacks[1].name
+                        count = item_stacks[1].count
+                    end
                 end
             end
             if trigger_events[name] or entity.type == "electric-pole" then

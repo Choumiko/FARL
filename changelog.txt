@@ -1,4 +1,9 @@
-Version: 3.0.1
+Version: 3.1.2
+Date: 29. 03. 2019
+  Bugfixes:
+    - fixed entities not being added in maintenance/bulldozer mode
+    - fixed coal not being collected when removing stone rocks
+---------------------------------------------------------------------------------------------------
 Version: 3.1.1
 Date: 28. 03. 2019
   Bugfixes:
