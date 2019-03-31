@@ -237,7 +237,7 @@ FARL.isFARLLocomotive = function(loco)
     if not loco or not loco.valid or not loco.type == "locomotive" then
         return false
     end
-    if loco.name == "farl" then
+    if loco.name == "farl" or loco.name == "farl-mu" then
         return true
     end
     if loco.grid then
