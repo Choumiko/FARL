@@ -1966,17 +1966,17 @@ FARL.parseBlueprints = function(self, blueprints)
                     --log(string.format('Pole: %s', Position.tostring(offsets.pole.position)))
                     --log(string.format('Rail: %s', Position.tostring(railPos)))
                     offsets.pole.position = Position.subtract(offsets.pole.position, railPos)
-                    log(serpent.block(offsets.pole.position))
+                    --log(serpent.block(offsets.pole.position))
                     local y_offset = offsets.pole.position.y
                     local x_offset = offsets.pole.position.x
-                    log(string.format('x offset: %s', x_offset))
-                    log(string.format('y offset: %s', y_offset))
+                    --log(string.format('x offset: %s', x_offset))
+                    --log(string.format('y offset: %s', y_offset))
                     --move main pole next to the main rail
                     if bpType == "straight" then
                         offsets.pole.position = Position.translate(offsets.pole.position, defines.direction.north, y_offset)
                     else
                         local distance = math.ceil((y_offset - x_offset) / 2)
-                        log(string.format('y offset: %s', distance))
+                        --log(string.format('y offset: %s', distance))
                         offsets.pole.position = Position.translate(offsets.pole.position, defines.direction.northeast, distance)
                     end
                     local railEntities = {}
@@ -1999,6 +1999,7 @@ FARL.parseBlueprints = function(self, blueprints)
                     end
                     local bp_rails = {}
                     local lanes = {}
+                    local new_signals = {}
                     local known_rails = {}
                     for _, l in pairs(offsets.rails) do
                         if not l.main then
@@ -2008,7 +2009,9 @@ FARL.parseBlueprints = function(self, blueprints)
                                     name = l.name,
                                     position = Position.subtract(l.position, mainRail.position),
                                     direction = l.direction,
-                                    type = game.entity_prototypes[l.name].type
+                                    type = game.entity_prototypes[l.name].type,
+                                    signal_number = l.signal_number,
+                                    signal = l.signal
                                 }
                             local move_dir = tmp.position.y < 0 and 1 or 5
                             if bpType == "diagonal" then
@@ -2020,16 +2023,45 @@ FARL.parseBlueprints = function(self, blueprints)
                             lane_distance = lane_distance / 2
                             if not known_rails[lane_distance] and lane_distance ~= 0 then
                                 table.insert(lanes, lane_distance)
+                                --TODO this is all so stupid
+                                for _, s in pairs(offsets.signals) do
+                                    if s.entity_number == l.signal_number then
+                                        local pos = Position.subtract(s.position, offsets.chain.position)
+                                        local reverse = (s.direction ~= offsets.chain.direction)
+                                        if bpType == "straight" then
+                                            if pos.x % 2 == 0 then
+                                                reverse = false
+                                            else
+                                                reverse = true
+                                            end
+                                        end
+                                        new_signals[#lanes] =
+                                        {
+                                            name = s.name,
+                                            position = pos,
+                                            direction = s.direction,
+                                            reverse = reverse,
+                                            entity_number = s.entity_number,
+                                            distance = lane_distance
+                                        }
+                                    end
+                                end
+
                                 known_rails[lane_distance] = true
                             end
                             local altRail, _
                             if l.direction % 2 == 1 and mainRail.direction == l.direction then
                                 _, altRail = self:getRail(tmp, move_dir, 1)
+                                altRail.signal_number = l.signal_number
+                                altRail.signal = l.signal
                                 tmp = altRail
                             end
                             table.insert(bp_rails, tmp)
                         end
                         table.sort(lanes)
+                        table.sort(new_signals, function(a, b)
+                            return a.distance < b.distance
+                        end)
                     end
                     local signals = {}
                     for _, l in pairs(offsets.signals) do
@@ -2047,7 +2079,8 @@ FARL.parseBlueprints = function(self, blueprints)
                                 name = l.name,
                                 position = pos,
                                 direction = l.direction,
-                                reverse = reverse
+                                reverse = reverse,
+                                entity_number = l.entity_number
                             })
                     end
                     local tl = Position.subtract(box.tl, FARL.diagonal_to_real_pos(mainRail))
@@ -2084,7 +2117,8 @@ FARL.parseBlueprints = function(self, blueprints)
                         pole = offsets.pole,
                         poleEntities = lamps,
                         rails = bp_rails,
-                        signals = signals,
+                        signals = new_signals,
+                        signals_old = signals,
                         concrete = offsets.concrete,
                         lanes = lanes,
                         clearance_points = clearance_points,

@@ -5,6 +5,74 @@ local Blueprint = {}
 local Position = require '__FARL__/stdlib/area/position'
 --local saveVar = require '__FARL__/lib_control.lua'['saveVar']
 local math = math
+
+--TODO check this:
+--signal dir + 4 = travel dir ?
+
+--[signal_dir] = {[raildir] = {offset (signal - rail)}}
+local rails_signals = {
+    [0] = {
+        [0] = {
+            {x = -1.5, y = -0.5, traveldir = 4},
+            {x = -1.5, y =  0.5, traveldir = 4},
+        }
+    },
+    [1] = {
+        [3] = {
+            {x = -0.5, y = -0.5, traveldir = 5}
+        },
+        [7] = {
+            {x = -1.5, y = -1.5, traveldir = 5},
+
+        }
+    },
+    [2] = {
+        [2] = {
+            {x =  -0.5, y =  -1.5, traveldir = 6},
+            {x =   0.5, y =  -1.5, traveldir = 6},
+        }
+    },
+    [3] = {
+        [1] = {
+            {x = 1.5, y = -1.5, traveldir = 7},
+
+        },
+        [5] = {
+            {x = 0.5, y = -0.5, traveldir = 7}
+        }
+    },
+    [4] = {
+        [0] = {
+            {x =  1.5, y = -0.5, traveldir = 0},
+            {x =  1.5, y =  0.5, traveldir = 0},
+        }
+    },
+    [5] = {
+        [3] = {
+            {x = 1.5, y = 1.5, traveldir = 1}
+        },
+        [7] = {
+            {x = 0.5, y = 0.5, traveldir = 1},
+
+        }
+    },
+    [6] = {
+        [2] = {
+            {x =  -0.5, y =  1.5, traveldir = 2},
+            {x =   0.5, y =  1.5, traveldir = 2},
+        }
+    },
+    [7] = {
+        [1] = {
+            {x = -0.5, y = 0.5, traveldir = 3},
+
+        },
+        [5] = {
+            {x = -1.5, y = 1.5, traveldir = 3}
+        }
+    },
+}
+
 ---Group entities in the blueprint
 --@param e entities
 --@return Untyped Type of the blueprint
@@ -43,6 +111,7 @@ Blueprint.group_entities = function(bp)
     local bpType = false
     local rails = 0
     local poles = {}
+    local all_signals = {}
     local box = {tl={x=0,y=0}, br={x=0,y=0}}
     for i=1,#e do
         local position = FARL.diagonal_to_real_pos(e[i])
@@ -59,6 +128,7 @@ Blueprint.group_entities = function(bp)
         if name == "rail-chain-signal" and not offsets.chain then
           --game.print(string.format('chain2 dir: %d position: %s', e[i].direction, Position.tostring(e[i].position)))
             offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
+            table.insert(all_signals, {name = "rail-signal", direction = dir, position = e[i].position, entity_number = e[i].entity_number})
             -- collect all poles in bp
         elseif prototype and prototype.type == "electric-pole" then
             table.insert(poles, {name = name, direction = dir, position = e[i].position, distance_to_chain = 0})
@@ -69,12 +139,13 @@ Blueprint.group_entities = function(bp)
             end
             if  (bpType == "diagonal" and (dir == 3 or dir == 7)) or
                 (bpType == "straight" and (dir == 0 or dir == 4)) then
-                table.insert(offsets.rails, {name = name, direction = dir, position = e[i].position, type = game.entity_prototypes[name].type})
+                table.insert(offsets.rails, {name = name, direction = dir, position = e[i].position, type = game.entity_prototypes[name].type, entity_number = e[i].entity_number})
             else
                 return false, {"msg-bp-rail-direction"}
             end
         elseif name == "rail-signal" then
-            table.insert(offsets.signals, {name = name, direction = dir, position = e[i].position})
+            table.insert(offsets.signals, {name = name, direction = dir, position = e[i].position, entity_number = e[i].entity_number})
+            table.insert(all_signals, {name = "rail-signal", direction = dir, position = e[i].position, entity_number = e[i].entity_number})
         else
             local e_type = game.entity_prototypes[name].type
             local rail_entities = {["wall"]=true}
@@ -88,12 +159,28 @@ Blueprint.group_entities = function(bp)
             end
         end
     end
+
+    for i, rail in pairs(offsets.rails) do
+        for _, signal in pairs(all_signals) do
+            for _, data in pairs(rails_signals[signal.direction]) do
+                for _, offset in pairs(data) do
+                    local pos = Position.subtract(signal.position, rail.position)
+                    if Position.equals(pos, offset) then
+                        offsets.rails[i].signal_number = signal.entity_number
+                        offsets.rails[i].signal = signal
+                    end
+                end
+            end
+        end
+    end
+
     if offsets.chain then
         local chain_position = offsets.chain.position
         for _, pole in pairs(poles) do
             pole.distance_to_chain = Position.distance_squared(chain_position, pole.position)
         end
     end
+    --log(serpent.block(offsets.rails))
     return bpType, rails, poles, box, offsets
 end
 
