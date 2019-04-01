@@ -1,8 +1,10 @@
 ---------------------------------------------------------------------------------------------------
 Version: 3.1.3
-Date: 31. 03. 2019
+Date: 01. 04. 2019
   Changes:
     - added support for Multiple Unit Train Control mod
+  Bugfixes:
+    - fixed some signals being placed in the wrong direction (read blueprints in again)
 ---------------------------------------------------------------------------------------------------
 Version: 3.1.2
 Date: 29. 03. 2019

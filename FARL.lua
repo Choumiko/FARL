@@ -1915,7 +1915,7 @@ FARL.parseBlueprints = function(self, blueprints)
     for j = 1, #blueprints do
         local e = blueprints[j].get_blueprint_entities()
         if e then
-            local bpType, rails, poles, box, offsets = Blueprint.group_entities(blueprints[j])
+            local bpType, rails, poles, box, offsets, original_string = Blueprint.group_entities(blueprints[j])
             if not bpType then
                 --self:print(rails)
                 return
@@ -2122,7 +2122,8 @@ FARL.parseBlueprints = function(self, blueprints)
                         concrete = offsets.concrete,
                         lanes = lanes,
                         clearance_points = clearance_points,
-                        railEntities = railEntities
+                        railEntities = railEntities,
+                        blueprint_string = original_string
                     }
                     --log(serpent.block(signals))
                     blueprint.boundingBox = {

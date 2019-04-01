@@ -81,6 +81,7 @@ local rails_signals = {
 --@return Untyped boundingbox
 --@return Untyped other entities
 Blueprint.group_entities = function(bp)
+    local original_string = bp.export_stack()
     local e = bp.get_blueprint_entities()
     --saveVar(e, "preRotate", "e")
     for i=1, #e do
@@ -181,7 +182,7 @@ Blueprint.group_entities = function(bp)
         end
     end
     --log(serpent.block(offsets.rails))
-    return bpType, rails, poles, box, offsets
+    return bpType, rails, poles, box, offsets, original_string
 end
 
 Blueprint.get_max_pole = function(poles, offsets)
