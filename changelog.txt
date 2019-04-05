@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 3.1.4
+Date: 05. 04. 2019
+  Bugfixes:
+    - fixed crash in certain circumstances when updating to 3.1.3
+    - fixed shallow and mud water from Alien Biomes not being landfilled
+---------------------------------------------------------------------------------------------------
 Version: 3.1.3
 Date: 01. 04. 2019
   Changes:

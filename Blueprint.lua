@@ -73,6 +73,16 @@ local rails_signals = {
     },
 }
 
+-- local is_placer_or_base = {
+--     ["ret-pole-placer"] = true,
+--     ["ret-signal-pole-placer"] = true,
+--     ["ret-chain-pole-placer"] = true,
+--     ["ret-pole-base-straight"] = true,
+--     ["ret-pole-base-diagonal"] = true,
+--     ["ret-signal-pole-base"] = true,
+--     ["ret-chain-pole-base"] = true
+-- }
+
 ---Group entities in the blueprint
 --@param e entities
 --@return Untyped Type of the blueprint
@@ -84,6 +94,7 @@ Blueprint.group_entities = function(bp)
     local original_string = bp.export_stack()
     local e = bp.get_blueprint_entities()
     --saveVar(e, "preRotate", "e")
+    --log(serpent.block(e))
     for i=1, #e do
         if e[i].name == "rail-chain-signal" then
             local dir = e[i].direction or 0
@@ -132,6 +143,7 @@ Blueprint.group_entities = function(bp)
             table.insert(all_signals, {name = "rail-signal", direction = dir, position = e[i].position, entity_number = e[i].entity_number})
             -- collect all poles in bp
         elseif prototype and prototype.type == "electric-pole" then
+        --elseif (prototype and prototype.type == "electric-pole") or is_placer_or_base[name] then
             table.insert(poles, {name = name, direction = dir, position = e[i].position, distance_to_chain = 0})
         elseif prototype and prototype.type == "straight-rail" then
             rails = rails + 1
@@ -148,16 +160,18 @@ Blueprint.group_entities = function(bp)
             table.insert(offsets.signals, {name = name, direction = dir, position = e[i].position, entity_number = e[i].entity_number})
             table.insert(all_signals, {name = "rail-signal", direction = dir, position = e[i].position, entity_number = e[i].entity_number})
         else
-            local e_type = game.entity_prototypes[name].type
-            local rail_entities = {["wall"]=true}
-            if not rail_entities[e_type] then
-                table.insert(offsets.poleEntities, {
-                    name = name, direction = dir, position = e[i].position, pickup_position = e[i].pickup_position,
-                    drop_position = e[i].drop_position, request_filters = e[i].request_filters, recipe = e[i].recipe
-                })
-            else
-                table.insert(offsets.railEntities, {name = name, direction = dir, position = e[i].position})
-            end
+            --if not is_placer_or_base[name] then
+                local e_type = game.entity_prototypes[name].type
+                local rail_entities = {["wall"]=true}
+                if not rail_entities[e_type] then
+                    table.insert(offsets.poleEntities, {
+                        name = name, direction = dir, position = e[i].position, pickup_position = e[i].pickup_position,
+                        drop_position = e[i].drop_position, request_filters = e[i].request_filters, recipe = e[i].recipe
+                    })
+                else
+                    table.insert(offsets.railEntities, {name = name, direction = dir, position = e[i].position})
+                end
+            --end
         end
     end
 
@@ -189,7 +203,9 @@ Blueprint.get_max_pole = function(poles, offsets)
     local max = 0
     local max_index
     local min_distance = math.huge
+    --local name
     for i,p in pairs(poles) do
+        --name = p.name--is_placer_or_base[p.name] and "ret-pole-wire" or p.name
         local wire_distance = game.entity_prototypes[p.name].max_wire_distance
         --choose pole closer to the chainsignal as the main pole in case of a tie
         if wire_distance == max and p.distance_to_chain < min_distance then

@@ -14,7 +14,15 @@ trigger_events = {} --luacheck: allow defined top
 local math = math
 local floor, ceil = math.floor, math.ceil
 local abs, min, max = math.abs, math.min, math.max
-
+-- local is_placer_or_base = {
+--     ["ret-pole-placer"] = true,
+--     ["ret-signal-pole-placer"] = true,
+--     ["ret-chain-pole-placer"] = true,
+--     ["ret-pole-base-straight"] = true,
+--     ["ret-pole-base-diagonal"] = true,
+--     ["ret-signal-pole-base"] = true,
+--     ["ret-chain-pole-base"] = true
+-- }
 local function round(num, idp)
     local mult = 10 ^ (idp or 0)
     return floor(num * mult + 0.5) / mult
@@ -908,12 +916,13 @@ FARL.fillWater = function(self, area)
             area = Area.to_table(area)
             local st, ft = area.left_top, area.right_bottom
             local dw, w = 0, 0
+            local water_tiles = {water = true, deepwater = true, ['water-shallow'] = true, ['water-mud'] = true}
             for x = st.x, ft.x, 1 do
                 for y = st.y, ft.y, 1 do
                     local tileName = self.surface.get_tile(x, y).name
                     -- check that tile is water, if it is add it to a list of tiles to be changed to grass
-                    if tileName == "water" or tileName == "deepwater" then
-                        if tileName == "water" then
+                    if water_tiles[tileName] then
+                        if tileName ~= "deepwater" then
                             w = w + 1
                         else
                             dw = dw + 1
@@ -996,9 +1005,10 @@ FARL.placeConcrete = function(self, dir, rail)
         --self:flyingText2(".", GREEN,true,entity.position)
         local tileName = self.surface.get_tile(pos.x, pos.y).name
         -- check that tile is water, if it is add it to a list of tiles to be changed to grass
-        if tileName == "water" or tileName == "deepwater" then
+        local water_tiles = {water = true, deepwater = true, ['water-shallow'] = true, ['water-mud'] = true}
+        if water_tiles[tileName] then
             if self.settings.bridge then
-                if tileName == "water" then
+                if tileName ~= "deepwater" then
                     w = w + 1
                 else
                     dw = dw + 1
@@ -1864,6 +1874,7 @@ FARL.genericCanPlace = function(self, arg)
 end
 
 FARL.genericPlace = function(self, arg, ignore, place_ghost)
+    --arg.name = is_placer_or_base[arg.name] and "ret-pole-placer" or arg.name
     local canPlace
     if not ignore then
         canPlace = self:genericCanPlace(arg)
@@ -1883,6 +1894,7 @@ FARL.genericPlace = function(self, arg, ignore, place_ghost)
     end
     if entity then
         if entity.type ~= "entity_ghost" and (trigger_events[entity.name] or entity.type == "electric-pole") then
+        --if entity.type ~= "entity_ghost" and (trigger_events[entity.name] or entity.type == "electric-pole" or is_placer_or_base[entity.name]) then
             script.raise_event(defines.events.on_robot_built_entity, { created_entity = entity })
         end
         if entity.type ~= "entity_ghost" then
@@ -2718,6 +2730,8 @@ end
 
 FARL.placePole = function(self, polePos, poleDir)
     local name = self.settings.activeBP.diagonal.pole.name
+    --local name = (self.direction % 2 == 1) and self.settings.activeBP.diagonal.pole.name or self.settings.activeBP.straight.pole.name
+    --name = is_placer_or_base[name] and "ret-pole-placer" or name
     --local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
     --debugDump(Position.distance(pole.position, self.lastPole.position),true)
     local canPlace = self:prepareArea({ name = name, position = polePos })
@@ -2984,7 +2998,8 @@ FARL.print = function(self, msg, color)
     if self.driver and self.driver.name ~= "farl_player" then
         self.driver.print( msg )
     elseif self.startedBy and self.startedBy.valid then
-        self.startedBy.print( { "", "FARL '", self.locomotive.backer_name,"': ",msg } )
+        local loco_name = (self.locomotive and self.locomotive.valid) and self.locomotive.backer_name or ''
+        self.startedBy.print( { "", "FARL '", loco_name,"': ",msg } )
     else
         self:flyingText( msg, color or RED, true )
     end
@@ -2992,9 +3007,13 @@ end
 
 FARL.flyingText = function(self, line, color, show, pos)
     if show then
-        pos = pos or Position.add(self.locomotive.position, { x = 0, y = -1 })
-        color = color or RED
-        self.surface.create_entity({ name = "flying-text", position = pos, text = line, color = color })
+        if self.locomotive and self.locomotive.valid then
+            pos = pos or Position.add(self.locomotive.position, { x = 0, y = -1 })
+            color = color or RED
+            self.surface.create_entity({ name = "flying-text", position = pos, text = line, color = color })
+        else
+            game.print(line)
+        end
     end
 end
 
