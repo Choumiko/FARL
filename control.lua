@@ -577,6 +577,39 @@ local function on_pre_player_removed(event)
     end
 end
 
+local function script_raised_destroy(event)
+    if event.entity and event.entity.valid and event.entity.type == "locomotive" then
+        local status, err = pcall(function()
+            local id = FARL.getIdFromTrain(event.entity.train)
+            local farl = global.farl[id]
+            if not farl then
+                return
+            end
+            farl:deactivate()
+            if farl.driver and farl.driver.valid then
+                GUI.destroyGui(farl.driver)
+            end
+            global.activeFarls[id] = nil
+            global.farl[id] = nil
+        end)
+        if not status then
+            debugDump("Unexpected error:",true)
+            debugDump(err, true)
+        end
+    end
+end
+
+-- local function script_raised_built(event)
+--     if event.entity and event.entity.valid and event.entity.type == "locomotive" then
+--         if event.mod_name and event.mod_name == "MultipleUnitTrainControl" then
+--             log(serpent.line(event))
+--             -- local entity = event.entity
+--             -- if entity.get_driver() then
+--             --     FARL.onPlayerEnter(entity.get_driver(), entity)
+--             -- end
+--         end
+--     end
+-- end
 --function on_player_placed_equipment(event)
 --  local player = game.get_player(event.player_index)
 --  if event.equipment.name == "farl-roboport" and isFARLLocomotive(player.vehicle) then
@@ -615,6 +648,9 @@ script.on_event(defines.events.on_gui_checked_state_changed, on_gui_checked_stat
 script.on_event(defines.events.on_pre_player_mined_item, on_preplayer_mined_item)
 script.on_event(defines.events.on_entity_died, on_entity_died)
 script.on_event(defines.events.on_marked_for_deconstruction, on_marked_for_deconstruction)
+script.on_event(defines.events.script_raised_destroy, script_raised_destroy)
+
+--script.on_event(defines.events.script_raised_built, script_raised_built)
 
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
 

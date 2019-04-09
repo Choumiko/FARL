@@ -422,7 +422,8 @@ FARL.update = function(self, _)
                     if farl.driver and farl.driver.valid then
                         GUI.destroyGui(farl.driver)
                     end
-                    farl:deactivate("Error (invalid train): " .. i)
+                    log("Error update (invalid train): " .. i .. " tick: " .. game.tick)
+                    farl:deactivate("Error (invalid train): " .. i .. " tick: " .. game.tick)
                     global.activeFarls[i] = nil
                     global.farl[i] = nil
                 end
@@ -437,7 +438,9 @@ FARL.update = function(self, _)
     end
 
     self.cruiseInterrupt = self.driver.riding_state.acceleration
-    self:cruiseControl()
+    if self.cruise then
+        self:cruiseControl()
+    end
     if self.active then
         self.input = self.driver.riding_state.direction
         --local next_rail = self:findNeighbour(below, self.direction, self.input) or self:get_connected_rail(below, false, self.direction)
@@ -1244,20 +1247,16 @@ FARL.cruiseControl = function(self)
     local modifier = self.max_speed_burner.currently_burning and self.max_speed_burner.currently_burning.fuel_top_speed_multiplier or 1
     local limit = self.active and self.settings.cruiseSpeed or self.max_speed
     limit = limit * (modifier + 0.01)
-    if self.cruise then
-        if self.cruiseInterrupt == 2 then
-            self:toggleCruiseControl()
-            return
-        end
-        if speed < limit then
-            self.driver.riding_state = { acceleration = acc, direction = self.driver.riding_state.direction }
-        elseif self.active and speed > limit + 0.1 then
-            self.driver.riding_state = { acceleration = decc, direction = self.driver.riding_state.direction }
-        else
-            self.driver.riding_state = { acceleration = defines.riding.acceleration.nothing, direction = self.driver.riding_state.direction }
-        end
+    if self.cruiseInterrupt == 2 then
+        self:toggleCruiseControl()
+        return
+    end
+    if speed < limit then
+        self.driver.riding_state = { acceleration = acc, direction = self.driver.riding_state.direction }
+    elseif self.active and speed > limit + 0.1 then
+        self.driver.riding_state = { acceleration = decc, direction = self.driver.riding_state.direction }
     else
-        self.driver.riding_state = { acceleration = self.driver.riding_state.acceleration, direction = self.driver.riding_state.direction }
+        self.driver.riding_state = { acceleration = defines.riding.acceleration.nothing, direction = self.driver.riding_state.direction }
     end
 end
 
@@ -1720,6 +1719,19 @@ FARL.toggleCruiseControl = function(self)
             self.cruise = true
             local input = self.input or defines.riding.direction.straight
             self.driver.riding_state = { acceleration = defines.riding.acceleration.accelerating, direction = input }
+
+            self.max_speed = math.huge
+            self.max_speed_loco = false
+            for _, l in pairs(self.train.locomotives.front_movers) do
+                if l.prototype.speed < self.max_speed then
+                    self.max_speed = l.prototype.speed
+                    self.max_speed_burner = l.burner
+                end
+            end
+            for _, l in pairs(self.train.locomotives.back_movers) do
+                self.max_speed = l.prototype.speed < self.max_speed and l.prototype.speed or self.max_speed
+            end
+
             GUI.updateGui(self)
         end
         return
