@@ -6,6 +6,7 @@ require "__FARL__/GUI"
 local lib = require "__FARL__/lib_control"
 local saveVar = lib.saveVar
 local debugDump = lib.debugDump
+local mod_gui = require '__core__/lualib/mod-gui'
 
 local Position = require '__FARL__/stdlib/area/position'
 
@@ -415,6 +416,20 @@ local function on_configuration_changed(data)
                         log("Deactivated " .. invalids .. "FARL trains")
                     end
                 end
+                if oldVersion < v'3.1.6' then
+                    local farl
+                    for _, player in pairs(game.players) do
+                        if player.gui.left.farl and player.gui.left.farl.valid then
+                            FARL.onPlayerLeave(player)
+                            player.gui.left.farl.destroy()
+                            farl = FARL.onPlayerEnter(player)
+                            GUI.createGui(player)
+                            if farl then
+                                GUI.updateGui(farl)
+                            end
+                        end
+                    end
+                end
             end
         else
             debugDump("FARL version: ".. tostring(newVersion), true)
@@ -474,7 +489,7 @@ local function on_gui_click(event)
     local status, err = pcall(function()
         local index = event.player_index
         local player = game.get_player(index)
-        if player.gui.left.farl ~= nil then
+        if mod_gui.get_frame_flow(player).farl ~= nil then
             local farl = FARL.findByPlayer(player)
             if farl then
                 GUI.onGuiClick(event, farl, player)
@@ -495,7 +510,7 @@ local function on_gui_checked_state_changed(event)
     local status, err = pcall(function()
         local index = event.player_index
         local player = game.get_player(index)
-        if player.gui.left.farl ~= nil then
+        if mod_gui.get_frame_flow(player).farl ~= nil then
             local farl = FARL.findByPlayer(player)
             if farl then
                 GUI.on_gui_checked_state_changed(event, farl, player)
@@ -543,7 +558,7 @@ end
 local function on_player_driving_changed_state(event)
     local player = game.get_player(event.player_index)
     if FARL.isFARLLocomotive(player.vehicle) then
-        if player.gui.left.farl == nil then
+        if mod_gui.get_frame_flow(player).farl == nil then
             local farl = FARL.onPlayerEnter(player)
             GUI.createGui(player)
             if farl then
@@ -551,7 +566,7 @@ local function on_player_driving_changed_state(event)
             end
         end
     end
-    if player.vehicle == nil and player.gui.left.farl ~= nil then
+    if player.vehicle == nil and mod_gui.get_frame_flow(player).farl ~= nil then
         FARL.onPlayerLeave(player)
         debugDump("onPlayerLeave (driving state changed)")
         GUI.destroyGui(player)
@@ -613,7 +628,7 @@ end
 --function on_player_placed_equipment(event)
 --  local player = game.get_player(event.player_index)
 --  if event.equipment.name == "farl-roboport" and isFARLLocomotive(player.vehicle) then
---    if player.gui.left.farl == nil then
+--    if mod_gui.get_frame_flow(player).farl == nil then
 --      FARL.onPlayerEnter(player)
 --      GUI.createGui(player)
 --    end
@@ -622,7 +637,7 @@ end
 --
 --function on_player_removed_equipment(event)
 --  local player = game.get_player(event.player_index)
---  if event.equipment.name == "farl-roboport" and player.gui.left.farl and player.vehicle then
+--  if event.equipment.name == "farl-roboport" and mod_gui.get_frame_flow(player).farl and player.vehicle then
 --    if not isFARLLocomotive(player.vehicle) then
 --      FARL.onPlayerLeave(player, event.tick + 5)
 --      log("onPlayerLeave (equipment changed)")
@@ -732,8 +747,26 @@ remote.add_interface("farl",
                 game.forces.player.recipes["farl"].enabled = true
                 game.forces.player.recipes["farl-roboport"].enabled = true
             end
+            local farl
+            for _, player in pairs(game.players) do
+                if player.gui.left.farl and player.gui.left.farl.valid then
+                    farl = FARL.findByPlayer(player)
+                    if farl then
+                        farl:deactivate()
+                        if mod_gui.get_frame_flow(player).farl == nil then
+                            farl = FARL.onPlayerEnter(player)
+                            GUI.createGui(player)
+                            if farl then
+                                GUI.updateGui(farl)
+                            end
+                        end
+                    end
+                    player.gui.left.farl.destroy()
+                end
+            end
             for _,p in pairs(game.players) do
                 if p.gui.left.farl then p.gui.left.farl.destroy() end
+                if mod_gui.get_frame_flow(p).farl then mod_gui.get_frame_flow(p).farl.destroy() end
                 if p.gui.top.farl then p.gui.top.farl.destroy() end
             end
             on_init()

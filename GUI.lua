@@ -2,6 +2,7 @@ local lib = require "__FARL__/lib_control"
 local saveVar = lib.saveVar
 local debugDump = lib.debugDump
 local startsWith = lib.startsWith
+local mod_gui = require '__core__/lualib/mod-gui'
 
 local isValidSlot = function(slot, state)
     if not slot or not slot.valid_for_read then return false end
@@ -126,10 +127,10 @@ GUI = {
     end,
 
     createGui = function(player)
-        if player.gui.left.farl ~= nil then return end
+        if mod_gui.get_frame_flow(player).farl ~= nil then return end
         local psettings = Settings.loadByPlayer(player)
         --GUI.init(player)
-        local farl = GUI.add(player.gui.left, {type="frame", direction="vertical", name="farl"})
+        local farl = GUI.add(mod_gui.get_frame_flow(player), {type="frame", direction="vertical", name="farl"})
         local rows = GUI.add(farl, {type="table", name="rows", column_count=1})
         local span = 3
 
@@ -162,8 +163,8 @@ GUI = {
     --  end,
 
     createPopup = function(player)
-        if player.gui.left.farl then
-            local gui = GUI.add(player.gui.left.farl.rows.farlConfirm, {type = "frame", direction="vertical", name = "farlConfirmFlow"})
+        if mod_gui.get_frame_flow(player).farl then
+            local gui = GUI.add(mod_gui.get_frame_flow(player).farl.rows.farlConfirm, {type = "frame", direction="vertical", name = "farlConfirmFlow"})
             GUI.addLabel(gui, {caption="Ghost rails detected, start Autopilot?"})
             GUI.add(gui, {type = "checkbox", name = "autoPilot", caption="Drive without me", state = false})
             local flow = GUI.add(gui, {type="flow", direction="horizontal", name="buttonFlow"})
@@ -174,12 +175,8 @@ GUI = {
 
     destroyGui = function(player)
         if player.valid then
-            if player.gui.left.farl == nil then return end
-            player.gui.left.farl.destroy()
-            -- if entity and isFARLLocomotive(entity) then
-            --     --TODO what did i want to do?!
-            --     local farl = FARL.findByLocomotive(entity)
-            -- end
+            if mod_gui.get_frame_flow(player).farl == nil then return end
+            mod_gui.get_frame_flow(player).farl.destroy()
         end
     end,
 
@@ -264,8 +261,8 @@ GUI = {
             farl:toggleCruiseControl()
         end
         farl.confirmed = nil
-        if player.gui.left.farl then
-            player.gui.left.farl.rows.farlConfirm.farlConfirmFlow.destroy()
+        if mod_gui.get_frame_flow(player).farl then
+            mod_gui.get_frame_flow(player).farl.rows.farlConfirm.farlConfirmFlow.destroy()
         end
     end,
 
@@ -274,7 +271,7 @@ GUI = {
         farl:activate()
         farl.ghostPath = nil
         farl.confirmed = nil
-        player.gui.left.farl.rows.farlConfirm.farlConfirmFlow.destroy()
+        mod_gui.get_frame_flow(player).farl.rows.farlConfirm.farlConfirmFlow.destroy()
     end,
 
     toggleBulldozer = function(_, farl, _)
@@ -331,7 +328,7 @@ GUI = {
     end,
 
     create_settings_button = function(player, sprite)
-        local buttons = player.gui.left.farl.rows.buttons
+        local buttons = mod_gui.get_frame_flow(player).farl.rows.buttons
         if buttons.settings and buttons.settings.valid then buttons.settings.destroy() end
         if sprite then
             return GUI.addButton(buttons, {type = "sprite-button", name = "settings", sprite = "farl_settings", style = "farl_button" }, GUI.toggleSettingsWindow)
@@ -341,7 +338,7 @@ GUI = {
     end,
 
     toggleSettingsWindow = function(_, farl, player)
-        local row = player.gui.left.farl.rows
+        local row = mod_gui.get_frame_flow(player).farl.rows
         local psettings = Settings.loadByPlayer(player)
         if row.settings ~= nil then
             local s = row.settings
@@ -574,11 +571,11 @@ GUI = {
 
     updateGui = function(farl)
         local guiPlayer = (farl.driver and farl.driver.name ~= "farl_player") and farl.driver or false
-        if guiPlayer and guiPlayer.gui.left.farl then
+        if guiPlayer and mod_gui.get_frame_flow(guiPlayer).farl then
             --GUI.init(farl.driver)
-            local farlGui = guiPlayer.gui.left.farl.rows
+            local farlGui = mod_gui.get_frame_flow(guiPlayer).farl.rows
             farlGui.buttons.start.caption = farl.active and {"text-stop"} or {"text-start"}
-            guiPlayer.gui.left.farl.rows.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
+            farlGui.buttons.cc.caption = farl.cruise and {"text-stopCC"} or {"text-startCC"}
             if farl.ghostProgress then
                 farlGui.pathProgress.visible = true
                 farlGui.pathProgress.value = farl.ghostProgress / farl.ghostProgressStart
