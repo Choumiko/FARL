@@ -28,10 +28,13 @@ local function round(num, idp)
     return floor(num * mult + 0.5) / mult
 end
 
+local sqrt2 = math.sqrt(2)/2
+local curved_l = 3--7.7288196964265417438549920430937/2
 local function get_signal_weight(rail, settings)
-    local weight = rail.name == settings.rail.curved and 3 or 1
+    -- curve length from https://github.com/dewiniaid/RailTools/blob/master/librail.lua#L5
+    local weight = rail.name == settings.rail.curved and curved_l or 1
     if rail.name ~= settings.rail.curved and rail.direction % 2 == 1 then
-        return 0.75
+        return sqrt2
     end
     return weight
 end
@@ -920,6 +923,10 @@ FARL.fillWater = function(self, area)
             local st, ft = area.left_top, area.right_bottom
             local dw, w = 0, 0
             local water_tiles = {water = true, deepwater = true, ['water-shallow'] = true, ['water-mud'] = true}
+            local place_result = game.item_prototypes["landfill"] and game.item_prototypes["landfill"].place_as_tile_result
+            place_result = place_result and place_result.name or "grass-1"
+            local _tile_prototypes = game.tile_prototypes
+            local tile_prototypes = {}
             for x = st.x, ft.x, 1 do
                 for y = st.y, ft.y, 1 do
                     local tileName = self.surface.get_tile(x, y).name
@@ -930,7 +937,8 @@ FARL.fillWater = function(self, area)
                         else
                             dw = dw + 1
                         end
-                        table.insert(tiles, { old_tile = tileName, name = "grass-1", position = { x=x, y=y } })
+                        tile_prototypes[tileName] = tile_prototypes[tileName] or _tile_prototypes[tileName]
+                        table.insert(tiles, { old_tile = tile_prototypes[tileName], name = place_result, position = { x=x, y=y } })
                     end
                 end
             end
@@ -956,8 +964,9 @@ FARL.replaceWater = function(self, tiles, w, dw)
             local event = {
                 player_index = ((self.driver and self.driver.valid and self.driver.name ~= "farl_player") and (self.driver.index)) or ((self.startedBy and self.startedBy.valid) and self.startedBy.index),
                 surface_index = self.surface.index,
-                tiles = tiles,
+                tiles = tiles, --array of {old_tile=.., position={x=..,y=y}}
                 item = game.item_prototypes['landfill'],
+                tile = game.tile_prototypes['landfill'],
                 --stack = nil,
             }
             event.player_index = event.player_index or 1
@@ -989,6 +998,12 @@ FARL.placeConcrete = function(self, dir, rail)
     --vanilla hazard concrete
     textured["hazard-concrete-left"] = "hazard-concrete-right"
     textured["hazard-concrete-right"] = "hazard-concrete-left"
+    local tile_prototypes = {}
+    local _tile_prototypes = game.tile_prototypes
+    local water_tiles = {water = true, deepwater = true, ['water-shallow'] = true, ['water-mud'] = true}
+
+    local place_result = game.item_prototypes["landfill"] and game.item_prototypes["landfill"].place_as_tile_result
+    place_result = place_result and place_result.name or "grass-1"
 
     for _, c in pairs(concrete) do
         local name = c.name
@@ -1008,7 +1023,6 @@ FARL.placeConcrete = function(self, dir, rail)
         --self:flyingText2(".", GREEN,true,entity.position)
         local tileName = self.surface.get_tile(pos.x, pos.y).name
         -- check that tile is water, if it is add it to a list of tiles to be changed to grass
-        local water_tiles = {water = true, deepwater = true, ['water-shallow'] = true, ['water-mud'] = true}
         if water_tiles[tileName] then
             if self.settings.bridge then
                 if tileName ~= "deepwater" then
@@ -1016,7 +1030,8 @@ FARL.placeConcrete = function(self, dir, rail)
                 else
                     dw = dw + 1
                 end
-                table.insert(tiles, { name = "grass-1", position = { pos.x, pos.y } })
+                tile_prototypes[tileName] = tile_prototypes[tileName] or _tile_prototypes[tileName]
+                table.insert(tiles, { name = place_result, old_tile = tile_prototypes[tileName], position = { x=pos.x, y=pos.y } })
                 table.insert(pave[name], entity)
             end
         elseif tileName ~= name and tileName ~= "out-of-map" then
@@ -1041,45 +1056,46 @@ FARL.placeConcrete = function(self, dir, rail)
     end
 end
 
+-- local tile_prototypes = {}
+-- local function get_proto(tileName)
+--     if not tile_prototypes[tileName] then
+--         log("get proto " .. serpent.line(tileName))
+--     end
+--     tile_prototypes[tileName] = tile_prototypes[tileName] or game.tile_prototypes[tileName]
+--     return tile_prototypes[tileName]
+-- end
+
 FARL.removeConcrete = function(self, area)
     local status, err = pcall(function()
         local tiles = {}
         Area.to_table(area)
         local st, ft = area.left_top, area.right_bottom
-
         local counts = {}
-        local tileName, tile_proto, itemsToPlace, toPlace
+        local tileName, itemsToPlace, toPlace
+        local _tile_prototypes = game.tile_prototypes
+        local tile_prototypes = {}
+        local hidden_tile
         for x = st.x, ft.x, 1 do
             for y = st.y, ft.y, 1 do
                 tileName = self.surface.get_tile(x, y).name
-                tile_proto = game.tile_prototypes[tileName]
+                tile_prototypes[tileName] = tile_prototypes[tileName] or _tile_prototypes[tileName]
                 -- check that tile is placeable by the player
-                itemsToPlace = tile_proto.items_to_place_this
+                itemsToPlace = tile_prototypes[tileName].items_to_place_this
                 toPlace = (itemsToPlace and #itemsToPlace >= 1) and itemsToPlace[1].name
-                if (tile_proto.can_be_part_of_blueprint
+                if (tile_prototypes[tileName].can_be_part_of_blueprint
                     and toPlace and toPlace ~= "landfill" and toPlace ~= "bi-adv-fertiliser"
                     and (not string.starts_with(toPlace, 'dect-base') and not string.starts_with(toPlace, 'dect-alien')) --luacheck: ignore
                     and not self:is_protected_tile({ x = x, y = y })
                 ) then
+                    hidden_tile = self.surface.get_hidden_tile{x=x, y=y} or "grass-1"
                     counts[tileName] = counts[tileName] or 0
-                    table.insert(tiles, { name = self.replace_tile, position = { x=x, y=y } })
+                    table.insert(tiles, { name = hidden_tile, position = { x=x, y=y } })
                     counts[tileName] = counts[tileName] + 1
                 end
             end
         end
         if #tiles > 0 then
             self.surface.set_tiles(tiles)
-
-            local event = {
-                player_index = ((self.driver and self.driver.valid and self.driver.name ~= "farl_player") and (self.driver.index)) or ((self.startedBy and self.startedBy.valid) and self.startedBy.index),
-                surface_index = self.surface.index,
-                tiles = tiles,
-                item = game.item_prototypes['landfill'],
-                --stack = nil,
-            }
-            event.player_index = event.player_index or 1
-            --log(serpent.block(event))
-            script.raise_event(defines.events.on_player_built_tile, event)
         end
 
 
@@ -1146,12 +1162,7 @@ FARL.bulldoze_area = function(self, rail, travel_dir)
 
     if rtype == "straight" then
         local area = self:createBoundingBox(rail, travel_dir)
-        local sarea1 = (travel_dir == 0 or travel_dir == 2) and area.left_top or area.right_bottom
-        local sarea2 = (travel_dir == 0 or travel_dir == 2) and area.right_bottom or area.left_top
-        local found = self:find_tile(sarea1, sarea2, travel_dir)
-        if found then
-            self.replace_tile = found
-        end
+
         self:prepareArea(rail, area)
         self:removeConcrete(area)
         local area2 = Position.expand_to_area(FARL.diagonal_to_real_pos(rail), 1.5)
@@ -1160,19 +1171,9 @@ FARL.bulldoze_area = function(self, rail, travel_dir)
             self:removeEntitiesFiltered({ area = area2, type = t }, self.protected)
         end
     else
-        local lastPoint = bp.clearance_points[#bp.clearance_points]
         for i, p in pairs(bp.clearance_points) do
             local pos = move_right_forward(rail.position, travel_dir, p.x, 0)
             local area = Position.expand_to_area(pos, 1.5)
-            if i == 1 then
-                --local tpos = move_right_forward(pos12toXY(area[1]),travel_dir,-1,0)
-                local sarea1 = area.left_top
-                local sarea2 = Position.expand_to_area(move_right_forward(rail.position, travel_dir, lastPoint.x, 0), 0.5).right_bottom
-                local found = self:find_tile(sarea1, sarea2, travel_dir)
-                if found then
-                    self.replace_tile = found
-                end
-            end
 
             self:removeTrees(area)
             self:pickupItems(area)
@@ -1410,11 +1411,7 @@ FARL.activate = function(self, scanForGhosts)
         else
             self.cheat_mode = self.startedBy and self.startedBy.cheat_mode or false
         end
-        --self.previews = {}
-        --      self.last_signal = {}
-        --      self.fake_signal_in = false
-        --      self.fake_signalCount = {main=0}
-        self.replace_tile = "grass-1"
+
         self.lastCurve = { dist = 20, input = false, direction = 0, blocked = {}, curveblock = 0 }
         for _, l in pairs(self.train.locomotives.front_movers) do
             if l == self.locomotive then
@@ -1442,7 +1439,7 @@ FARL.activate = function(self, scanForGhosts)
                     local ghost_name = data.rail.ghost_name
                     local ttl = data.rail.time_to_live
                     data.rail.destroy()
-                    data.rail = {position = position, name=name, inner_name = ghost_name, direction=direction, timeToLive = ttl}
+                    data.rail = {position = position, name=name, ghost_name = ghost_name, direction=direction, timeToLive = ttl}
                 end
                 self.destroyedGhosts = true
             end
@@ -1878,10 +1875,10 @@ FARL.genericCanPlace = function(self, arg)
     --apiCalls.canplace = apiCalls.canplace + 1
     if not arg.direction then
         return self.surface.can_place_entity { name = name, position = arg.position }
-            --return self.surface.can_place_entity { name = name, position = arg.position, inner_name = arg.inner_name }
+            --return self.surface.can_place_entity { name = name, position = arg.position, ghost_name = arg.ghost_name }
     else
         return self.surface.can_place_entity { name = name, position = arg.position, direction = arg.direction }
-            --return self.surface.can_place_entity { name = name, position = arg.position, direction = arg.direction, inner_name = arg.inner_name }
+            --return self.surface.can_place_entity { name = name, position = arg.position, direction = arg.direction, ghost_name = arg.ghost_name }
     end
 end
 
@@ -1926,7 +1923,7 @@ end
 
 FARL.get_ghost = function(entity)
     local ghostEntity = table.deepcopy(entity)
-    ghostEntity.inner_name = entity.name
+    ghostEntity.ghost_name = entity.name
     ghostEntity.name = "entity-ghost"
     ghostEntity.expires = false
     return ghostEntity

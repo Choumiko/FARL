@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 3.1.7
+Date: 29. 04. 2019
+  Bugfixes:
+    - fixed FARL creating wrong events when placing landfill/concrete
+    - improved signal distance on diagonal tracks
+---------------------------------------------------------------------------------------------------
 Version: 3.1.6
 Date: 18. 04. 2019
   Bugfixes:
