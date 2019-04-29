@@ -1067,49 +1067,44 @@ end
 
 FARL.removeConcrete = function(self, area)
     local status, err = pcall(function()
+        area = Area.round_to_integer(area)
+        local options = {area = area, has_hidden_tile = true, collision_mask = "ground-tile"}
+        if self.surface.count_tiles_filtered(options) == 0 then return end
         local tiles = {}
-        Area.to_table(area)
-        local st, ft = area.left_top, area.right_bottom
         local counts = {}
         local tileName, itemsToPlace, toPlace
         local _tile_prototypes = game.tile_prototypes
         local tile_prototypes = {}
-        local hidden_tile
-        for x = st.x, ft.x, 1 do
-            for y = st.y, ft.y, 1 do
-                tileName = self.surface.get_tile(x, y).name
-                tile_prototypes[tileName] = tile_prototypes[tileName] or _tile_prototypes[tileName]
-                -- check that tile is placeable by the player
-                itemsToPlace = tile_prototypes[tileName].items_to_place_this
-                toPlace = (itemsToPlace and #itemsToPlace >= 1) and itemsToPlace[1].name
-                if (tile_prototypes[tileName].can_be_part_of_blueprint
-                    and toPlace and toPlace ~= "landfill" and toPlace ~= "bi-adv-fertiliser"
-                    and (not string.starts_with(toPlace, 'dect-base') and not string.starts_with(toPlace, 'dect-alien')) --luacheck: ignore
-                    and not self:is_protected_tile({ x = x, y = y })
-                ) then
-                    hidden_tile = self.surface.get_hidden_tile{x=x, y=y} or "grass-1"
-                    counts[tileName] = counts[tileName] or 0
-                    table.insert(tiles, { name = hidden_tile, position = { x=x, y=y } })
-                    counts[tileName] = counts[tileName] + 1
-                end
+        local tiles_filtered = self.surface.find_tiles_filtered(options)
+        for _, tile in pairs(tiles_filtered) do
+            tileName = tile.name
+            tile_prototypes[tileName] = tile_prototypes[tileName] or _tile_prototypes[tileName]
+            -- check that tile is placeable by the player
+            itemsToPlace = tile_prototypes[tileName].items_to_place_this
+            toPlace = (itemsToPlace and #itemsToPlace >= 1) and itemsToPlace[1].name
+            if (tile_prototypes[tileName].can_be_part_of_blueprint
+                and toPlace and toPlace ~= "landfill" and toPlace ~= "bi-adv-fertiliser"
+                and (not string.starts_with(toPlace, 'dect-base') and not string.starts_with(toPlace, 'dect-alien')) --luacheck: ignore
+                and not self:is_protected_tile(tile.position)
+            ) then
+                counts[tileName] = counts[tileName] or 0
+                table.insert(tiles, { name = tile.hidden_tile or "grass-1", position = tile.position })
+                counts[tileName] = counts[tileName] + 1
             end
         end
         if #tiles > 0 then
             self.surface.set_tiles(tiles)
-        end
-
-
-        for name, c in pairs(counts) do
-            local item = get_item_name(name)
-            if item then
-                self:addItemToCargo(item, c, true)
-                local stat = global.statistics[self.locomotive.force.name].removed[item] or 0
-                global.statistics[self.locomotive.force.name].removed[item] = stat + c
+            for name, c in pairs(counts) do
+                local item = get_item_name(name)
+                if item then
+                    self:addItemToCargo(item, c, true)
+                    local stat = global.statistics[self.locomotive.force.name].removed[item] or 0
+                    global.statistics[self.locomotive.force.name].removed[item] = stat + c
+                end
             end
         end
     end)
     if not status then
-        debugDump(area, true)
         error(err, 3)
     end
 end

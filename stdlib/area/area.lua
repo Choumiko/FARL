@@ -7,7 +7,8 @@
 
 local fail_if_missing = require '__FARL__/stdlib/core'['fail_if_missing']
 local Position = require '__FARL__/stdlib/area/position'
-
+local math = math
+local ceil, floor = math.ceil, math.floor
 local Area = {}
 
 --- Creates an area from the 2 positions p1 and p2
@@ -195,8 +196,8 @@ function Area.round_to_integer(area)
 
     local left_top = area.left_top
     local right_bottom = area.right_bottom
-    return {left_top = {x = math.floor(left_top.x), y = math.floor(left_top.y)},
-        right_bottom = {x = math.ceil(right_bottom.x), y = math.ceil(right_bottom.y)}}
+    return {left_top = {x = floor(left_top.x), y = floor(left_top.y)},
+        right_bottom = {x = ceil(right_bottom.x), y = ceil(right_bottom.y)}}
 end
 
 --- Iterates an area.
@@ -213,7 +214,7 @@ function Area.iterate(area)
     function iterator.iterate(area) --luacheck: ignore area
         local rx = area.right_bottom.x - area.left_top.x + 1
         local dx = iterator.idx % rx
-        local dy = math.floor(iterator.idx / rx)
+        local dy = floor(iterator.idx / rx)
         iterator.idx = iterator.idx + 1
         if (area.left_top.y + dy) > area.right_bottom.y then
             return
@@ -238,8 +239,8 @@ function Area.spiral_iterate(area)
 
     local rx = area.right_bottom.x - area.left_top.x + 1
     local ry = area.right_bottom.y - area.left_top.y + 1
-    local half_x = math.floor(rx / 2)
-    local half_y = math.floor(ry / 2)
+    local half_x = floor(rx / 2)
+    local half_y = floor(ry / 2)
     local center_x = area.left_top.x + half_x
     local center_y = area.left_top.y + half_y
 
