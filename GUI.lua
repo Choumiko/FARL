@@ -426,7 +426,7 @@ GUI = {
         local blueprints = {}
         return blueprints
             --        if player ~= nil then
-            --            local hotbar = player.controller_type == defines.controllers.character and player.get_inventory(defines.inventory.player_main) or player.get_inventory(defines.inventory.god_main)
+            --            local hotbar = player.get_main_inventory())
             --            if hotbar ~= nil then
             --                for i=1,#hotbar do
             --                    local itemStack = hotbar[i]

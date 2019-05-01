@@ -18,8 +18,8 @@ function M.debugDump(var, force)
             player.print(msg)
         end
         local tick = game and game.tick or 0
-        log(debug.traceback())
         log(tick .. " " .. msg)
+        log(debug.traceback())
     end
 end
 
