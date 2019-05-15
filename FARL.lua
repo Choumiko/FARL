@@ -9,8 +9,6 @@ local debugLog = lib.debugLog
 local endsWith = lib.endsWith
 --local saveVar = lib.saveVar
 
-trigger_events = {} --luacheck: allow defined top
-
 local math = math
 local floor, ceil = math.floor, math.ceil
 local abs, min, max = math.abs, math.min, math.max
@@ -529,10 +527,7 @@ FARL.update = function(self, _)
                             if self.settings.bulldozer then
                                 self:bulldoze_area(rail, self.path[i].travel_dir)
                                 local addAmount = self.path[i].rail.type == "straight-rail" and 1 or 4
-                                if trigger_events[name] then
-                                    script.raise_event(defines.events.on_robot_pre_mined, { entity = self.path[i].rail })
-                                end
-                                if self.path[i].rail.destroy() then
+                                if self.path[i].rail.destroy({raise_destroy = true}) then
                                     self:addItemToCargo(name, addAmount, true) --TODO addAmount shouldn't be needed
                                 else
                                     self:deactivate({ "msg-cant-remove" })
@@ -896,10 +891,7 @@ FARL.removeEntitiesFiltered = function(self, args)
                     end
                 end
             end
-            if trigger_events[name] or entity.type == "electric-pole" then
-                script.raise_event(defines.events.on_robot_pre_mined, { entity = entity })
-            end
-            if not entity.destroy() then
+            if not entity.destroy({raise_destroy = true}) then
                 self:deactivate({ "msg-cant-remove" })
                 return
             else
@@ -1890,6 +1882,7 @@ FARL.genericPlace = function(self, arg, ignore, place_ghost)
         local force = arg.force or self.locomotive.force
         arg.force = force
         if not place_ghost then
+            arg.raise_built = true
             entity = self.surface.create_entity(arg)
         else
             entity = self.surface.create_entity(FARL.get_ghost(arg))
@@ -1897,10 +1890,6 @@ FARL.genericPlace = function(self, arg, ignore, place_ghost)
         --apiCalls.create = apiCalls.create + 1
     end
     if entity then
-        if entity.type ~= "entity_ghost" and (trigger_events[entity.name] or entity.type == "electric-pole") then
-        --if entity.type ~= "entity_ghost" and (trigger_events[entity.name] or entity.type == "electric-pole" or is_placer_or_base[entity.name]) then
-            script.raise_event(defines.events.on_robot_built_entity, { created_entity = entity })
-        end
         if entity.type ~= "entity_ghost" then
             local stat = global.statistics[entity.force.name].created[entity.name] or 0
             global.statistics[entity.force.name].created[entity.name] = stat + 1

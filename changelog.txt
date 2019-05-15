@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 3.1.9
+Date: 15. 05. 2019
+  Changes:
+    - FARL now raises the script_raised_built and script_raised_destroy events when placing/removing entities
+    - the remote calls add_entity_to_trigger, remove_entity_from_trigger and get_trigger_list no longer work
+---------------------------------------------------------------------------------------------------
 Version: 3.1.8
 Date: 01. 05. 2019
   Changes:

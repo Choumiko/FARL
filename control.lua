@@ -135,7 +135,6 @@ local function init_global()
     global.electricInstalled = remote.interfaces.dim_trains and remote.interfaces.dim_trains.railCreated
     global.overlayStack = global.overlayStack or {}
     global.statistics = global.statistics or {}
-    global.trigger_events = global.trigger_events or {}
     global.version = global.version or "0.5.35"
     global.railString = global.railString or "rail"
     global.rails_by_index = global.rails_by_index or {}
@@ -430,17 +429,13 @@ local function on_configuration_changed(data)
                         end
                     end
                 end
+                global.trigger_events = nil
             end
         else
             debugDump("FARL version: ".. tostring(newVersion), true)
         end
         on_init()
         global.version = tostring(newVersion)
-    end
-    for name, _ in pairs(global.trigger_events) do
-        if not game.entity_prototypes[name] then
-            global.trigger_events[name] = nil
-        end
     end
 
     if data.mod_startup_settings_changed then
@@ -876,32 +871,16 @@ remote.add_interface("farl",
             end
         end,
 
-        add_entity_to_trigger = function(name)
-            global.trigger_events = global.trigger_events or {}
-            if game.entity_prototypes[name] or game.tile_prototypes[name] then
-                trigger_events[name] = true
-                global.trigger_events[name] = true
-                log(string.format("Registered %s to trigger create/remove events", name))
-                log(serpent.block(global.trigger_events))
-                return true
-            end
+        add_entity_to_trigger = function()
+            log("remote.call('farl', 'add_entity_to_trigger') is no longer supported. Listen to defines.events.script_raised_built and/or defines.events.script_raised_destroy instead.")
         end,
 
-        remove_entity_from_trigger = function(name)
-            global.trigger_events = global.trigger_events or {}
-            if global.trigger_events[name] then
-                trigger_events[name] = nil
-                global.trigger_events[name] = nil
-                log(string.format("Removed %s from triggering create/remove events", name))
-                log(serpent.block(global.trigger_events))
-                return true
-            end
+        remove_entity_from_trigger = function()
+            log("remote.call('farl', 'remove_entity_from_trigger') is no longer supported. Listen to defines.events.script_raised_built and/or defines.events.script_raised_destroy instead.")
         end,
 
         get_trigger_list = function()
-            global.trigger_events = global.trigger_events or {}
-            trigger_events = trigger_events or {}
-            return trigger_events
+            log("remote.call('farl', 'get_trigger_list') is no longer supported. Listen to defines.events.script_raised_built and/or defines.events.script_raised_destroy instead")
         end,
 
         -- foo = function()
