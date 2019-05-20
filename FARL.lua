@@ -1420,13 +1420,15 @@ FARL.activate = function(self, scanForGhosts)
                 self.ghostProgressStart = #self.ghostPath
                 self.ghostProgress = 0
                 for _, data in pairs(self.ghostPath) do
-                    local position = data.rail.position
-                    local direction = data.rail.direction
-                    local name = data.rail.name
-                    local ghost_name = data.rail.ghost_name
-                    local ttl = data.rail.time_to_live
-                    data.rail.destroy()
-                    data.rail = {position = position, name=name, ghost_name = ghost_name, direction=direction, timeToLive = ttl}
+                    if data.rail and data.rail.valid then
+                        local position = data.rail.position
+                        local direction = data.rail.direction
+                        local name = data.rail.name
+                        local ghost_name = data.rail.ghost_name
+                        local ttl = data.rail.time_to_live
+                        data.rail.destroy()
+                        data.rail = {position = position, name=name, ghost_name = ghost_name, direction=direction, timeToLive = ttl}
+                    end
                 end
                 self.destroyedGhosts = true
             end
@@ -1630,16 +1632,17 @@ FARL.deactivate = function(self, reason)
         local status, err = pcall(function()
             for _, data in pairs(self.ghostPath) do
                 local ghost = data.rail
-                ghost.force = force
-                local ent =
-                    self.surface.create_entity(ghost)
-                if ent then
-                    ent.time_to_live = data.rail.timeToLive
+                if not ghost.valid then--should be a simple table
+                    ghost.force = force
+                    local ent = self.surface.create_entity(ghost)
+                    if ent then
+                        ent.time_to_live = data.rail.timeToLive
+                    end
                 end
             end
         end)
         if not status then
-            self:print({ "", "Error deactivating: ", err })
+            self:print({ "", "Error deactivating (ghostPath): ", err })
         end
     end
     if self.driver and self.driver.name == "farl_player" then
@@ -1649,17 +1652,6 @@ FARL.deactivate = function(self, reason)
 
     self.ghostPath = nil
     self.confirmed = nil
-    --    if self.last_signal then
-    --      for i, signal in pairs(self.last_signal) do
-    --        if signal and signal.valid then
-    --          signal.destroy()
-    --        end
-    --      end
-    --      self.last_signal = nil
-    --    end
-    if reason then
-        self:print({ "", { "msg-deactivated" }, ": ", reason })
-    end
     self.lastrail = nil
     self.already_prepared = nil
     self.lastCurve = 0
@@ -1675,17 +1667,9 @@ FARL.deactivate = function(self, reason)
     self.startedBy = nil
     self.last_message = {}
     self.read_blueprints = 0
-    --    self.previews = self.previews or {}
-    --    for _, p in pairs(self.previews) do
-    --      if p then
-    --        for _, r in pairs(p) do
-    --          if r and r.valid then
-    --            r.destroy()
-    --          end
-    --        end
-    --      end
-    --    end
-    --    self.previews = {}
+    if reason then
+        self:print({ "", { "msg-deactivated" }, ": ", reason })
+    end
 end
 
 FARL.toggleActive = function(self, scanForGhosts)
@@ -2140,7 +2124,8 @@ FARL.parseBlueprints = function(self, blueprints)
                     if #bp_rails > 0 then
                         self.settings.flipPoles = false
                     end
-                    self:print({ "msg-bp-saved", bpType, { "entity-name." .. blueprint.pole.name } })
+                    local localised = game.entity_prototypes[blueprint.pole.name].localised_name
+                    self:print({ "msg-bp-saved", bpType, localised })
                 else
                     self:print({ "msg-bp-chain-direction" })
                 end

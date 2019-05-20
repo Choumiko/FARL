@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 3.1.10
+Date: 20. 05. 2019
+  Bugfixes:
+    - Fixed an error related to ghost rails becoming invalid
+    - Fixed unknown key for modded electric poles when reading blueprints
+---------------------------------------------------------------------------------------------------
 Version: 3.1.9
 Date: 15. 05. 2019
   Changes:
