@@ -28,7 +28,7 @@ $(OUTPUT_DIR)/%.lua: %.lua
 $(OUTPUT_DIR)/%: %
 	mkdir -p $(@D)
 	sed $(SED_EXPRS) $< > $@
-	
+
 package: package-copy $(OUT_FILES)
 	cd build && zip -r $(OUTPUT_NAME).zip $(OUTPUT_NAME)
 
@@ -55,3 +55,4 @@ install_mod:
 	fi;
 tag:
 	git tag -f $(VERSION_STRING)
+	git push --tags
