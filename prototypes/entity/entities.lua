@@ -1,6 +1,7 @@
 local copyPrototype = require "__FARL__/lib"
 local farl = copyPrototype("locomotive", "locomotive", "farl")
 farl.icon = "__FARL__/graphics/icons/farl.png"
+farl.icon_size = 32
 farl.max_speed = 0.8
 farl.burner.fuel_inventory_size = 4
 

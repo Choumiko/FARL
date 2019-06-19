@@ -45,5 +45,6 @@ local farlRoboportItem = copyPrototype("item", "personal-roboport-equipment", "f
 farlRoboportItem.subgroup = "transport"
 farlRoboportItem.order = "a[train-system]-fc[farl]"
 farlRoboportItem.icon = "__FARL__/graphics/icons/farl-roboport.png"
+farlRoboportItem.icon_size = 32
 
 data:extend{farlRoboport, farlRoboportItem, farlRoboportRecipe}

@@ -2963,9 +2963,9 @@ end
 FARL.print_out_of_item = function(self, item)
     local tick = game.tick
     if not self.last_message[item] or tick >= self.last_message[item] then
-        local name = game.entity_prototypes[item] and game.entity_prototypes[item].localised_name
-            or game.item_prototypes[item] and game.item_prototypes[item].localised_name
-            or game.tile_prototypes[item] and game.tile_prototypes[item].localised_name
+        local name = (game.entity_prototypes[item] and game.entity_prototypes[item].localised_name)
+            or (game.item_prototypes[item] and game.item_prototypes[item].localised_name)
+            or (game.tile_prototypes[item] and game.tile_prototypes[item].localised_name)
         local msg = { "msg-out-of-item", name }
         self:print(msg, YELLOW)
         self.last_message[item] = tick + 300
