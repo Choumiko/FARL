@@ -369,8 +369,8 @@ GUI = {
             end
             GUI.add(settings,{type="drop-down", name="railType", items=global.rails_localised, selected_index=psettings.railType})
 
-            GUI.add(settings, {type="label", caption={"stg-poleSide"}})
-            GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=psettings.flipPoles})
+            -- GUI.add(settings, {type="label", caption={"stg-poleSide"}})
+            -- GUI.add(settings, {type="checkbox", name="flipPoles", caption={"stg-flipPoles"}, state=psettings.flipPoles})
 
             GUI.add(settings,{type="checkbox", name="poleEntities", caption={"stg-poleEntities"}, tooltip={"farl_tooltip_place_pole_entities"}},"poleEntities")
             GUI.add(settings, {type="checkbox", name="remove_cliffs", caption={"stg-remove-cliffs"}, tooltip={ "farl_tooltip_remove_cliffs", {"item-name.cliff-explosives"}}}, "remove_cliffs")
@@ -380,9 +380,6 @@ GUI = {
 
             GUI.add(settings, {type="checkbox", name="mirrorConcrete", caption= {"stg-mirror-concrete"}, "mirrorConcrete"})
             GUI.addPlaceHolder(settings)
-
-            --GUI.add(settings,{type="checkbox", name="parallelTracks", caption={"stg-parallel-tracks"}}, "parallelTracks")
-            --GUI.addPlaceHolder(settings)
 
             GUI.add(settings, {type="checkbox", name="ccNet", caption={"stg-ccNet"}, state=psettings.ccNet})
             local row2 = GUI.add(settings, {type="table", name="row3", column_count=2})
@@ -398,18 +395,18 @@ GUI = {
                     local lanes = #bps[i].straight.lanes + 1
                     local pole = game.entity_prototypes[bps[i].straight.pole.name].localised_name
                     GUI.addButton(stored_bp,{name="load_bp_"..i, caption="L"})
-                    GUI.addButton(stored_bp,{name="save_bp_"..i, caption="S"})
+                    GUI.addButton(stored_bp,{name="save_bp_"..i, caption="S", tooltip = {"farl_tooltip_s_button"}})
                     GUI.addLabel(stored_bp, {caption={"text-blueprint-description", lanes, pole}})
                 else
                     GUI.addLabel(stored_bp,{caption="L"})
-                    GUI.addButton(stored_bp,{name="save_bp_"..i, caption="S"})
+                    GUI.addButton(stored_bp,{name="save_bp_"..i, caption="S", tooltip = {"farl_tooltip_s_button"}})
                     GUI.addLabel(stored_bp, {caption="--"})
                 end
             end
 
             GUI.add(settings, {type="label", caption={"stg-blueprint"}})
             local row3 = GUI.add(settings, {type="table", name="row4", column_count=2})
-            GUI.addButton(row3, {name="blueprint", caption={"stg-blueprint-read"}}, GUI.readBlueprint)
+            GUI.addButton(row3, {name="blueprint", caption={"stg-blueprint-read"}, tooltip = {"farl_tooltip_read"}}, GUI.readBlueprint)
             GUI.addButton(row3, {name="bpClear", caption={"stg-blueprint-clear"}}, GUI.clearBlueprints)
             GUI.add(settings, {type="label", caption={"stg-blueprint-write"}})
             local row4 = GUI.add(settings, {type="flow", name="row5", direction="horizontal"})

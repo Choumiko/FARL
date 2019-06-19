@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 3.1.11
+Date: ??. 06. 2019
+  Changes:
+    - Added tooltips to the "S" and "Read" buttons
+    - removed the "Side of pole" option from the gui, added /farl_flipPoles command to toggle the setting
+---------------------------------------------------------------------------------------------------
 Version: 3.1.10
 Date: 20. 05. 2019
   Bugfixes:

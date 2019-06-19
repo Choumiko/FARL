@@ -218,7 +218,7 @@ local function on_configuration_changed(data)
         local oldVersion = data.mod_changes[MOD_NAME].old_version
         if oldVersion then
             oldVersion = v(oldVersion)
-            debugDump("FARL version changed from ".. tostring(oldVersion) .." to ".. tostring(newVersion), true)
+            log("FARL version changed from ".. tostring(oldVersion) .." to ".. tostring(newVersion))
             if oldVersion > newVersion then
                 debugDump("Downgrading FARL, reset settings",true)
                 global = {}
@@ -427,6 +427,11 @@ local function on_configuration_changed(data)
                                 GUI.updateGui(farl)
                             end
                         end
+                    end
+                end
+                if oldVersion < v'3.1.11' then
+                    for _, psettings in pairs(global.players) do
+                        psettings.flipPoles = false
                     end
                 end
                 global.trigger_events = nil
@@ -722,6 +727,12 @@ commands.add_command("farl_read_bp", "Read the blueprint/book on the cursor", fa
 commands.add_command("farl_clear_bp", "Clear stored layout", farl_command)
 commands.add_command("farl_vertical_bp", "Create vertical blueprint", farl_command)
 commands.add_command("farl_diagonal_bp", "Create diagonal blueprint", farl_command)
+commands.add_command("farl_flipPoles", "Flip the side of the electric pole", function(data)
+    local player = game.get_player(data.player_index)
+    local psettings = Settings.loadByPlayer(player)
+    psettings.flipPoles = not psettings.flipPoles
+    player.print("flipPoles: " .. tostring(psettings.flipPoles))
+end)
 
 remote.add_interface("farl",
     {
