@@ -1,10 +1,4 @@
-build
 build/*
 factorio_mods
-*.iml
-/.buildpath
-/.project
-/.settings
-/factorio_mods15/
 thumbnail.xcf
 cookiejar.txt

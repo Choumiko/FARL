@@ -60,12 +60,6 @@ data.raw["gui-style"].default["farl_button"] =
                 volume = 1
             }
         },
-        right_click_sound = {
-            {
-                filename = "__core__/sound/gui-click.ogg",
-                volume = 1
-            }
-        }
     }
 data.raw["gui-style"].default["farl_checkbox"] =
     {

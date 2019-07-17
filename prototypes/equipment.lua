@@ -2,30 +2,29 @@ if not settings.startup["farl_enable_module"].value then
     return
 end
 local copyPrototype = require "__FARL__/lib"
-data:extend
+
+data:extend{
     {
-        {
-            type = "equipment-category",
-            name = "farl-equipment"
-        },
-        {
-            type = "equipment-grid",
-            name = "farl-equipment-grid",
-            width = 2,
-            height = 2,
-            equipment_categories = {"farl-equipment"},
-        },--[[
+        type = "equipment-category",
+        name = "farl-equipment"
+    },
     {
-      type = "equipment-grid",
-      name = "farl-equipment-grid-wagon",
-      width = 8,
-      height = 8,
-      equipment_categories = {"farl-equipment", "armor"},
+        type = "equipment-grid",
+        name = "farl-equipment-grid",
+        width = 2,
+        height = 2,
+        equipment_categories = {"farl-equipment"},
+    },--[[
+    {
+    type = "equipment-grid",
+    name = "farl-equipment-grid-wagon",
+    width = 8,
+    height = 8,
+    equipment_categories = {"farl-equipment", "armor"},
     },]]--
 }
 
 local farlRoboport =  copyPrototype("roboport-equipment", "personal-roboport-equipment", "farl-roboport", true)
-farlRoboport.energy_consumption = "0W"
 --farlRoboport.robot_limit = 50
 farlRoboport.robot_limit = 0
 farlRoboport.charging_station_count = 0
