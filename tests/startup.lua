@@ -586,4 +586,93 @@ startup[8] = {
     }
 }
 
+startup[9] = {
+    name = "Test9",
+    test_type = "",
+    to_create = {
+        rails = {
+            [100008099999001] = {name = "curved-rail", position = {x = 80, y = -10}, direction = 1, force = "player"},
+            [100008299999000] = {name = "curved-rail", position = {x = 82, y = -10}, direction = 0, force = "player"},
+            [100010499999000] = {name = "curved-rail", position = {x = 104, y = -10}, direction = 0, force = "player"},
+            [100010299999001] = {name = "curved-rail", position = {x = 102, y = -10}, direction = 1, force = "player"},
+            [100008899999006] = {name = "curved-rail", position = {x = 88, y = -10}, direction = 6, force = "player"},
+            [100008899999207] = {name = "curved-rail", position = {x = 88, y = -8}, direction = 7, force = "player"},
+            [100009699999003] = {name = "curved-rail", position = {x = 96, y = -10}, direction = 3, force = "player"},
+            [100009699999202] = {name = "curved-rail", position = {x = 96, y = -8}, direction = 2, force = "player"},
+            [100009999999301] = {name = "straight-rail", position = {x = 99, y = -7}, direction = 1, force = "player"},
+            [100008099999804] = {name = "curved-rail", position = {x = 80, y = -2}, direction = 4, force = "player"},
+            [100008299999805] = {name = "curved-rail", position = {x = 82, y = -2}, direction = 5, force = "player"},
+            [100008899999606] = {name = "curved-rail", position = {x = 88, y = -4}, direction = 6, force = "player"},
+            [100008899999807] = {name = "curved-rail", position = {x = 88, y = -2}, direction = 7, force = "player"},
+            [100009699999603] = {name = "curved-rail", position = {x = 96, y = -4}, direction = 3, force = "player"},
+            [100009699999802] = {name = "curved-rail", position = {x = 96, y = -2}, direction = 2, force = "player"},
+            [100010499999805] = {name = "curved-rail", position = {x = 104, y = -2}, direction = 5, force = "player"},
+            [100010299999804] = {name = "curved-rail", position = {x = 102, y = -2}, direction = 4, force = "player"}
+        },
+        signals = {}
+    },
+    cases = {
+        {loco = {name = "farl", position = {x = 79.1953125, y = -6.4296875}, orientation = 0.0069, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 82.80859375, y = -6.3046875}, orientation = 0.995, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 91.84375, y = -10.8125}, orientation = 0.7475, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 91.90625, y = -7.18359375}, orientation = 0.7514, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 91.875, y = -4.8125}, orientation = 0.248, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 91.75390625, y = -1.1875}, orientation = 0.2539, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 101.18359375, y = -6.12109375}, orientation = 0.502, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 104.8125, y = -6.15234375}, orientation = 0.4975, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 79.41015625, y = -8.03125}, orientation = 0.0333, force = "player"}, rail = 100008099999001, signal = false},
+        {loco = {name = "farl", position = {x = 82.69140625, y = -4.5234375}, orientation = 0.5241, force = "player"}, rail = 100008299999805, signal = false},
+        {loco = {name = "farl", position = {x = 90.33203125, y = -1.33984375}, orientation = 0.7771, force = "player"}, rail = 100008899999807, signal = false},
+        {loco = {name = "farl", position = {x = 93.48828125, y = -4.69140625}, orientation = 0.2742, force = "player"}, rail = 100009699999603, signal = false},
+        {loco = {name = "farl", position = {x = 93.6484375, y = -7.3359375}, orientation = 0.2233, force = "player"}, rail = 100009699999202, signal = false},
+        {loco = {name = "farl", position = {x = 90.3671875, y = -10.6640625}, orientation = 0.7234, force = "player"}, rail = 100008899999006, signal = false},
+        {loco = {name = "farl", position = {x = 101.31640625, y = -4.4609375}, orientation = 0.4748, force = "player"}, rail = 100010299999804, signal = false},
+        {loco = {name = "farl", position = {x = 104.68359375, y = -7.5390625}, orientation = 0.9748, force = "player"}, rail = 100010499999000, signal = false}
+    }
+}
+
+startup[10] = {
+    name = "Test10",
+    test_type = "",
+    to_create = {
+        rails = {
+            [100008999998500] = {name = "straight-rail", position = {x = 89, y = -15}, direction = 0, force = "player"},
+            [100009399998500] = {name = "straight-rail", position = {x = 93, y = -15}, direction = 0, force = "player"},
+            [100008899999005] = {name = "curved-rail", position = {x = 88, y = -10}, direction = 5, force = "player"},
+            [100009499999004] = {name = "curved-rail", position = {x = 94, y = -10}, direction = 4, force = "player"},
+            [100008299999202] = {name = "curved-rail", position = {x = 82, y = -8}, direction = 2, force = "player"},
+            [100008599998903] = {name = "straight-rail", position = {x = 85, y = -11}, direction = 3, force = "player"},
+            [100009799998905] = {name = "straight-rail", position = {x = 97, y = -11}, direction = 5, force = "player"},
+            [100010099999207] = {name = "curved-rail", position = {x = 100, y = -8}, direction = 7, force = "player"},
+            [100007799999702] = {name = "straight-rail", position = {x = 77, y = -3}, direction = 2, force = "player"},
+            [100008299999803] = {name = "curved-rail", position = {x = 82, y = -2}, direction = 3, force = "player"},
+            [100008900000000] = {name = "curved-rail", position = {x = 88, y = 0}, direction = 0, force = "player"},
+            [100009500000001] = {name = "curved-rail", position = {x = 94, y = 0}, direction = 1, force = "player"},
+            [100010099999806] = {name = "curved-rail", position = {x = 100, y = -2}, direction = 6, force = "player"},
+            [100010599999702] = {name = "straight-rail", position = {x = 105, y = -3}, direction = 2, force = "player"},
+            [100009000000500] = {name = "straight-rail", position = {x = 89, y = 5}, direction = 0, force = "player"},
+            [100009400000500] = {name = "straight-rail", position = {x = 93, y = 5}, direction = 0, force = "player"}
+        },
+        signals = {}
+    },
+    cases = {
+        {loco = {name = "farl", position = {x = 79.32421875, y = -2.72265625}, orientation = 0.2721, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 88.71875, y = 2.63671875}, orientation = 0.9774, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 93.2890625, y = 2.59765625}, orientation = 0.0232, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 102.80078125, y = -2.74609375}, orientation = 0.7296, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 98.296875, y = -9.08984375}, orientation = 0.3529, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 93.27734375, y = -12.6640625}, orientation = 0.4777, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 88.7421875, y = -12.7890625}, orientation = 0.5205, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 83.68359375, y = -9.078125}, orientation = 0.6474, force = "player"}, rail = false, signal = "some error"},
+        {loco = {name = "farl", position = {x = 79.32421875, y = -2.72265625}, orientation = 0.7721, force = "player"}, rail = 100007799999702, signal = false},
+        {loco = {name = "farl", position = {x = 83.68359375, y = -9.078125}, orientation = 0.1474, force = "player"}, rail = 100008599998903, signal = false},
+        {loco = {name = "farl", position = {x = 88.7421875, y = -12.7890625}, orientation = 0.0205, force = "player"}, rail = 100008999998500, signal = false},
+        {loco = {name = "farl", position = {x = 93.27734375, y = -12.6640625}, orientation = 0.9777, force = "player"}, rail = 100009399998500, signal = false},
+        {loco = {name = "farl", position = {x = 98.296875, y = -9.08984375}, orientation = 0.8529, force = "player"}, rail = 100009799998905, signal = false},
+        {loco = {name = "farl", position = {x = 102.80078125, y = -2.74609375}, orientation = 0.2296, force = "player"}, rail = 100010599999702, signal = false},
+        {loco = {name = "farl", position = {x = 93.2890625, y = 2.59765625}, orientation = 0.5232, force = "player"}, rail = 100009400000500, signal = false},
+        {loco = {name = "farl", position = {x = 88.703125, y = 2.5625}, orientation = 0.4763, force = "player"}, rail = 100009000000500, signal = false}
+    }
+}
+
 return startup

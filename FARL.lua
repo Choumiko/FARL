@@ -286,7 +286,7 @@ FARL.new = function(player)
     local farl = FARL.newByLocomotive(player.vehicle)
     farl.driver = player
     farl.cheat_mode = player.cheat_mode
-    farl.settings = Settings.loadByPlayer(player)
+    farl.settings = Settings.loadByPlayer(player)--luacheck: ignore
     return farl
 end
 
@@ -327,7 +327,7 @@ FARL.onPlayerEnter = function(player, loco)
         local farl = FARL.setup(loco or player.vehicle)
         if farl and not farl.active then
             farl.driver = player
-            farl.settings = Settings.loadByPlayer(player)
+            farl.settings = Settings.loadByPlayer(player)--luacheck: ignore
             farl.cheat_mode = player.cheat_mode
             farl.read_blueprints = 0
 

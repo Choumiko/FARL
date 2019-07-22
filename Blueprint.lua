@@ -1,13 +1,6 @@
---- Blueprint parsing
---@module Blueprint
-
 local Blueprint = {}
-local Position = require '__FARL__/stdlib/area/position'
---local saveVar = require '__FARL__/lib_control.lua'['saveVar']
+local Position = require 'Position'
 local math = math
-
---TODO check this:
---signal dir + 4 = travel dir ?
 
 --[signal_dir] = {[raildir] = {offset (signal - rail)}}
 local rails_signals = {
@@ -73,45 +66,18 @@ local rails_signals = {
     },
 }
 
--- local is_placer_or_base = {
---     ["ret-pole-placer"] = true,
---     ["ret-signal-pole-placer"] = true,
---     ["ret-chain-pole-placer"] = true,
---     ["ret-pole-base-straight"] = true,
---     ["ret-pole-base-diagonal"] = true,
---     ["ret-signal-pole-base"] = true,
---     ["ret-chain-pole-base"] = true
--- }
-
----Group entities in the blueprint
---@param e entities
---@return Untyped Type of the blueprint
---@return Untyped No of rails
---@return Untyped poles in the blueprint
---@return Untyped boundingbox
---@return Untyped other entities
 Blueprint.group_entities = function(bp)
     local original_string = bp.export_stack()
     local e = bp.get_blueprint_entities()
-    --saveVar(e, "preRotate", "e")
-    --log(serpent.block(e))
+
     for i=1, #e do
         if e[i].name == "rail-chain-signal" then
             local dir = e[i].direction or 0
-            --local _, name = table.find(defines.direction, function(v, _, direction) return v == direction end, (dir + 4) % 8) --luacheck: ignore
-            --log(string.format('Found chainsignal for driving due %s, direction: %d', tostring(name), dir))
             if not (dir == 4 or dir == 5) then
                 local rot = (dir % 2 == 0) and (4 - dir ) * 45 or (5 - dir ) * 45
                 --log(string.format("Rotating blueprint by %d degrees (dir: %d)", rot, dir))
                 Blueprint.rotate(bp,rot)
                 e = bp.get_blueprint_entities()
-                -- for j=1, #e do
-                --     if e[j].name == "rail-chain-signal" then
-                --        _, name = table.find(defines.direction, function(v, _, direction) return v == direction end, (dir + 4) % 8) --luacheck: ignore
-                --        --log(string.format('Found chainsignal for driving due %s, direction: %d', tostring(name), dir))
-                --        break
-                --     end
-                -- end
             end
             break
         end
@@ -126,7 +92,7 @@ Blueprint.group_entities = function(bp)
     local all_signals = {}
     local box = {tl={x=0,y=0}, br={x=0,y=0}}
     for i=1,#e do
-        local position = FARL.diagonal_to_real_pos(e[i])
+        local position = FARL.diagonal_to_real_pos(e[i])--luacheck: ignore
         local prototype = game.entity_prototypes[e[i].name]
         if box.tl.x > position.x then box.tl.x = position.x end
         if box.tl.y > position.y then box.tl.y = position.y end
@@ -143,7 +109,6 @@ Blueprint.group_entities = function(bp)
             table.insert(all_signals, {name = "rail-signal", direction = dir, position = e[i].position, entity_number = e[i].entity_number})
             -- collect all poles in bp
         elseif prototype and prototype.type == "electric-pole" then
-        --elseif (prototype and prototype.type == "electric-pole") or is_placer_or_base[name] then
             table.insert(poles, {name = name, direction = dir, position = e[i].position, distance_to_chain = 0})
         elseif prototype and prototype.type == "straight-rail" then
             rails = rails + 1
@@ -160,18 +125,16 @@ Blueprint.group_entities = function(bp)
             table.insert(offsets.signals, {name = name, direction = dir, position = e[i].position, entity_number = e[i].entity_number})
             table.insert(all_signals, {name = "rail-signal", direction = dir, position = e[i].position, entity_number = e[i].entity_number})
         else
-            --if not is_placer_or_base[name] then
-                local e_type = game.entity_prototypes[name].type
-                local rail_entities = {["wall"]=true}
-                if not rail_entities[e_type] then
-                    table.insert(offsets.poleEntities, {
-                        name = name, direction = dir, position = e[i].position, pickup_position = e[i].pickup_position,
-                        drop_position = e[i].drop_position, request_filters = e[i].request_filters, recipe = e[i].recipe
-                    })
-                else
-                    table.insert(offsets.railEntities, {name = name, direction = dir, position = e[i].position})
-                end
-            --end
+            local e_type = game.entity_prototypes[name].type
+            local rail_entities = {["wall"]=true}
+            if not rail_entities[e_type] then
+                table.insert(offsets.poleEntities, {
+                    name = name, direction = dir, position = e[i].position, pickup_position = e[i].pickup_position,
+                    drop_position = e[i].drop_position, request_filters = e[i].request_filters, recipe = e[i].recipe
+                })
+            else
+                table.insert(offsets.railEntities, {name = name, direction = dir, position = e[i].position})
+            end
         end
     end
 

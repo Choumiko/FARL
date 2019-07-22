@@ -1,7 +1,7 @@
 local lib = require 'lib_control'
 local diagonal_to_real_pos = lib.diagonal_to_real_pos
 --local find_key = lib.find_key
-local Position = lib.Position
+local Position = require 'Position'
 local round = lib.round
 
 local colors = {
@@ -247,7 +247,9 @@ function render.draw_line(from, to, color, alt, dash, opts)
         color = color or colors.black,
         width = 2,
         from = from,
+        from_offset = opts.from_offset,
         to = to,
+        to_offset = opts.to_offset,
         gap_length = dash and 0.5 or nil,
         dash_length = dash and 0.5 or nil,
         surface = render.surface or from.surface,
@@ -269,9 +271,11 @@ function render.draw_rectangle(from, to, color, alt, opts)
     end
     return rendering.draw_rectangle{
         color = color or colors.orange,
-        width = 2,
+        width = opts.width or 2,
         left_top = from,
+        left_top_offset = opts.left_top_offset,
         right_bottom = to,
+        right_bottom_offset = opts.right_bottom_offset,
         surface = render.surface or from.surface,
         time_to_live = render.ttl or opts.ttl,
         players = render.player_index,

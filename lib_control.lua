@@ -1,3 +1,5 @@
+local Position = require 'Position'
+
 local M = {}
 
 function M.saveVar(var, name)
@@ -53,38 +55,21 @@ M._diagonal_data = {
     [dir.northwest] = { x = -0.5, y = -0.5 }
     }
 
-local Position = {}
-function Position.add(pos1, pos2)
-    return { x = pos1.x + pos2.x, y = pos1.y + pos2.y}
-end
-
-function Position.subtract(pos1, pos2)
-    return { x = pos1.x - pos2.x, y = pos1.y - pos2.y}
-end
-
-function Position.equals(pos1, pos2)
-    return pos1.x == pos2.x and pos1.y == pos2.y
-end
-
-function Position.expand_to_area(pos, radius)
-    if #pos == 2 then
-        return { left_top = { x = pos[1] - radius, y = pos[2] - radius }, right_bottom = { x = pos[1] + radius, y = pos[2] + radius } }
-    end
-    return { left_top = { x = pos.x - radius, y = pos.y - radius}, right_bottom = { x = pos.x + radius, y = pos.y + radius } }
-end
-
-function Position.distance_squared(pos1, pos2)
-    local axbx = pos1.x - pos2.x
-    local ayby = pos1.y - pos2.y
-    return axbx * axbx + ayby * ayby
-end
-
 function M.diagonal_to_real_pos(rail)
-    if rail.type == "straight-rail" then
+    if rail.type == "straight-rail" or rail.name == "straight-rail" then
         local off = M._diagonal_data[rail.direction] or { x = 0, y = 0 }
         return Position.add(off, rail.position)
     else
-        return rail.position
+        return {x = rail.position.x, y = rail.position.y}
+    end
+end
+
+function M.real_to_diagonal_pos(rail)
+    if rail.type == "straight-rail" or rail.name == "straight-rail" then
+        local off = M._diagonal_data[rail.direction] or { x = 0, y = 0 }
+        return Position.subtract(rail.position, off)
+    else
+        return {x = rail.position.x, y = rail.position.y}
     end
 end
 
@@ -98,5 +83,28 @@ function M.round_to_int(num)
     return floor(num + 0.5)
 end
 
-M.Position = Position
+function M.find_key(tbl, n)
+    for name, v in pairs(tbl) do
+        if v == n then return name end
+    end
+end
+
+function M.position_hash(x, y, d)
+    return ((1000000 + x) * 100000000) + ((1000000 + y) * 100) + d
+end
+
+function M.position_hash2(ent)
+    local pos = ent.position
+    return M.position_hash(pos.x, pos.y, ent.direction or 0)
+end
+
+function M.create_set(...)
+    local t = table.pack(...)
+    local ret = {}
+    for _, s in pairs(t) do
+        ret[s] = true
+    end
+    return ret
+end
+
 return M
