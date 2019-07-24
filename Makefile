@@ -36,7 +36,7 @@ clean:
 	rm -rf build/
 
 verify:
-	luacheck . --exclude-files "scrap.lua"
+	luacheck . --exclude-files scrap.lua profiler3.lua unused.lua
 
 remove_mod:
 	if [ -L factorio_mods ];\

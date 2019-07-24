@@ -188,52 +188,79 @@ Blueprint.get_max_pole = function(poles, offsets)
     end
 end
 
--- rotate a blueprint, return entities, tiles
-Blueprint.rotate = function(bp, degree)
-    local entities = bp.get_blueprint_entities()
+local _rotations = {
+    [-1] = { sin = -1, cos = 0},
+    [1] = { sin = 1, cos = 0},
+    [2] = { sin = 0, cos = -1},
+}
+_rotations[-2] = _rotations[2]
+local function rotate_position(pos, _t)
+    return {x = _t.cos * pos.x - _t.sin * pos.y, y = _t.sin * pos.x + _t.cos * pos.y}
+end
+
+local function rotate_entity(ent, rotations, rot)
+    ent.direction = ent.direction or 0
+    if rotations and rot then
+        ent.position = rotate_position(ent.position, rot)
+        ent.direction = ((ent.direction) + 2 * rotations) % 8
+        ent.pickup_position = ent.pickup_position and rotate_position(ent.pickup_position, rot) or nil
+        ent.drop_position = ent.drop_position and rotate_position(ent.drop_position, rot) or nil
+    end
+    return ent
+end
+
+Blueprint.rotate = function(bp, signal_types)
+    local ents = bp.get_blueprint_entities()
     local tiles = bp.get_blueprint_tiles()
-    local rad = math.rad(degree)
-    local cos, sin = math.cos(rad), math.sin(rad)
-    if math.abs(degree) == 180 then
-        sin = 0
-        cos = -1
-    elseif degree == 90 then
-      sin = 1
-      cos = 0
-    elseif degree == -90 then
-      sin = -1
-      cos = 0
+
+    local rotations
+    local chain_signal
+    local is_diagonal = false
+    for i, ent in pairs(ents) do
+        if ent.name == "rail-chain-signal" then
+            ent.direction = ent.direction or 0
+            if ent.direction % 2 == 0 then
+                rotations = (4 - ent.direction) / 2
+            else
+                rotations = (5 - ent.direction) / 2
+                is_diagonal = true
+            end
+            ent.chain = true
+            chain_signal = ent
+            break
+        end
     end
-    local rotate = function(pos)
-        return { x = cos * pos.x - sin * pos.y, y = sin * pos.x + cos * pos.y }
+    if not chain_signal then
+        return
     end
-    --local r = { { x = cos, y = -sin }, { x = sin, y = cos } } --counter clockwise
-    --game.print(string.format('degree: %s, cos: %s, sin: %s', degree, cos, sin))
-    local x, y
-    for _, entity in pairs(entities) do
-        x, y = entity.position.x, entity.position.y
-        --log(serpent.block({n = entity.name, pos = entity.position, dir = entity.direction}))
-        entity.position.x = cos * x - sin * y
-        entity.position.y = sin * x + cos * y
-        entity.direction = entity.direction or 0
-        entity.direction = ( entity.direction + degree / 45 ) % 8
-        --log(serpent.block({new_pos = entity.position, dir = entity.direction}))
-        entity.pickup_position = entity.pickup_position and rotate(entity.pickup_position) or nil
-        entity.drop_position = entity.drop_position and rotate(entity.drop_position) or nil
-    end
-    --saveVar(entities, "postRotate", "e")
-    bp.set_blueprint_entities(entities)
-    if tiles then
+    local rot = _rotations[rotations]
+    if tiles and rotations ~= 0 then
+        log(serpent.block(tiles))
         for _, tile in pairs(tiles) do
             --tiles 'center' is the top left corner, rotate the real center of the tile
-            x, y = tile.position.x + 0.5, tile.position.y + 0.5
-            tile.position.x = (cos * x - sin * y) - 0.5
-            tile.position.y = (sin * x + cos * y) - 0.5
+            local x, y = tile.position.x + 0.5, tile.position.y + 0.5
+            tile.position = rotate_position({x = x, y = y}, rot)
+            -- tile.position.x = (cos * x - sin * y) - 0.5
+            -- tile.position.y = (sin * x + cos * y) - 0.5
         end
-        --TODO fix tile position
+        --? TODO fix tile position
         bp.set_blueprint_tiles(tiles)
     end
-    --game.print("Done rotating")
+
+    local proto
+    local bp_data = {signals = {}, lanes = {}}
+    for i, ent in pairs(ents) do
+        proto = game.entity_prototypes[ent.name].type
+        ent.type = proto
+        ents[i] = rotate_entity(ent, rotations, rot)
+        if signal_types[proto] then
+            bp_data.signals[ent.entity_number] = ent
+        else
+            bp_data[proto] = bp_data[proto] or {}
+            bp_data[proto][ent.entity_number] = ent
+        end
+    end
+    return ents, bp_data, chain_signal, is_diagonal
 end
 
 return Blueprint

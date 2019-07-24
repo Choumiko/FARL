@@ -3,6 +3,7 @@ local render = require('render')
 local colors = render.colors
 local lib = require 'lib_control'
 local Position = require 'Position'
+local Blueprint = require 'Blueprint'
 local round = lib.round
 local librail = require 'librail'
 local profiler = require('profiler')
@@ -26,6 +27,7 @@ local function log2(v, description)
         local info = debug.getinfo(2, "l")
         description = info and info.currentline
     end
+    v = type(v) == "table" and serpent.line(v) or v
     log(string.format("%s: %s", description or "undesc", tostring(v)))
 end
 
@@ -1136,18 +1138,22 @@ local function rotate_bounding_box(sel_box, direction, box, pos)
     rect[2] = sel_box.left_top.y
     rect[3] = sel_box.right_bottom.x
     rect[4] = sel_box.right_bottom.y
-
+    -- print("\n")
+    -- log2(sel_box, "Sel_box")
+    -- log2(direction, "dir")
     local x1, y1 = rect[rot[1]], rect[rot[2]]
     local x2, y2 = rect[rot[3]], rect[rot[4]]
+    -- log2({x1,y1,x2,y2}, "rotated")
     --swap tl and rb
     if x1 > x2 then
-        x1, x2 = -x1, x2
+        x1, x2 = x2, x1
     end
     sel_box.left_top.x = x1
     sel_box.right_bottom.x = x2
     if y1 > y2 then
-        y1, y2 = -y1, -y2
+        y1, y2 = y2, y1
     end
+    -- log2({x1,y1,x2,y2}, "rotated2")
     sel_box.left_top.y = y1
     sel_box.right_bottom.y = y2
     if pos then
@@ -1168,63 +1174,12 @@ local function farl_test(event)
     if player.cursor_stack.valid_for_read then
         local selected = player.cursor_stack
         if selected.type == "blueprint" then
-            local ents = selected.get_blueprint_entities()
-            local function rotate_position(pos, rotations)
-                local t = {
-                    [-1] = { sin = -1, cos = 0},
-                    [1] = { sin = 1, cos = 0},
-                    [2] = { sin = 0, cos = -1},
-                }
-                t[-2] = t[2]
-                local _t = t[rotations]
-                return {x = _t.cos * pos.x - _t.sin * pos.y, y = _t.sin * pos.x + _t.cos * pos.y}
-            end
-            local function rotate_entity(ent, rotations)
-                ent.direction = ent.direction or 0
-                if rotations and rotations ~= 0 then
-                    ent.position = rotate_position(ent.position, rotations)
-                    ent.direction = ((ent.direction) + 2 * rotations) % 8
-                    ent.pickup_position = ent.pickup_position and rotate_position(ent.pickup_position, rotations) or nil
-                    ent.drop_position = ent.drop_position and rotate_position(ent.drop_position, rotations) or nil
-                end
-                return ent
-            end
-            local rotations
-            local chain_signal, main_pole, main_rail
-            local is_diagonal = false
-            for i, ent in pairs(ents) do
-                if ent.name == "rail-chain-signal" then
-                    ent.direction = ent.direction or 0
-                    if ent.direction % 2 == 0 then
-                        rotations = (4 - ent.direction) / 2
-                    else
-                        rotations = (5 - ent.direction) / 2
-                        is_diagonal = true
-                    end
-                    ent.chain = true
-                    chain_signal = ent
-                    break
-                end
-            end
-            if not chain_signal then
+            local ents, bp_data, chain_signal, is_diagonal = Blueprint.rotate(selected, signal_types)
+            if not ents then
                 game.print("No chain signal")
                 return
             end
-
-            --!rotate BEFORE you do stuff based on positions you idiot
-            local proto
-            local bp_data = {signals = {}, lanes = {}}
-            for i, ent in pairs(ents) do
-                proto = game.entity_prototypes[ent.name].type
-                ent.type = proto
-                ents[i] = rotate_entity(ent, rotations)
-                if signal_types[proto] then
-                    bp_data.signals[ent.entity_number] = ent
-                else
-                    bp_data[proto] = bp_data[proto] or {}
-                    bp_data[proto][ent.entity_number] = ent
-                end
-            end
+            local main_rail, main_pole
 
             --pair signals with rails
             local offset, k, rail_data
@@ -1251,81 +1206,86 @@ local function farl_test(event)
             assert(main_rail)
             assert(chain_signal)
 
-            --[[--?will doing this NOT as the last step mess up diagonal blueprints?
-                diagonals have different positions depending on their direction, so for non euqal directions i might have to do things different?
-                - Nope, only when calculating rail specific offsets (walls)
-            ]]
-            --center the blueprint on the main rail <-- why?
-
-            -- local real_pos = lib.diagonal_to_real_pos(main_rail)
-            -- for _, ent in pairs(ents) do
-            --     ent.position = Position.subtract(lib.diagonal_to_real_pos(ent), real_pos)
-            -- end
-
-            -- log(serpent.line(real_pos))
             do
-            local p0 = lib.diagonal_to_real_pos(main_rail)
-            local b = 1
-            local div = sqrt2
-            if not is_diagonal then
-                b, div = 0, 1
-            end
-            local c = -(p0.x + b * p0.y)
-            local dist, wire_dist, abs_dist, bb
-            local max_distance, min_to_chain = 0, math.huge
-            local bb_min, bb_max = 0, 0
-            local dist_l, dist_r, tmp, r_pos
-            local box = {}
-            for _, ent in pairs(ents) do
-                r_pos = lib.diagonal_to_real_pos(ent)
-                --distance to the line through the rail, left/right offset basically
-                dist = (r_pos.x + b * r_pos.y + c)
-                ent.distance = is_diagonal and dist / 2 or dist
-                if ent.type == "straight-rail" then
-                    ent.track_distance = dist / 2
-                    table.insert(bp_data.lanes, ent)
+                local p0 = lib.diagonal_to_real_pos(main_rail)
+                local b = 1
+                local div = sqrt2
+                if not is_diagonal then
+                    b, div = 0, 1
                 end
-                dist = dist / div
-                bb = rotate_bounding_box(game.entity_prototypes[ent.name].selection_box, ent.direction, box, lib.diagonal_to_real_pos(ent))
+                local c = -(p0.x + b * p0.y)
+                local dist, wire_dist, abs_dist, r_pos
+                local max_distance, min_to_chain = 0, math.huge
+                -- local bb_min, bb_max = 0, 0
+                -- local dist_l, dist_r
+                -- local tmp, bb
+                -- local ent_min, ent_max
+                local box = {}
+                for _, ent in pairs(ents) do
+                    r_pos = lib.diagonal_to_real_pos(ent)
+                    --distance to the line through the rail, left/right offset basically
+                    dist = (r_pos.x + b * r_pos.y + c)
+                    ent.distance = is_diagonal and dist / 2 or dist
+                    if ent.type == "straight-rail" then
+                        ent.track_distance = dist / 2
+                        table.insert(bp_data.lanes, ent)
+                    end
+                    dist = dist / div
+                    -- bb = rotate_bounding_box(game.entity_prototypes[ent.name].selection_box, ent.direction, box, r_pos)
+                    rotate_bounding_box(game.entity_prototypes[ent.name].selection_box, ent.direction, box, r_pos)
+                    -- tmp = Position.add(bb.left_top, r_pos)
+                    -- log2(tmp, "l")
+                    -- dist_l = (tmp.x + b * tmp.y + c) / div
+                    -- tmp = Position.add(bb.right_bottom, r_pos)
+                    -- log2(tmp, "r")
+                    -- dist_r = (tmp.x + b * tmp.y + c) / div
+                    -- if bb_max < dist_r then
+                    --     bb_max = dist_r
+                    --     --ent_max = ent
+                    -- end
+                    -- if bb_min > dist_l then
+                    --     bb_min = dist_l
+                    --     --ent_min = ent
+                    -- end
+                    -- log2(dist, ent.name .. " dist")
+                    if ent.type == "electric-pole" then
+                        abs_dist = math.abs(dist)
+                        wire_dist = game.entity_prototypes[ent.name].max_wire_distance
+                        if wire_dist == max_distance and abs_dist < min_to_chain then
+                            min_to_chain = abs_dist
+                            main_pole = ent
+                        end
+                        if wire_dist > max_distance then
+                            max_distance = wire_dist
+                            main_pole = ent
+                            min_to_chain = abs_dist
+                        end
+                    end
+                end
+                -- log2(bb_min, "Left")
+                -- log2(bb_max, "Right")
+                -- log2(serpent.line(box))
+                render.on(true)
+                rendering.clear("FARL")
+                box.left_top = Position.subtract(box.left_top, p0)
+                box.right_bottom = Position.subtract(box.right_bottom, p0)
 
-                tmp = Position.add(bb.left_top, r_pos)
-                dist_l = (tmp.x + b * tmp.y + c) / div
-                tmp = Position.add(bb.right_bottom, r_pos)
-                dist_r = (tmp.x + b * tmp.y + c) / div
-                bb_max = bb_max < dist_r and dist_r or bb_max
-                bb_min = bb_min > dist_l and dist_l or bb_min
-                log2(dist, ent.name .. " dist")
-                if ent.type == "electric-pole" then
-                    abs_dist = math.abs(dist)
-                    wire_dist = game.entity_prototypes[ent.name].max_wire_distance
-                    if wire_dist == max_distance and abs_dist < min_to_chain then
-                        min_to_chain = abs_dist
-                        main_pole = ent
-                    end
-                    if wire_dist > max_distance then
-                        max_distance = wire_dist
-                        main_pole = ent
-                        min_to_chain = abs_dist
-                    end
-                end
-            end
-            log2(bb_min, "Left")
-            log2(bb_max, "Right")
-            box.left_top = Position.subtract(box.left_top, p0)
-            box.right_bottom = Position.subtract(box.right_bottom, p0)
-            log2(serpent.line(box))
-            render.on(true)
-            rendering.clear("FARL")
-            render.draw_line(player.character, player.character, nil, true, false, {from_offset = {x = bb_min, y = 0}, to_offset = {x = bb_max, y = 0}})
-            render.draw_line(player.character, player.character, nil, true, false, {from_offset = box.right_bottom, to_offset = box.left_top})
-            render.draw_rectangle(player, player.character, colors.green, true, {left_top_offset = box.right_bottom, right_bottom_offset = box.left_top})
-            --render.draw_line(player.character, player.character, colors.red, true, false, {from_offset = {x = 0, y = 4}})
+                box.left_top.x = math.floor(box.left_top.x)
+                box.left_top.y = math.floor(box.left_top.y)
+                box.right_bottom.x = math.ceil(box.right_bottom.x)
+                box.right_bottom.y = math.ceil(box.right_bottom.y)
+
+                render.draw_rectangle(player.character, player.character, colors.green, true, {left_top_offset = box.left_top, right_bottom_offset = box.right_bottom})
+                bp_data.bounding_box = box
             end
             table.sort(bp_data.lanes, function(a, b) return a.track_distance < b.track_distance end)
+
             if main_pole then
                 main_pole.main = true
+                main_pole.signal_offsets = {}
+                --for "place signals with every Xth pole" mode
                 for _, signal in pairs(bp_data.signals) do
-                    signal.offset_to_pole = Position.subtract(signal.position, main_pole.position)
+                    table.insert(main_pole.signal_offsets, Position.subtract(signal.position, main_pole.position))
                 end
             end
 
@@ -1333,25 +1293,7 @@ local function farl_test(event)
             --One final pass to calculate the necessary offsets and bounding box
             --offsets relative to rail for walls, for other rails technically only left/right distance is necessary?
             --offsets relative to pole: signals, anything that isn't a rail or a wall?
-            -- local box, rect = {}, {}
-            -- for _, ent in pairs(ents) do
-            --     if ent.name == "straight-rail" and ent.direction % 2 == 1 then
-            --         --log(serpent.line(ent.position))
-            --         ent.real_pos = lib.diagonal_to_real_pos(ent)
-            --         --log(serpent.line(ent.real_pos).."\n")
-            --     end
 
-            --     update_bounding_box(box, ent.position, x1, y1, x2, y2)
-            -- end
-            -- log2(serpent.line(box))
-
-            -- local from = player.selected or player.character
-            -- render.draw_rectangle(from, from, nil, true, {left_top_offset = box.left_top, right_bottom_offset = box.right_bottom})
-            -- box.left_top.x = math.floor(box.left_top.x) - 1
-            -- box.left_top.y = math.floor(box.left_top.y)
-            -- box.right_bottom.x = math.ceil(box.right_bottom.x) + 1
-            -- box.right_bottom.y = math.ceil(box.right_bottom.y)
-            -- bp_data.bounding_box = box
             local pdata = global._pdata[player.index]
             pdata.bp_data[is_diagonal] = bp_data
             local data = pdata.bp_data
@@ -1359,38 +1301,42 @@ local function farl_test(event)
             if data[false] and data[true] and #data[true].lanes == #data[false].lanes then
                 for i, rail in pairs(data[false].lanes) do
                     if not rail.main then
+                        local rail_d = data[true].lanes[i]
                         local Sd = rail.track_distance
-                        local Dd = data[true].lanes[i].track_distance
+                        local Dd = rail_d.track_distance
                         log2(Sd, "Sd")
                         log2(Dd, "Dd")
                         local n = Sd - Dd
-                        log2(n, "N")--lag for straight -> diagonal
+                        --local n = math.abs(Sd - Dd)
+                        --for positive n: n*2 is the amount of rails needed to catchup
+                        log2(n, "N")--lag for straight -> diagonal (+/- are for right turns, for left invert it)
                         local d = -Dd - 2 * n
-                        log2(d, "I")--lag for diagonal -> straight
-                        if not is_diagonal then
-                            rail.position.x = main_rail.position.x + Sd * 2
-                            rail.position.y = main_rail.position.y + math.abs(2 * n)
-                        -- else
-                        --     local m_pos = lib.diagonal_to_real_pos(main_rail)
-                        --     rail.position = Position.add(m_pos, {x = Dd, y = Dd})
-                        --     rail.direction = main_rail.direction
-                        --     rail.position = lib.real_to_diagonal_pos(rail)
+                        log2(d, "I")--lag for diagonal -> straight (+/- are for right turns, for left invert it)
+                        rail.lag_s = n
+                        rail.lag_d = d
+                        rail_d.lag_s = n
+                        rail_d.lag_d = d
+
+                        rail.position.x = main_rail.position.x + Sd * 2
+                        rail.position.y = main_rail.position.y + math.abs(2 * n)
+                        if rail.signal then
+                            rail.signal.position.y = rail.signal.position.y + math.abs(2 * n)
+                        end
+                        local pos = {x = -math.abs(d), y = math.abs(d)}
+                        if Dd % 2 == 1 then
+                            rail_d.position = Position.add(lib.diagonal_to_real_pos(rail_d), pos)
+                            rail_d.direction = (rail_d.direction + 4) % 8
+                            rail_d.position = lib.real_to_diagonal_pos(rail_d)
+                        else
+                            rail_d.position = Position.add(rail_d.position, pos)
+                        end
+                        if rail_d.signal then
+                            rail_d.signal.position = Position.add(rail_d.signal.position, pos)
                         end
                     end
                 end
             end
-            --log2(serpent.line(box))
 
-
-            -- for t, _ents in pairs(bp_data) do
-            --     log2("", t)
-            --     for _, _ent in pairs(_ents) do
-            --         log(serpent.line(_ent))
-            --     end
-            --     --print("")
-            -- end
-            -- log2(serpent.line(main_pole), "Pole")
-            -- log2(serpent.line(main_rail), "Rail")
             selected.set_blueprint_entities(ents)
             game.write_file("bp_data.lua", serpent.block(pdata.bp_data, {name = "bp_data"}))
             --game.write_file("reapplied.lua", serpent.block(selected.get_blueprint_entities()))
@@ -1419,7 +1365,13 @@ local function farl_test(event)
             log{"", p}
         elseif rail_types[sel_type] then
             local data = get_rail_data(selected).next_rails
-
+            local bb = rotate_bounding_box(game.entity_prototypes[selected.name].selection_box, selected.direction)
+            log2(game.entity_prototypes[selected.name].selection_box, "bb")
+            -- bb.left_top = Position.add(bb.left_top, lib.diagonal_to_real_pos(selected))
+            -- bb.right_bottom = Position.add(bb.right_bottom, lib.diagonal_to_real_pos(selected))
+            render.on(true)
+            rendering.clear("FARL")
+            render.draw_rectangle(player.character, player.character, nil, true, {left_top_offset = bb.left_top, right_bottom_offset = bb.right_bottom})
             -- test_functions.next_rails(selected)
             -- test_functions.get_closest_signal(selected, player)
             render.on(true)

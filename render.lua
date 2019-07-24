@@ -76,6 +76,7 @@ function render.mark_entity(entity, color, text, opts)
             radius = 0.25,
             filled = true,
             target = entity,
+            target_offset = opts.target_offset or nil,--and {opts.target_offset.x, opts.target_offset.y}
             surface = render.surface or entity.surface,
             time_to_live = opts.ttl or render.ttl,
             only_in_alt_mode = opts.alt,
