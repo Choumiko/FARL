@@ -1,191 +1,71 @@
 local Blueprint = {}
 local Position = require 'Position'
+local librail = require 'librail'
+local lib = require 'lib_control'
 local math = math
+local dir = defines.direction
 
---[signal_dir] = {[raildir] = {offset (signal - rail)}}
-local rails_signals = {
-    [0] = {
-        [0] = {
-            {x = -1.5, y = -0.5, traveldir = 4},
-            {x = -1.5, y =  0.5, traveldir = 4},
-        }
-    },
-    [1] = {
-        [3] = {
-            {x = -0.5, y = -0.5, traveldir = 5}
-        },
-        [7] = {
-            {x = -1.5, y = -1.5, traveldir = 5},
-
-        }
-    },
-    [2] = {
-        [2] = {
-            {x =  -0.5, y =  -1.5, traveldir = 6},
-            {x =   0.5, y =  -1.5, traveldir = 6},
-        }
-    },
-    [3] = {
-        [1] = {
-            {x = 1.5, y = -1.5, traveldir = 7},
-
-        },
-        [5] = {
-            {x = 0.5, y = -0.5, traveldir = 7}
-        }
-    },
-    [4] = {
-        [0] = {
-            {x =  1.5, y = -0.5, traveldir = 0},
-            {x =  1.5, y =  0.5, traveldir = 0},
-        }
-    },
-    [5] = {
-        [3] = {
-            {x = 1.5, y = 1.5, traveldir = 1}
-        },
-        [7] = {
-            {x = 0.5, y = 0.5, traveldir = 1},
-
-        }
-    },
-    [6] = {
-        [2] = {
-            {x =  -0.5, y =  1.5, traveldir = 2},
-            {x =   0.5, y =  1.5, traveldir = 2},
-        }
-    },
-    [7] = {
-        [1] = {
-            {x = -0.5, y = 0.5, traveldir = 3},
-
-        },
-        [5] = {
-            {x = -1.5, y = 1.5, traveldir = 3}
-        }
-    },
+-- https://github.com/dewiniaid/BlueprintExtensions/blob/master/modules/snap.lua
+local box_rotations = {
+    [dir.north] = { 1, 2, 3, 4 },
+    [dir.northeast] = { 3, 2, 1, 4 },
+    [dir.east] = { 4, 1, 2, 3 },
+    [dir.southeast] = { 2, 1, 4, 3 },
+    [dir.south] = { 3, 4, 1, 2 },
+    [dir.southwest] = { 1, 4, 3, 2 },
+    [dir.west] = { 2, 3, 4, 1 },
+    [dir.northwest] = { 4, 3, 2, 1 },
 }
 
-Blueprint.group_entities = function(bp)
-    local original_string = bp.export_stack()
-    local e = bp.get_blueprint_entities()
-
-    for i=1, #e do
-        if e[i].name == "rail-chain-signal" then
-            local dir = e[i].direction or 0
-            if not (dir == 4 or dir == 5) then
-                local rot = (dir % 2 == 0) and (4 - dir ) * 45 or (5 - dir ) * 45
-                --log(string.format("Rotating blueprint by %d degrees (dir: %d)", rot, dir))
-                Blueprint.rotate(bp,rot)
-                e = bp.get_blueprint_entities()
-            end
-            break
-        end
+local function update_bounding_box(box, pos, min_x, min_y, max_x, max_y)--luacheck: no unused
+    min_x = pos.x + min_x
+    min_y = pos.y + min_y
+    max_x = pos.x + max_x
+    max_y = pos.y + max_y
+    if not box.left_top then
+        box.left_top = {x = min_x, y = min_y}
+        box.right_bottom = {x = max_x, y = max_y}
+        return
     end
+    local lt = box.left_top
+    local rb = box.right_bottom
 
-    local offsets = {
-        pole=false, chain=false, poleEntities={}, railEntities={},
-        rails={}, signals={}, concrete={}, lanes={}}
-    local bpType = false
-    local rails = 0
-    local poles = {}
-    local all_signals = {}
-    local box = {tl={x=0,y=0}, br={x=0,y=0}}
-    for i=1,#e do
-        local position = FARL.diagonal_to_real_pos(e[i])--luacheck: ignore
-        local prototype = game.entity_prototypes[e[i].name]
-        if box.tl.x > position.x then box.tl.x = position.x end
-        if box.tl.y > position.y then box.tl.y = position.y end
+    lt.x = min_x < lt.x and min_x or lt.x
+    lt.y = min_y < lt.y and min_y or lt.y
 
-        if box.br.x < position.x then box.br.x = position.x end
-        if box.br.y < position.y then box.br.y = position.y end
-
-        local dir = e[i].direction or 0
-        local name = e[i].name
-
-        if name == "rail-chain-signal" and not offsets.chain then
-          --game.print(string.format('chain2 dir: %d position: %s', e[i].direction, Position.tostring(e[i].position)))
-            offsets.chain = {direction = dir, name = e[i].name, position = e[i].position}
-            table.insert(all_signals, {name = "rail-signal", direction = dir, position = e[i].position, entity_number = e[i].entity_number})
-            -- collect all poles in bp
-        elseif prototype and prototype.type == "electric-pole" then
-            table.insert(poles, {name = name, direction = dir, position = e[i].position, distance_to_chain = 0})
-        elseif prototype and prototype.type == "straight-rail" then
-            rails = rails + 1
-            if not bpType then
-                bpType = (dir == 0 or dir == 4) and "straight" or "diagonal"
-            end
-            if  (bpType == "diagonal" and (dir == 3 or dir == 7)) or
-                (bpType == "straight" and (dir == 0 or dir == 4)) then
-                table.insert(offsets.rails, {name = name, direction = dir, position = e[i].position, type = game.entity_prototypes[name].type, entity_number = e[i].entity_number})
-            else
-                return false, {"msg-bp-rail-direction"}
-            end
-        elseif name == "rail-signal" then
-            table.insert(offsets.signals, {name = name, direction = dir, position = e[i].position, entity_number = e[i].entity_number})
-            table.insert(all_signals, {name = "rail-signal", direction = dir, position = e[i].position, entity_number = e[i].entity_number})
-        else
-            local e_type = game.entity_prototypes[name].type
-            local rail_entities = {["wall"]=true}
-            if not rail_entities[e_type] then
-                table.insert(offsets.poleEntities, {
-                    name = name, direction = dir, position = e[i].position, pickup_position = e[i].pickup_position,
-                    drop_position = e[i].drop_position, request_filters = e[i].request_filters, recipe = e[i].recipe
-                })
-            else
-                table.insert(offsets.railEntities, {name = name, direction = dir, position = e[i].position})
-            end
-        end
-    end
-
-    for i, rail in pairs(offsets.rails) do
-        for _, signal in pairs(all_signals) do
-            for _, data in pairs(rails_signals[signal.direction]) do
-                for _, offset in pairs(data) do
-                    local pos = Position.subtract(signal.position, rail.position)
-                    if Position.equals(pos, offset) then
-                        offsets.rails[i].signal_number = signal.entity_number
-                        offsets.rails[i].signal = signal
-                    end
-                end
-            end
-        end
-    end
-
-    if offsets.chain then
-        local chain_position = offsets.chain.position
-        for _, pole in pairs(poles) do
-            pole.distance_to_chain = Position.distance_squared(chain_position, pole.position)
-        end
-    end
-    --log(serpent.block(offsets.rails))
-    return bpType, rails, poles, box, offsets, original_string
+    rb.x = max_x > rb.x and max_x or rb.x
+    rb.y = max_y > rb.y and max_y or rb.y
 end
 
-Blueprint.get_max_pole = function(poles, offsets)
-    local max = 0
-    local max_index
-    local min_distance = math.huge
-    --local name
-    for i,p in pairs(poles) do
-        --name = p.name--is_placer_or_base[p.name] and "ret-pole-wire" or p.name
-        local wire_distance = game.entity_prototypes[p.name].max_wire_distance
-        --choose pole closer to the chainsignal as the main pole in case of a tie
-        if wire_distance == max and p.distance_to_chain < min_distance then
-            min_distance = p.distance_to_chain
-            max_index = i
-        end
-        if wire_distance > max then
-            max = wire_distance
-            max_index = i
-        end
+local function rotate_bounding_box(sel_box, direction, box, pos)
+    local rot = box_rotations[direction or 0]
+    local rect = {false, false, false, false}
+    rect[1] = sel_box.left_top.x
+    rect[2] = sel_box.left_top.y
+    rect[3] = sel_box.right_bottom.x
+    rect[4] = sel_box.right_bottom.y
+    -- print("\n")
+    -- log2(sel_box, "Sel_box")
+    -- log2(direction, "dir")
+    local x1, y1 = rect[rot[1]], rect[rot[2]]
+    local x2, y2 = rect[rot[3]], rect[rot[4]]
+    -- log2({x1,y1,x2,y2}, "rotated")
+    --swap tl and rb
+    if x1 > x2 then
+        x1, x2 = x2, x1
     end
-    offsets.pole = poles[max_index]
-    for i,p in pairs(poles) do
-        if i ~= max_index then
-            table.insert(offsets.poleEntities, p)
-        end
+    sel_box.left_top.x = x1
+    sel_box.right_bottom.x = x2
+    if y1 > y2 then
+        y1, y2 = y2, y1
     end
+    -- log2({x1,y1,x2,y2}, "rotated2")
+    sel_box.left_top.y = y1
+    sel_box.right_bottom.y = y2
+    if pos then
+        update_bounding_box(box, pos, x1, y1, x2, y2)
+    end
+    return sel_box
 end
 
 local _rotations = {
@@ -261,6 +141,94 @@ Blueprint.rotate = function(bp, signal_types)
         end
     end
     return ents, bp_data, chain_signal, is_diagonal
+end
+
+function Blueprint.parse(bp_data, chain_signal, is_diagonal, ents)
+    local main_rail, main_pole
+
+    --pair signals with rails
+    local offset, k, rail_data
+    for _s, signal in pairs(bp_data.signals) do
+        for _, rail in pairs(bp_data["straight-rail"]) do
+            rail_data = librail.rail_data[rail.type][rail.direction]
+            offset = Position.subtract(signal.position, rail.position)
+            k = librail.args_to_key(offset.x, offset.y, signal.direction)
+            if rail_data.signal_map[k] then
+                if signal == chain_signal then
+                    rail.main = true
+                    main_rail = rail
+                end
+                rail.travel_dir = (signal.direction + 4) % 8
+                --rail.signals = rail_data.signals[rail_data.travel_to_rd[rail.travel_dir]]
+                signal.rail = rail.entity_number
+                rail.signal = signal
+            end
+        end
+        if not signal.rail then
+            game.print("Lone signal")
+        end
+    end
+    assert(main_rail)
+    assert(chain_signal)
+
+    local p0 = lib.diagonal_to_real_pos(main_rail)
+    local b = 1
+    local div = math.sqrt(2)
+    if not is_diagonal then
+        b, div = 0, 1
+    end
+    local c = -(p0.x + b * p0.y)
+    local dist, wire_dist, abs_dist, r_pos
+    local max_distance, min_to_chain = 0, math.huge
+    local box = {}
+    for _, ent in pairs(ents) do
+        r_pos = lib.diagonal_to_real_pos(ent)
+        --distance to the line through the rail, left/right offset basically
+        dist = (r_pos.x + b * r_pos.y + c)
+        ent.distance = is_diagonal and dist / 2 or dist
+        if ent.type == "straight-rail" then
+            ent.track_distance = dist / 2
+            table.insert(bp_data.lanes, ent)
+        end
+        dist = dist / div
+        -- bb = rotate_bounding_box(game.entity_prototypes[ent.name].selection_box, ent.direction, box, r_pos)
+        rotate_bounding_box(game.entity_prototypes[ent.name].selection_box, ent.direction, box, r_pos)
+
+        if ent.type == "electric-pole" then
+            abs_dist = math.abs(dist)
+            wire_dist = game.entity_prototypes[ent.name].max_wire_distance
+            if wire_dist == max_distance and abs_dist < min_to_chain then
+                min_to_chain = abs_dist
+                main_pole = ent
+            end
+            if wire_dist > max_distance then
+                max_distance = wire_dist
+                main_pole = ent
+                min_to_chain = abs_dist
+            end
+        end
+    end
+
+    box.left_top = Position.subtract(box.left_top, p0)
+    box.right_bottom = Position.subtract(box.right_bottom, p0)
+
+    box.left_top.x = math.floor(box.left_top.x)
+    box.left_top.y = math.floor(box.left_top.y)
+    box.right_bottom.x = math.ceil(box.right_bottom.x)
+    box.right_bottom.y = math.ceil(box.right_bottom.y)
+    bp_data.bounding_box = box
+
+    table.sort(bp_data.lanes, function(A, B) return A.track_distance < B.track_distance end)
+
+    if main_pole then
+        main_pole.main = true
+        main_pole.signal_offsets = {}
+        --for "place signals with every Xth pole" mode
+        for _, signal in pairs(bp_data.signals) do
+            table.insert(main_pole.signal_offsets, Position.subtract(signal.position, main_pole.position))
+        end
+    end
+    return main_rail
 end
 
 return Blueprint
