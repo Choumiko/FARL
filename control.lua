@@ -22,14 +22,7 @@ local function print2(v, desc, block)
     print(string.format("%s: %s", desc or "undesc", type(v) == "table" and f(v) or tostring(v)))
 end
 
-local function log2(v, description)
-    if not description then
-        local info = debug.getinfo(2, "l")
-        description = info and info.currentline
-    end
-    v = type(v) == "table" and serpent.line(v) or v
-    log(string.format("%s: %s", description or "undesc", tostring(v)))
-end
+local log2 = lib.log2
 
 --?Stuff to think about
 --[[
@@ -1027,10 +1020,6 @@ script.on_event(defines.events.on_entity_died, on_entity_died)
 script.on_event(defines.events.on_marked_for_deconstruction, on_marked_for_deconstruction)
 script.on_event(defines.events.script_raised_destroy, script_raised_destroy)
 
--- script.on_event(defines.events.on_player_changed_position, function(e)
---     log(e.tick)
--- end)
-
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
 
 local test_functions = {}--luacheck: no unused
@@ -1157,6 +1146,8 @@ local function farl_test(event)
                             rail.signal.position.y = rail.signal.position.y + math.abs(2 * n)
                         end
                         local pos = {x = -math.abs(d), y = math.abs(d)}
+                        --! broken, because i assume rails are diagonal in the blueprint
+                        --TODO calculate the position based of main rail pos and diagonal distance, not the rails position
                         if Dd % 2 == 1 then
                             rail_d.position = Position.add(lib.diagonal_to_real_pos(rail_d), pos)
                             rail_d.direction = (rail_d.direction + 4) % 8

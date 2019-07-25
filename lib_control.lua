@@ -24,6 +24,15 @@ function M.debugDump(var, force)
     end
 end
 
+function M.log2(v, description)
+    if not description then
+        local info = debug.getinfo(2, "l")
+        description = info and info.currentline
+    end
+    v = type(v) == "table" and serpent.line(v) or v
+    log(string.format("%s: %s", description or "undesc", tostring(v)))
+end
+
 function M.debugLog(var, prepend)
     if not global.debug_log then return end
     local str = prepend or ""
