@@ -105,6 +105,104 @@ local function log_entity(ent, description, short)
     return description .. "nil"
 end
 
+local function clear_area(farl, area)
+    local args = {area = area, type = {"tree", "simple-entity"}}
+    args.limit = 1--?Does that help in any way?
+    local count = farl.surface.count_entities_filtered(args)
+    log(count)
+    log2(area)
+    args.limit = nil
+    local amount, name, proto
+    local random = math.random
+    for _, entity in pairs(farl.surface.find_entities_filtered(args) ) do--, force = "neutral" }) do
+        proto = entity.prototype.mineable_properties
+        if proto and proto.minable and proto.products then
+            if (entity.type == "tree" and entity.die(nil, farl.loco)) or entity.destroy() then
+                for _, product in pairs(proto.products) do
+                    if product.type == "item" then
+                        if product.probability and not product.amount then
+                            if product.probability == 1 or (product.probability >= random()) then
+                                name = product.name
+                            end
+                            if name then
+                                if product.amount_max == product.amount_min then
+                                    amount = product.amount_max
+                                else
+                                    amount = random(product.amount_min, product.amount_max)
+                                end
+                                if amount and amount > 0 then
+                                    log(string.format("added %s %s", amount, name))
+                                    --addItemToCargo(farl, name, math.ceil(amount/2))
+                                end
+                                name = false
+                            end
+                        elseif product.name and product.amount then
+                            name = product.name
+                            amount = product.amount
+                            if amount and amount > 0 then
+                                log(string.format("added %s %s", amount, name))
+                                --addItemToCargo(farl, name, math.ceil(amount/2))
+                            end
+                            name = false
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local _rail_data = {}
+local hits, calls = 0, 0
+local function get_rail_data(rail)
+    local id = rail.unit_number
+    calls = calls + 1
+    if not _rail_data[id] then
+        _rail_data[id] = librail.rail_data[rail.type][rail.direction]
+    else
+        hits = hits + 1
+    end
+    return _rail_data[id], id
+end
+
+local chiral_directions = {
+        [true] = {
+            [rd.front] = rd.front,
+            [rd.back] = rd.back
+        },
+        [false] = {
+            [rd.front] = rd.back,
+            [rd.back] = rd.front
+        }
+}
+local opposite_rail_direction = chiral_directions[false]
+
+local function place_next_rail(farl, input)
+    local c
+    local surface = farl.surface
+    local pos = farl.last_rail.position
+    local create = {force = farl.force, position = Position.add(pos, {x=0,y=0}), direction = 0, name = false}
+    local data = get_rail_data(farl.last_rail).next_rails
+
+    local rail = data[farl.travel_rd][input] or data[farl.travel_rd][rcd.straight]
+    if rail then
+        create.position = Position.add(pos, rail.position)
+        create.name = rail.type
+        create.direction = rail.direction
+        c = surface.create_entity(create)
+        if c then
+            if not Position.equals(create.position, c.position) then
+                game.print("Diff: " .. serpent.line(create.position).. " got: " .. serpent.line(c.position))
+            end
+            local rdata = get_rail_data(c)
+            local chiral = chiral_directions[get_rail_data(farl.last_rail).chirality == rdata.chirality][farl.travel_rd]
+            return c, chiral, rdata.rd_to_travel[chiral]
+        else
+            game.print("Failed to create: " .. serpent.line(create))
+        end
+    end
+end
+
 local function on_tick()
     local changed
     for train_id, farl in pairs(global.active) do
@@ -115,7 +213,34 @@ local function on_tick()
         end
         --{last_rail = dead_end, distance = distance, player = player, loco = loco}
         if Position.distance_squared(farl.last_rail.position, farl.loco.position) < 36 then
-            game.print("place")
+            local input = farl.driver.riding_state.direction
+            local is_diagonal = farl.travel_direction % 2 == 1
+            local data = farl.bp_data[is_diagonal]
+            if data then
+                local bb = data.bounding_box
+                local h = bb.right_bottom.y - bb.left_top.y
+                local de_pos = Position.translate(lib.diagonal_to_real_pos(farl.last_rail), h, farl.travel_direction)
+                --local deg = is_diagonal and (farl.travel_direction - 1) * 45 or farl.travel_direction * 45
+                -- local bb_rot = {left_top = Position.rotate(bb.left_top, deg),
+                --                 right_bottom = Position.rotate(bb.right_bottom, deg)}
+                local deg = is_diagonal and (farl.travel_direction - 1) or farl.travel_direction
+                local bb_rot = lib.rotate_bounding_box(bb, deg)
+                farl.clearance_area = {left_top = Position.add(de_pos, bb_rot.left_top), right_bottom = Position.add(de_pos, bb_rot.right_bottom)}
+            end
+
+            render.on(true)
+            render.surface = farl.surface
+            farl.bb = render.draw_rectangle(farl.clearance_area.left_top, farl.clearance_area.right_bottom, colors.green)
+            clear_area(farl, farl.clearance_area)
+            local new_rail, new_rd, new_travel = place_next_rail(farl, input)
+            if new_rail then
+                farl.last_rail, farl.travel_rd, farl.travel_direction = new_rail, new_rd, new_travel
+            else
+                game.print("Deactivate")
+                farl.last_rail = nil
+            end
+
+            render.restore()
         end
 
         ::continue::
@@ -356,31 +481,6 @@ librail.rail_data = {
 }
 
 librail.create_lookup()
-
-local chiral_directions = {
-        [true] = {
-            [rd.front] = rd.front,
-            [rd.back] = rd.back
-        },
-        [false] = {
-            [rd.front] = rd.back,
-            [rd.back] = rd.front
-        }
-}
-local opposite_rail_direction = chiral_directions[false]
-
-local _rail_data = {}
-local hits, calls = 0, 0
-local function get_rail_data(rail)
-    local id = rail.unit_number
-    calls = calls + 1
-    if not _rail_data[id] then
-        _rail_data[id] = librail.rail_data[rail.type][rail.direction]
-    else
-        hits = hits + 1
-    end
-    return _rail_data[id], id
-end
 
 -- local function get_rail_data(rail)
 --     return next_rail_data[rail.type][rail.direction]
@@ -636,11 +736,25 @@ local function get_closest_signal(dead_end, de_dir)
     return signal, best
 end
 
+local function get_closest_pole(rail, pole_name)
+    local reach = game.entity_prototypes[pole_name].max_wire_distance
+    local min_distance, pole = 900, nil
+    local pos = rail.position
+    for _, p in pairs(rail.surface.find_entities_filtered { area = Position.expand_to_area(pos, reach), name = pole_name }) do
+        local dist = Position.distance(pos, p.position)
+        if min_distance > dist then
+            pole = p
+            min_distance = dist
+        end
+    end
+    return pole
+end
+
 local function get_rail_direction_from_loco(entity, rail, is_front_mover)
     local rail_direction = is_front_mover and entity.train.rail_direction_from_front_rail or entity.train.rail_direction_from_back_rail
+    local data = get_rail_data(rail)
     if rail.type == "curved-rail" then
         local loco_o = entity.orientation * 8
-        local data = get_rail_data(rail)
         local calc_orientation = data.rd_to_travel[rail_direction]
         local diff = math.abs(loco_o - calc_orientation)
         diff = diff > 7 and diff - 7 or diff
@@ -651,7 +765,8 @@ local function get_rail_direction_from_loco(entity, rail, is_front_mover)
             return
         end
     end
-    return rail_direction
+    local travel_direction = data.rd_to_travel[rail_direction]
+    return rail_direction, travel_direction
 end
 
 --[[
@@ -665,7 +780,7 @@ To activate FARL we need:
     - The closest pole (or the pole maybe not so close pole that matches the position relative to the rail bp)
 --]]
 
-local function get_startup_data(entity)
+local function get_startup_data(entity, pdata)
     local train = entity.train
 
     local carriages = train.carriages
@@ -679,7 +794,7 @@ local function get_startup_data(entity)
     local front = in_front_mover and train.front_rail or train.back_rail
     --log("front rail: " .. front.type .. " " .. front.direction)
 
-    local rail_direction = get_rail_direction_from_loco(entity, front, in_front_mover)
+    local rail_direction, travel_direction = get_rail_direction_from_loco(entity, front, in_front_mover)
     -- log2(find_key(rd, rail_direction), "Calc")
     -- log2(find_key(rd, entity.train.rail_direction_from_front_rail), "api")
     if not rail_direction then
@@ -694,12 +809,19 @@ local function get_startup_data(entity)
     --log2(find_key(rd, de_direction), "de_dir")
     --log(log_entity(dead_end, "Starting rail", true))
     local signal, distance = get_closest_signal(dead_end, de_direction)
+
+    local bp_data = pdata.bp_data[travel_direction % 2 == 1]
+    local pole
+    if bp_data.main_pole then
+        pole = get_closest_pole(dead_end, bp_data.main_pole.name)
+    end
+
     render.on(true)
     render.mark_rail(dead_end, colors.green, "S", true)
     --render.mark_entity_text(dead_end, find_key(rd, de_direction))
     render.mark_signal(signal, "C", colors.green, nil, nil, distance)
     render.restore()
-    return dead_end, signal, distance
+    return dead_end, signal, pole, distance, travel_direction, de_direction
 end
 
 local function on_player_driving_changed_state(event)
@@ -711,27 +833,44 @@ local function on_player_driving_changed_state(event)
         render.player_index = {event.player_index}
         render.surface = player.surface
         if loco and loco.name == "farl" then
-            local dead_end, signal, distance = get_startup_data(loco)
+            local dead_end, signal, pole, distance, travel_direction, travel_rd = get_startup_data(loco, pdata)
             if not dead_end then
                 game.print(signal)
                 return
             end
+            local is_diagonal = travel_direction % 2 == 1
             pdata.train_id = loco.train.id
-            pdata.farl = {last_rail = dead_end, distance = distance, player = player, loco = loco}
+            pdata.farl = {
+                last_rail = dead_end,
+                pole = pole,
+                signal = signal,
+                distance = distance,
+                travel_direction = travel_direction,
+                travel_rd = travel_rd,
+                player = player,
+                driver = player,
+                loco = loco,
+                force = loco.force,
+                surface = loco.surface,
+                bp_data = pdata.bp_data}
             global.active[loco.train.id] = pdata.farl
 
             render.on(true)
             rendering.clear("FARL")
             render.mark_rail(dead_end, colors.green, "S", true)
             render.mark_signal(signal, "C", colors.green, nil, nil, distance)
-            local data = pdata.bp_data
+            render.mark_entity(pole, colors.green, "P")
+            local data = pdata.bp_data[is_diagonal]
             if data then
-                local bb = data.bounding_box
-                local h = bb.right_bottom.y - bb.left_top.y
-                pdata.farl.bb = render.draw_rectangle(dead_end, dead_end, colors.green, nil, {
-                    left_top_offset = Position.add(bb.left_top, {x = 0, y = -h}),
-                    right_bottom_offset = Position.add(bb.right_bottom, {x = 0, y = -h})})
-                render.draw_line(loco, loco, colors.red, nil, nil, {from_offset = {-1, -6}, to_offset = {1, -6}})
+                -- local bb = data.bounding_box
+                -- local h = bb.right_bottom.y - bb.left_top.y
+                -- log2(bb)
+                -- local de_pos = Position.translate(lib.diagonal_to_real_pos(dead_end), h, travel_direction)
+                -- local deg = is_diagonal and (travel_direction - 1) * 45 or travel_direction * 45
+                -- local bb_rot = {left_top = Position.rotate(bb.left_top, deg),
+                --                 right_bottom = Position.rotate(bb.right_bottom, deg)}
+                -- pdata.farl.clearance_area = {left_top = Position.add(de_pos, bb_rot.left_top), right_bottom = Position.add(de_pos, bb_rot.right_bottom)}
+                render.draw_line(loco, loco, colors.red, nil, nil, {from_offset = Position.rotate({x = -1, y = -6}, travel_direction * 45), to_offset = Position.rotate({x = 1, y = -6}, travel_direction * 45)})
             end
             render.restore()
             script.on_event(defines.events.on_tick, on_tick)
@@ -1145,18 +1284,22 @@ local function farl_test(event)
                         if rail.signal then
                             rail.signal.position.y = rail.signal.position.y + math.abs(2 * n)
                         end
-                        local pos = {x = -math.abs(d), y = math.abs(d)}
-                        --! broken, because i assume rails are diagonal in the blueprint
-                        --TODO calculate the position based of main rail pos and diagonal distance, not the rails position
-                        if Dd % 2 == 1 then
-                            rail_d.position = Position.add(lib.diagonal_to_real_pos(rail_d), pos)
+                        local pos = {x = Dd - math.abs(d), y = math.abs(d) + Dd}
+                        --local pos = {x = Dd, y = Dd}
+                        log2(pos, "pos")
+                        local m_pos = data[true].main_rail.position
+                        if (Dd + d) % 2 == 1 then
+                            rail_d.position = Position.add(lib.diagonal_to_real_pos(data[true].main_rail), pos)
                             rail_d.direction = (rail_d.direction + 4) % 8
                             rail_d.position = lib.real_to_diagonal_pos(rail_d)
                         else
-                            rail_d.position = Position.add(rail_d.position, pos)
+                            rail_d.position = Position.add(m_pos, pos)
                         end
                         if rail_d.signal then
-                            rail_d.signal.position = Position.add(rail_d.signal.position, pos)
+                            local r_data = librail.rail_data[rail_d.type][rail_d.direction]
+                            local _rd = r_data.travel_to_rd[rail_d.travel_dir]
+                            pos = r_data.signals[_rd][1]
+                            rail_d.signal.position = Position.add(rail_d.position, pos)
                         end
                     end
                 end

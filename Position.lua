@@ -45,4 +45,12 @@ function Position.distance(pos1, pos2)
     return math.sqrt(Position.distance_squared(pos1, pos2))
 end
 
+local to_rad = math.pi / 180
+function Position.rotate(v, degree)
+    local cos = math.cos(degree * to_rad)
+    local sin = math.sin(degree * to_rad)
+    return {x = cos * v.x - sin * v.y,
+            y = sin * v.x + cos * v.y}
+end
+
 return Position

@@ -19,7 +19,7 @@ colors.alternate = {colors.green, colors.blue, colors.white}
 
 local render = {
     player_index = nil,
-    surface =nil,
+    surface = nil,
     colors = colors,
     defaults = {
         alt = false,
@@ -264,12 +264,13 @@ function render.draw_rectangle(from, to, color, alt, opts)
     if not (render.enabled and from and (from.valid or from.x) and to and (to.valid or to.x)) then return end
     opts = not_nil_defaults(opts)
     if from.valid and from.is_player() then from = from.character end
-    if from.type == "straight-rail" and from.direction % 2 == 1 then
-        from = diagonal_to_real_pos(from)
-    end
-    if to.type == "straight-rail" and to.direction % 2 == 1 then
-        to = diagonal_to_real_pos(to)
-    end
+    --TODO fix lt/rb offsets for diagonal rails
+    -- if from.type == "straight-rail" and from.direction % 2 == 1 then
+    --     from = diagonal_to_real_pos(from)
+    -- end
+    -- if to.type == "straight-rail" and to.direction % 2 == 1 then
+    --     to = diagonal_to_real_pos(to)
+    -- end
     return rendering.draw_rectangle{
         color = color or colors.orange,
         width = opts.width or 2,

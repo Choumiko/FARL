@@ -116,4 +116,67 @@ function M.create_set(...)
     return ret
 end
 
+-- https://github.com/dewiniaid/BlueprintExtensions/blob/master/modules/snap.lua
+local box_rotations = {
+    [dir.north] = { 1, 2, 3, 4 },
+    [dir.northeast] = { 3, 2, 1, 4 },
+    [dir.east] = { 4, 1, 2, 3 },
+    [dir.southeast] = { 2, 1, 4, 3 },
+    [dir.south] = { 3, 4, 1, 2 },
+    [dir.southwest] = { 1, 4, 3, 2 },
+    [dir.west] = { 2, 3, 4, 1 },
+    [dir.northwest] = { 4, 3, 2, 1 },
+}
+
+local function update_bounding_box(box, pos, min_x, min_y, max_x, max_y)--luacheck: no unused
+    min_x = pos.x + min_x
+    min_y = pos.y + min_y
+    max_x = pos.x + max_x
+    max_y = pos.y + max_y
+    if not box.left_top then
+        box.left_top = {x = min_x, y = min_y}
+        box.right_bottom = {x = max_x, y = max_y}
+        return
+    end
+    local lt = box.left_top
+    local rb = box.right_bottom
+
+    lt.x = min_x < lt.x and min_x or lt.x
+    lt.y = min_y < lt.y and min_y or lt.y
+
+    rb.x = max_x > rb.x and max_x or rb.x
+    rb.y = max_y > rb.y and max_y or rb.y
+end
+
+function M.rotate_bounding_box(sel_box, direction, box, pos)
+    local rot = box_rotations[direction or 0]
+    local rect = {false, false, false, false}
+    rect[1] = sel_box.left_top.x
+    rect[2] = sel_box.left_top.y
+    rect[3] = sel_box.right_bottom.x
+    rect[4] = sel_box.right_bottom.y
+    -- print("\n")
+    -- log2(sel_box, "Sel_box")
+    -- log2(direction, "dir")
+    local x1, y1 = rect[rot[1]], rect[rot[2]]
+    local x2, y2 = rect[rot[3]], rect[rot[4]]
+    -- log2({x1,y1,x2,y2}, "rotated")
+    --swap tl and rb
+    if x1 > x2 then
+        x1, x2 = x2, x1
+    end
+    sel_box.left_top.x = x1
+    sel_box.right_bottom.x = x2
+    if y1 > y2 then
+        y1, y2 = y2, y1
+    end
+    -- log2({x1,y1,x2,y2}, "rotated2")
+    sel_box.left_top.y = y1
+    sel_box.right_bottom.y = y2
+    if pos then
+        update_bounding_box(box, pos, x1, y1, x2, y2)
+    end
+    return sel_box
+end
+
 return M
