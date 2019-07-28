@@ -130,7 +130,7 @@ function Blueprint.parse(bp_data, chain_signal, is_diagonal, ents)
         end
         dist = dist / div
         if not is_diagonal then
-            lib.rotate_bounding_box(game.entity_prototypes[ent.name].selection_box, ent.direction, box, r_pos)
+            lib.rotate_bounding_box(game.entity_prototypes[ent.name].collision_box, ent.direction, box, r_pos)
         end
 
         if ent.type == "electric-pole" then
@@ -170,13 +170,13 @@ function Blueprint.parse(bp_data, chain_signal, is_diagonal, ents)
                 ent.position.y = main_rail.position.y
                 ent.position.x = 2 * ent.track_distance + main_rail.position.x
                 ent.direction = main_rail.direction
-                lib.rotate_bounding_box(game.entity_prototypes[ent.name].selection_box, ent.direction, box, lib.diagonal_to_real_pos(ent))
+                lib.rotate_bounding_box(game.entity_prototypes[ent.name].collision_box, ent.direction, box, lib.diagonal_to_real_pos(ent))
                 if ent.signal then
                     local data = librail.rail_data[ent.type][ent.direction]
                     local _rd = data.travel_to_rd[ent.travel_dir]
                     pos = data.signals[_rd][1]
                     ent.signal.position = Position.add(ent.position, pos)
-                    lib.rotate_bounding_box(game.entity_prototypes[ent.signal.name].selection_box, ent.signal.direction, box, ent.signal.position)
+                    lib.rotate_bounding_box(game.entity_prototypes[ent.signal.name].collision_box, ent.signal.direction, box, ent.signal.position)
                 end
 
             elseif not (ent.type == "rail-signal" or ent.type == "rail-chain-signal") then
@@ -184,18 +184,17 @@ function Blueprint.parse(bp_data, chain_signal, is_diagonal, ents)
                 log2(pos, "Pos")
                 ent.position.x = ent.position.x + pos.y
                 ent.position.y = ent.position.y - pos.y
-                lib.rotate_bounding_box(game.entity_prototypes[ent.name].selection_box, ent.direction, box, lib.diagonal_to_real_pos(ent))
+                lib.rotate_bounding_box(game.entity_prototypes[ent.name].collision_box, ent.direction, box, lib.diagonal_to_real_pos(ent))
             end
         end
     end
-
     box.left_top = Position.subtract(box.left_top, p0)
     box.right_bottom = Position.subtract(box.right_bottom, p0)
-
     box.left_top.x = math.floor(box.left_top.x - 0.5)
     box.left_top.y = math.floor(box.left_top.y)
     box.right_bottom.x = math.ceil(box.right_bottom.x + 0.5)
-    box.right_bottom.y = math.ceil(box.right_bottom.y)
+    box.right_bottom.y = is_diagonal and math.floor(box.right_bottom.y) or math.ceil(box.right_bottom.y)
+    box.h = math.abs(box.right_bottom.y - box.left_top.y)
 
     bp_data.bounding_box = box
 

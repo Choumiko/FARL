@@ -244,44 +244,64 @@ function render.draw_line(from, to, color, alt, dash, opts)
     if to.type == "straight-rail" and to.direction % 2 == 1 then
         to = diagonal_to_real_pos(to)
     end
-    return rendering.draw_line{
-        color = color or colors.black,
-        width = 2,
-        from = from,
-        from_offset = opts.from_offset,
-        to = to,
-        to_offset = opts.to_offset,
-        gap_length = dash and 0.5 or nil,
-        dash_length = dash and 0.5 or nil,
-        surface = render.surface or from.surface,
-        time_to_live = render.ttl or opts.ttl,
-        players = render.player_index,
-        only_in_alt_mode = alt
-    }
+    if opts.id and rendering.is_valid(opts.id) then
+        rendering.set_from(opts.id, from, opts.from_offset or {x = 0, y = 0})
+        rendering.set_to(opts.id, to, opts.to_offset or {x = 0, y = 0})
+        return opts.id
+    else
+        return rendering.draw_line{
+            color = color or colors.black,
+            width = 2,
+            from = from,
+            from_offset = opts.from_offset,
+            to = to,
+            to_offset = opts.to_offset,
+            gap_length = dash and 0.5 or nil,
+            dash_length = dash and 0.5 or nil,
+            surface = render.surface or from.surface,
+            time_to_live = render.ttl or opts.ttl,
+            players = render.player_index,
+            only_in_alt_mode = alt
+        }
+    end
 end
 
 function render.draw_rectangle(from, to, color, alt, opts)
     if not (render.enabled and from and (from.valid or from.x) and to and (to.valid or to.x)) then return end
     opts = not_nil_defaults(opts)
     if from.valid and from.is_player() then from = from.character end
-    --TODO fix lt/rb offsets for diagonal rails
-    -- if from.type == "straight-rail" and from.direction % 2 == 1 then
-    --     from = diagonal_to_real_pos(from)
-    -- end
-    -- if to.type == "straight-rail" and to.direction % 2 == 1 then
-    --     to = diagonal_to_real_pos(to)
-    -- end
-    return rendering.draw_rectangle{
-        color = color or colors.orange,
-        width = opts.width or 2,
-        left_top = from,
-        left_top_offset = opts.left_top_offset,
-        right_bottom = to,
-        right_bottom_offset = opts.right_bottom_offset,
-        surface = render.surface or from.surface,
-        time_to_live = render.ttl or opts.ttl,
-        players = render.player_index,
-        only_in_alt_mode = alt
+    if opts.id and rendering.is_valid(opts.id) then
+        rendering.set_left_top(opts.id, from, opts.left_top_offset or {x = 0, y = 0})
+        rendering.set_right_bottom(opts.id, to, opts.right_bottom_offset or {x = 0, y = 0})
+        return opts.id
+    else
+        return rendering.draw_rectangle{
+            color = color or colors.orange,
+            width = opts.width or 2,
+            left_top = from,
+            left_top_offset = opts.left_top_offset,
+            right_bottom = to,
+            right_bottom_offset = opts.right_bottom_offset,
+            surface = render.surface or from.surface,
+            time_to_live = render.ttl or opts.ttl,
+            players = render.player_index,
+            only_in_alt_mode = alt
+        }
+    end
+end
+
+function render.draw_circle(center, radius, color, alt, opts)
+    opts = not_nil_defaults(opts)
+    return rendering.draw_circle{
+        color = color or opts.color or colors.orange,
+        radius = radius or 0.25,
+        filled = true,
+        target = center,
+        target_offset = opts.target_offset or nil,--and {opts.target_offset.x, opts.target_offset.y}
+        surface = render.surface or center.surface,
+        time_to_live = opts.ttl or render.ttl,
+        only_in_alt_mode = alt or opts.alt,
+        players = render.player_index
     }
 end
 

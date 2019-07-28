@@ -109,8 +109,7 @@ local function clear_area(farl, area)
     local args = {area = area, type = {"tree", "simple-entity"}}
     args.limit = 1--?Does that help in any way?
     local count = farl.surface.count_entities_filtered(args)
-    log(count)
-    log2(area)
+    if count == 0 then return end
     args.limit = nil
     local amount, name, proto
     local random = math.random
@@ -183,9 +182,10 @@ local function place_next_rail(farl, input)
     local pos = farl.last_rail.position
     local create = {force = farl.force, position = Position.add(pos, {x=0,y=0}), direction = 0, name = false}
     local data = get_rail_data(farl.last_rail).next_rails
-
     local rail = data[farl.travel_rd][input] or data[farl.travel_rd][rcd.straight]
+
     if rail then
+        clear_area(farl, farl.clearance_area)
         create.position = Position.add(pos, rail.position)
         create.name = rail.type
         create.direction = rail.direction
@@ -215,26 +215,24 @@ local function on_tick()
         if Position.distance_squared(farl.last_rail.position, farl.loco.position) < 36 then
             local input = farl.driver.riding_state.direction
             local is_diagonal = farl.travel_direction % 2 == 1
-            local data = farl.bp_data[is_diagonal]
+            local data = farl.bp_data[farl.travel_direction]
             if data then
                 local bb = data.bounding_box
-                local h = bb.right_bottom.y - bb.left_top.y
-                local de_pos = Position.translate(lib.diagonal_to_real_pos(farl.last_rail), h, farl.travel_direction)
-                --local deg = is_diagonal and (farl.travel_direction - 1) * 45 or farl.travel_direction * 45
-                -- local bb_rot = {left_top = Position.rotate(bb.left_top, deg),
-                --                 right_bottom = Position.rotate(bb.right_bottom, deg)}
-                local deg = is_diagonal and (farl.travel_direction - 1) or farl.travel_direction
-                local bb_rot = lib.rotate_bounding_box(bb, deg)
-                farl.clearance_area = {left_top = Position.add(de_pos, bb_rot.left_top), right_bottom = Position.add(de_pos, bb_rot.right_bottom)}
+                local de_pos = Position.translate(lib.diagonal_to_real_pos(farl.last_rail), is_diagonal and bb.h - 1 or bb.h, farl.travel_direction)
+                render.draw_circle(de_pos, 0.15)
+                farl.clearance_area = {left_top = Position.add(de_pos, bb.left_top), right_bottom = Position.add(de_pos, bb.right_bottom)}
             end
 
             render.on(true)
             render.surface = farl.surface
-            farl.bb = render.draw_rectangle(farl.clearance_area.left_top, farl.clearance_area.right_bottom, colors.green)
-            clear_area(farl, farl.clearance_area)
+            farl.bb = render.draw_rectangle(farl.clearance_area.left_top, farl.clearance_area.right_bottom, colors.green, nil)--, {id = farl.bb})
             local new_rail, new_rd, new_travel = place_next_rail(farl, input)
             if new_rail then
                 farl.last_rail, farl.travel_rd, farl.travel_direction = new_rail, new_rd, new_travel
+                farl.line = render.draw_line(farl.loco, farl.loco, colors.red, false, false, {id = farl.line,
+                                from_offset = Position.rotate({x = -1, y = -6}, new_travel * 45),
+                                to_offset = Position.rotate({x = 1, y = -6}, new_travel * 45)
+                            })
             else
                 game.print("Deactivate")
                 farl.last_rail = nil
@@ -852,7 +850,7 @@ local function on_player_driving_changed_state(event)
                 loco = loco,
                 force = loco.force,
                 surface = loco.surface,
-                bp_data = pdata.bp_data}
+                bp_data = pdata.bp_data2}
             global.active[loco.train.id] = pdata.farl
 
             render.on(true)
@@ -862,19 +860,11 @@ local function on_player_driving_changed_state(event)
             render.mark_entity(pole, colors.green, "P")
             local data = pdata.bp_data[is_diagonal]
             if data then
-                -- local bb = data.bounding_box
-                -- local h = bb.right_bottom.y - bb.left_top.y
-                -- log2(bb)
-                -- local de_pos = Position.translate(lib.diagonal_to_real_pos(dead_end), h, travel_direction)
-                -- local deg = is_diagonal and (travel_direction - 1) * 45 or travel_direction * 45
-                -- local bb_rot = {left_top = Position.rotate(bb.left_top, deg),
-                --                 right_bottom = Position.rotate(bb.right_bottom, deg)}
-                -- pdata.farl.clearance_area = {left_top = Position.add(de_pos, bb_rot.left_top), right_bottom = Position.add(de_pos, bb_rot.right_bottom)}
-                render.draw_line(loco, loco, colors.red, nil, nil, {from_offset = Position.rotate({x = -1, y = -6}, travel_direction * 45), to_offset = Position.rotate({x = 1, y = -6}, travel_direction * 45)})
+                pdata.farl.line = render.draw_line(loco, loco, colors.red, nil, nil, {from_offset = Position.rotate({x = -1, y = -6}, travel_direction * 45), to_offset = Position.rotate({x = 1, y = -6}, travel_direction * 45)})
+                script.on_event(defines.events.on_tick, on_tick)
+                log("Registered")
             end
             render.restore()
-            script.on_event(defines.events.on_tick, on_tick)
-            log("Registered")
         end
     else
         if pdata.train_id then
@@ -1303,6 +1293,43 @@ local function farl_test(event)
                         end
                     end
                 end
+                --TODO create tables for the remaining directions, so i don't have to do all the rotations over and over again
+                data = {[0] = pdata.bp_data[false], [1] = pdata.bp_data[true]}
+                local tmp, deg
+                for i = 3, 7, 2 do
+                    data[i] = util.table.deepcopy(pdata.bp_data[true])
+                    tmp = data[i]
+                    tmp.bounding_box = lib.rotate_bounding_box(tmp.bounding_box, i - 1)
+                    tmp.bounding_box.h = data[1].bounding_box.h
+                    deg = (i - 1) * 45
+                    for _, lane in pairs(tmp.lanes) do
+                        lane.position = Position.rotate(lane.position, deg)
+                        lane.travel_dir = lane.travel_dir and (lane.travel_dir + i - 1) % 8 or nil
+                        lane.direction = (lane.direction + i - 1) % 8
+                        if lane.signal then
+                            lane.signal.direction = (lane.signal.direction + i - 1) % 8
+                            lane.signal.position = Position.rotate(lane.signal.position, deg)
+                        end
+                    end
+                end
+                for i = 2, 6, 2 do
+                    data[i] = util.table.deepcopy(pdata.bp_data[false])
+                    tmp = data[i]
+                    tmp.bounding_box = lib.rotate_bounding_box(tmp.bounding_box, i)
+                    tmp.bounding_box.h = data[0].bounding_box.h
+                    deg = i * 45
+                    for _, lane in pairs(tmp.lanes) do
+                        lane.position = Position.rotate(lane.position, deg)
+                        lane.travel_dir = lane.travel_dir and (lane.travel_dir + i) % 8 or nil
+                        lane.direction = (lane.direction + i) % 4
+                        if lane.signal then
+                            lane.signal.direction = (lane.signal.direction + i) % 8
+                            lane.signal.position = Position.rotate(lane.signal.position, deg)
+                        end
+                    end
+                end
+                pdata.bp_data2 = data
+                game.write_file("bp_data2.lua", serpent.block(data, {name = "bp_data2"}))
             end
 
             selected.set_blueprint_entities(ents)
