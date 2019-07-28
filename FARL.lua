@@ -2035,6 +2035,9 @@ FARL.parseBlueprints = function(self, blueprints)
                                         }
                                     end
                                 end
+                                if not new_signals[#lanes] then
+                                    new_signals[#lanes] = {distance = lane_distance}
+                                end
 
                                 known_rails[lane_distance] = true
                             end
@@ -2445,7 +2448,7 @@ FARL.placeParallelSignals = function(self, traveldir, rail, lane_index)
         local place_ghost = self.settings.place_ghosts and cargo_count == 0
         if self.settings.place_ghosts or cargo_count > 0 then
             local signals = traveldir % 2 == 0 and self.settings.activeBP.straight.signals or self.settings.activeBP.diagonal.signals
-            if signals and type(signals) == "table" and signals[lane_index] then
+            if signals and type(signals) == "table" and signals[lane_index] and signals[lane_index].name then
                 local signal_data = signals[lane_index]
                 local end_of_rail = signal_data.reverse
                 local signal_traveldir = signal_data.reverse and Position.opposite_direction(traveldir) or traveldir
@@ -2717,7 +2720,7 @@ FARL.placePole = function(self, polePos, poleDir)
     if not canPlace then
         placed_pole =  self.surface.find_entity(name, polePos)
         if placed_pole then
-            log("found pole @" .. Position.tostring(polePos))
+            --log("found pole @" .. Position.tostring(polePos))
             canPlace = true
         end
     end
