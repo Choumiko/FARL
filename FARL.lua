@@ -1865,8 +1865,8 @@ FARL.genericPlace = function(self, arg, ignore, place_ghost)
     if canPlace then
         local force = arg.force or self.locomotive.force
         arg.force = force
+        arg.raise_built = true
         if not place_ghost then
-            arg.raise_built = true
             entity = self.surface.create_entity(arg)
         else
             entity = self.surface.create_entity(FARL.get_ghost(arg))
