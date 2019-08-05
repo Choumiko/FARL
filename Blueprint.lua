@@ -109,6 +109,11 @@ function Blueprint.parse(bp_data, chain_signal, is_diagonal, ents)
     assert(main_rail)
     assert(chain_signal)
 
+    local main_pos = main_rail.position
+    for _, ent in pairs(ents) do
+        ent.position = Position.subtract(ent.position, main_pos)
+    end
+
     local p0 = lib.diagonal_to_real_pos(main_rail)
     local b = 1
     local div = math.sqrt(2)
@@ -167,6 +172,7 @@ function Blueprint.parse(bp_data, chain_signal, is_diagonal, ents)
         local pos
         for _, ent in pairs(ents) do
             if ent.type == "straight-rail" and not ent.main then
+                --move all rails on one horizontal line
                 ent.position.y = main_rail.position.y
                 ent.position.x = 2 * ent.track_distance + main_rail.position.x
                 ent.direction = main_rail.direction
@@ -193,7 +199,7 @@ function Blueprint.parse(bp_data, chain_signal, is_diagonal, ents)
     box.left_top.x = math.floor(box.left_top.x - 0.5)
     box.left_top.y = math.floor(box.left_top.y)
     box.right_bottom.x = math.ceil(box.right_bottom.x + 0.5)
-    box.right_bottom.y = is_diagonal and math.floor(box.right_bottom.y) or math.ceil(box.right_bottom.y)
+    box.right_bottom.y = math.ceil(box.right_bottom.y)--is_diagonal and math.floor(box.right_bottom.y) or
     box.h = math.abs(box.right_bottom.y - box.left_top.y)
 
     bp_data.bounding_box = box

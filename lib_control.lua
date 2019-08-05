@@ -163,12 +163,12 @@ function M.rotate_bounding_box(sel_box, direction, box, pos)
     -- log2({x1,y1,x2,y2}, "rotated")
     --swap tl and rb
     if x1 > x2 then
-        x1, x2 = x2, x1
+        x1, x2 = -x1, -x2
     end
     sel_box.left_top.x = x1
     sel_box.right_bottom.x = x2
     if y1 > y2 then
-        y1, y2 = y2, y1
+        y1, y2 = -y1, -y2
     end
     -- log2({x1,y1,x2,y2}, "rotated2")
     sel_box.left_top.y = y1

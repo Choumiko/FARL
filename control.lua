@@ -106,49 +106,60 @@ local function log_entity(ent, description, short)
 end
 
 local function clear_area(farl, area)
-    local args = {area = area, type = {"tree", "simple-entity"}}
+    --! simple-entity isn't necessarily just a rock, could be a modded entity
+    local args = {area = area, type = {"tree", "simple-entity", "cliff"}}
     args.limit = 1--?Does that help in any way?
     local count = farl.surface.count_entities_filtered(args)
     if count == 0 then return end
     args.limit = nil
     local amount, name, proto
     local random = math.random
+    local removed = 0
     for _, entity in pairs(farl.surface.find_entities_filtered(args) ) do--, force = "neutral" }) do
-        proto = entity.prototype.mineable_properties
-        if proto and proto.minable and proto.products then
-            if (entity.type == "tree" and entity.die(nil, farl.loco)) or entity.destroy() then
-                for _, product in pairs(proto.products) do
-                    if product.type == "item" then
-                        if product.probability and not product.amount then
-                            if product.probability == 1 or (product.probability >= random()) then
-                                name = product.name
-                            end
-                            if name then
-                                if product.amount_max == product.amount_min then
-                                    amount = product.amount_max
-                                else
-                                    amount = random(product.amount_min, product.amount_max)
+        if not entity.valid then goto continue end
+        if entity.type == "cliff" then
+            if entity.destroy({do_cliff_correction = true}) then
+                removed = removed + 1
+            end
+        else
+            proto = entity.prototype.mineable_properties
+            if proto and proto.minable and proto.products then
+                if (entity.type == "tree" and entity.die(nil, farl.loco)) or entity.destroy() then
+                    for _, product in pairs(proto.products) do
+                        if product.type == "item" then
+                            if product.probability and not product.amount then
+                                if product.probability == 1 or (product.probability >= random()) then
+                                    name = product.name
                                 end
+                                if name then
+                                    if product.amount_max == product.amount_min then
+                                        amount = product.amount_max
+                                    else
+                                        amount = random(product.amount_min, product.amount_max)
+                                    end
+                                    if amount and amount > 0 then
+                                        log(string.format("added %s %s", amount, name))
+                                        --addItemToCargo(farl, name, math.ceil(amount/2))
+                                    end
+                                    name = false
+                                end
+                            elseif product.name and product.amount then
+                                name = product.name
+                                amount = product.amount
                                 if amount and amount > 0 then
                                     log(string.format("added %s %s", amount, name))
                                     --addItemToCargo(farl, name, math.ceil(amount/2))
                                 end
                                 name = false
                             end
-                        elseif product.name and product.amount then
-                            name = product.name
-                            amount = product.amount
-                            if amount and amount > 0 then
-                                log(string.format("added %s %s", amount, name))
-                                --addItemToCargo(farl, name, math.ceil(amount/2))
-                            end
-                            name = false
                         end
                     end
                 end
             end
         end
+        ::continue::
     end
+    log2(removed, "Removed cliffs")
 end
 
 local _rail_data = {}
@@ -176,29 +187,114 @@ local chiral_directions = {
 }
 local opposite_rail_direction = chiral_directions[false]
 
+local function create_rail(create_entity, args)
+    local c = create_entity(args)
+    if c then
+        if not Position.equals(args.position, c.position) then
+            game.print("Diff: " .. serpent.line(args.position).. " got: " .. serpent.line(c.position))
+        end
+        return c
+    else
+        game.print("Failed to create: " .. serpent.line(args))
+    end
+end
+
 local function place_next_rail(farl, input)
     local c
     local surface = farl.surface
     local pos = farl.last_rail.position
     local create = {force = farl.force, position = Position.add(pos, {x=0,y=0}), direction = 0, name = false}
-    local data = get_rail_data(farl.last_rail).next_rails
-    local rail = data[farl.travel_rd][input] or data[farl.travel_rd][rcd.straight]
+    local rdata = get_rail_data(farl.last_rail)
+
+    local rail = rdata.next_rails[farl.travel_rd][input]
+    if not rail then
+        input = rcd.straight
+        rail = rdata.next_rails[farl.travel_rd][input]
+    end
 
     if rail then
+        --TODO clear area for curves
         clear_area(farl, farl.clearance_area)
         create.position = Position.add(pos, rail.position)
-        create.name = rail.type
         create.direction = rail.direction
-        c = surface.create_entity(create)
-        if c then
-            if not Position.equals(create.position, c.position) then
-                game.print("Diff: " .. serpent.line(create.position).. " got: " .. serpent.line(c.position))
+        create.name = farl.rail_name[rail.type]
+        c = create_rail(surface.create_entity, create)
+        if not c then
+            return
+        end
+        local ndata = get_rail_data(c)
+        local chiral = chiral_directions[rdata.chirality == ndata.chirality][farl.travel_rd]
+        return c, chiral, ndata.rd_to_travel[chiral], input
+    end
+end
+
+local function place_parallel_rails(farl, _, data, _)
+    local c
+    local pos = farl.last_rail.position
+    local create_entity = farl.surface.create_entity
+    local create = {force = farl.force, position = {x=0,y=0}, direction = 0, name = farl.rail_name["straight-rail"]}
+    local same_dir = farl.last_rail.direction == data.main_rail.direction
+    local block
+    for li, lane in pairs(data.lanes) do
+        if not lane.main then
+            block = farl.last_curve_input * lane.block_left
+            --log2(block, "block")
+            if block - farl.last_curve_dist < 0 then
+                create.position = Position.add(pos, lane.position)
+                create.direction = same_dir and lane.direction or (lane.direction + 4) % 8
+                c = create_rail(create_entity, create)
+                if c then
+                    farl.last_lanes[li] = c
+                    render.mark_entity(c, nil, tostring(block))
+                end
             end
-            local rdata = get_rail_data(c)
-            local chiral = chiral_directions[get_rail_data(farl.last_rail).chirality == rdata.chirality][farl.travel_rd]
-            return c, chiral, rdata.rd_to_travel[chiral]
-        else
-            game.print("Failed to create: " .. serpent.line(create))
+        end
+    end
+end
+
+local function place_parallel_curves(farl, input, bp_data, old_travel, same_input)
+    local catchup
+    local pos, rail, data
+    local create_entity = farl.surface.create_entity
+    local create = {force = farl.force, position = {}, direction = 0, name = false}
+    for li, lane in pairs(farl.last_lanes) do
+        log2(li)
+        catchup = bp_data.lanes[li].block_left * - farl.last_curve_input
+        log2(catchup, "catchup")
+        local c = lane
+        if catchup > 0 and lane.valid then
+            if not same_input then
+                catchup = farl.last_curve_dist > catchup and catchup or farl.last_curve_dist
+            end
+            log2(catchup, "catchup2")
+            for i = 1, catchup do
+                pos = c.position
+                data = get_rail_data(c)
+                rail = data.next_rails[data.travel_to_rd[old_travel]][defines.riding.direction.straight]
+
+                if rail then
+                    create.position = Position.add(pos, rail.position)
+                    create.name = farl.rail_name["straight-rail"]
+                    create.direction = rail.direction
+                    c = create_rail(create_entity, create)
+                    if c then
+                        farl.last_lanes[li] = c
+                    end
+                end
+            end
+        end
+        data = get_rail_data(farl.last_lanes[li])
+        rail = data.next_rails[data.travel_to_rd[old_travel]][input]
+        if rail then
+            pos = farl.last_lanes[li].position
+            create.position = Position.add(pos, rail.position)
+            create.name = farl.rail_name["curved-rail"]
+            create.direction = rail.direction
+            -- c = surface.create_entity(create)
+            c = create_rail(create_entity, create)
+            if c then
+                farl.last_lanes[li] = c
+            end
         end
     end
 end
@@ -216,19 +312,46 @@ local function on_tick()
             local input = farl.driver.riding_state.direction
             local is_diagonal = farl.travel_direction % 2 == 1
             local data = farl.bp_data[farl.travel_direction]
-            if data then
-                local bb = data.bounding_box
-                local de_pos = Position.translate(lib.diagonal_to_real_pos(farl.last_rail), is_diagonal and bb.h - 1 or bb.h, farl.travel_direction)
-                render.draw_circle(de_pos, 0.15)
-                farl.clearance_area = {left_top = Position.add(de_pos, bb.left_top), right_bottom = Position.add(de_pos, bb.right_bottom)}
+            assert(data)
+            local bb = data.bounding_box
+            local de_pos = Position.translate(lib.diagonal_to_real_pos(farl.last_rail), bb.h, farl.travel_direction)
+            --render.draw_circle(de_pos, 0.15)
+            farl.clearance_area = {left_top = Position.add(de_pos, bb.left_top), right_bottom = Position.add(de_pos, bb.right_bottom)}
+
+            local which = farl.last_curve_input == 1 and data.lanes[1] or data.lanes[#data.lanes]
+            local which2 = farl.last_curve_input == 1 and data.lanes[#data.lanes] or data.lanes[1]
+            --!might need some kind of min/max for all lanes, right now i block either too long or to short for wierd blueprint layouts
+            -- log2(which.block_left, "which")
+            -- log2(which2.block_left, "which2")
+            local block = farl.last_curve_input * which.block_left
+            local block2 = farl.last_curve_input * which2.block_left
+            log2(block, "BLOCK1")
+            log2(block2, "BLOCK2")
+            block = block > block2 and block or block2
+            log2(block2, "BLOCK")
+            log2(farl.last_curve_dist, "curve_dist")
+            local drd = defines.riding.direction
+            local input_2_curve = {[drd.left] = 1, [drd.straight] = 0, [drd.right] = -1}
+            if input_2_curve[input] == farl.last_curve_input and block - farl.last_curve_dist > 0 then
+                input = drd.straight
             end
 
             render.on(true)
             render.surface = farl.surface
-            farl.bb = render.draw_rectangle(farl.clearance_area.left_top, farl.clearance_area.right_bottom, colors.green, nil)--, {id = farl.bb})
-            local new_rail, new_rd, new_travel = place_next_rail(farl, input)
+            farl.bb = render.draw_rectangle(farl.clearance_area.left_top, farl.clearance_area.right_bottom, colors.green, true, {id = farl.bb})
+            local old_travel = farl.travel_direction
+            local old_curve = farl.last_curve_input
+            local new_rail, new_rd, new_travel, actual_input = place_next_rail(farl, input, data)
             if new_rail then
                 farl.last_rail, farl.travel_rd, farl.travel_direction = new_rail, new_rd, new_travel
+                if new_rail.type == "straight-rail" then
+                    farl.last_curve_dist = farl.last_curve_dist + 1
+                    place_parallel_rails(farl, actual_input, data, is_diagonal)
+                else
+                    farl.last_curve_input = actual_input == defines.riding.direction.left and 1 or -1
+                    place_parallel_curves(farl, actual_input, data, old_travel, farl.last_curve_input == old_curve)
+                    farl.last_curve_dist = 0
+                end
                 farl.line = render.draw_line(farl.loco, farl.loco, colors.red, false, false, {id = farl.line,
                                 from_offset = Position.rotate({x = -1, y = -6}, new_travel * 45),
                                 to_offset = Position.rotate({x = 1, y = -6}, new_travel * 45)
@@ -840,6 +963,14 @@ local function on_player_driving_changed_state(event)
             pdata.train_id = loco.train.id
             pdata.farl = {
                 last_rail = dead_end,
+                --TODO find the last curve and input (up to max lag away)
+                last_curve_dist = 0,
+                last_curve_input = 0,
+                last_lanes = {},
+                rail_name = {
+                    ["straight-rail"] = "straight-rail",
+                    ["curved-rail"] = "curved-rail"
+                },
                 pole = pole,
                 signal = signal,
                 distance = distance,
@@ -1252,7 +1383,7 @@ local function farl_test(event)
             log("")
             if data[false] and data[true] and #data[true].lanes == #data[false].lanes then
                 for i, rail in pairs(data[false].lanes) do
-                    if not rail.main then
+                    --if not rail.main then
                         local rail_d = data[true].lanes[i]
                         local Sd = rail.track_distance
                         local Dd = rail_d.track_distance
@@ -1261,39 +1392,61 @@ local function farl_test(event)
                         local n = Sd - Dd
                         --local n = math.abs(Sd - Dd)
                         --for positive n: n*2 is the amount of rails needed to catchup
-                        log2(n, "N")--lag for straight -> diagonal (+/- are for right turns, for left invert it)
+                        log2(n, "lag_s")--lag for straight -> diagonal (+/- are for right turns, for left invert it)
                         local d = -Dd - 2 * n
-                        log2(d, "I")--lag for diagonal -> straight (+/- are for right turns, for left invert it)
+                        log2(d, "lag_d")--lag for diagonal -> straight (+/- are for right turns, for left invert it)
                         rail.lag_s = n
                         rail.lag_d = d
                         rail_d.lag_s = n
                         rail_d.lag_d = d
 
-                        rail.position.x = main_rail.position.x + Sd * 2
+                        --rail.position.x = main_rail.position.x + Sd * 2
+                        rail.position.x = Sd * 2
                         rail.position.y = main_rail.position.y + math.abs(2 * n)
+                        --TODO make sure this works correct for bps with largely different distances
+                        rail.block_left = 2 * rail.lag_s
+                        --rail.block_right = 2 * (Dd - Sd)
+                        rail_d.block_left = 2 * rail_d.lag_d
+                        --rail_d.block_right = 2 * (Dd - 2 * (Dd - Sd))
+
                         if rail.signal then
                             rail.signal.position.y = rail.signal.position.y + math.abs(2 * n)
                         end
-                        local pos = {x = Dd - math.abs(d), y = math.abs(d) + Dd}
-                        --local pos = {x = Dd, y = Dd}
-                        log2(pos, "pos")
-                        local m_pos = data[true].main_rail.position
-                        if (Dd + d) % 2 == 1 then
-                            rail_d.position = Position.add(lib.diagonal_to_real_pos(data[true].main_rail), pos)
+                        local pos-- = {x = Dd - math.abs(d), y = math.abs(d) + Dd}
+                        -- local pos = {x = Dd, y = Dd}
+                        -- log2(pos, "pos")
+                        -- local m_pos = data[true].main_rail.position
+                        -- local r_pos = lib.diagonal_to_real_pos(data[true].main_rail)
+                        -- log2(Dd, "Dd")
+                        -- log2(d, "d")
+                        rail_d.position = Position.translate({x = 0, y = 0}, Dd, dir.southeast)
+                        if math.abs(Dd) % 2 == 1 then
                             rail_d.direction = (rail_d.direction + 4) % 8
-                            rail_d.position = lib.real_to_diagonal_pos(rail_d)
-                        else
-                            rail_d.position = Position.add(m_pos, pos)
                         end
+                        rail_d.position = Position.translate(rail_d.position, math.abs(d), dir.southwest)
+                        if math.abs(d) % 2 == 1 then
+                            rail_d.direction = (rail_d.direction + 4) % 8
+                        end
+                        --rail_d.position = lib.real_to_diagonal_pos(rail_d)
+                        -- if (Dd + d) % 2 == 1 then
+                        --     log2(i, "lane odd")
+                        --     rail_d.position = Position.add(lib.diagonal_to_real_pos(data[true].main_rail), pos)
+                        --     rail_d.direction = (rail_d.direction + 4) % 8
+                        --     rail_d.position = lib.real_to_diagonal_pos(rail_d)
+                        -- else
+                        --     log2(i, "lane even")
+                        --     rail_d.position = Position.add(m_pos, pos)
+                        --     --rail_d.position = pos
+                        -- end
                         if rail_d.signal then
                             local r_data = librail.rail_data[rail_d.type][rail_d.direction]
                             local _rd = r_data.travel_to_rd[rail_d.travel_dir]
                             pos = r_data.signals[_rd][1]
                             rail_d.signal.position = Position.add(rail_d.position, pos)
                         end
-                    end
+                    --end
                 end
-                --TODO create tables for the remaining directions, so i don't have to do all the rotations over and over again
+                --create tables for the remaining directions, so i don't have to do all the rotations over and over again
                 data = {[0] = pdata.bp_data[false], [1] = pdata.bp_data[true]}
                 local tmp, deg
                 for i = 3, 7, 2 do
@@ -1330,6 +1483,8 @@ local function farl_test(event)
                 end
                 pdata.bp_data2 = data
                 game.write_file("bp_data2.lua", serpent.block(data, {name = "bp_data2"}))
+            else
+                game.print("Incomplete bp")
             end
 
             selected.set_blueprint_entities(ents)
@@ -1446,6 +1601,11 @@ local function on_nth_tick(event)
 end
 
 local farl_commands = {
+
+    clear_bp = function()
+        global._pdata[game.player.index].bp_data = nil
+        global._pdata[game.player.index].bp_data2 = nil
+    end,
 
     test_run = function(args)
         render.surface = game.player.surface
