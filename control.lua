@@ -318,21 +318,22 @@ local function on_tick()
             --render.draw_circle(de_pos, 0.15)
             farl.clearance_area = {left_top = Position.add(de_pos, bb.left_top), right_bottom = Position.add(de_pos, bb.right_bottom)}
 
-            local which = farl.last_curve_input == 1 and data.lanes[1] or data.lanes[#data.lanes]
-            local which2 = farl.last_curve_input == 1 and data.lanes[#data.lanes] or data.lanes[1]
-            --!might need some kind of min/max for all lanes, right now i block either too long or to short for wierd blueprint layouts
-            -- log2(which.block_left, "which")
-            -- log2(which2.block_left, "which2")
-            local block = farl.last_curve_input * which.block_left
-            local block2 = farl.last_curve_input * which2.block_left
-            log2(block, "BLOCK1")
-            log2(block2, "BLOCK2")
-            block = block > block2 and block or block2
-            log2(block2, "BLOCK")
+            --TODO move this to parsing stage!?
+            local max = 0
+            local t
+            for i, lane in pairs(data.lanes) do
+                --if i ~= which_index then
+                    t = farl.last_curve_input * lane.block_left
+                    max = t > max and t or max
+                --end
+            end
+            log2(max, "BLOCK")
+            -- block = block > block2 and block or block2
+            -- log2(block, "BLOCK")
             log2(farl.last_curve_dist, "curve_dist")
             local drd = defines.riding.direction
             local input_2_curve = {[drd.left] = 1, [drd.straight] = 0, [drd.right] = -1}
-            if input_2_curve[input] == farl.last_curve_input and block - farl.last_curve_dist > 0 then
+            if input_2_curve[input] == farl.last_curve_input and max - farl.last_curve_dist > 0 then
                 input = drd.straight
             end
 
@@ -1400,25 +1401,16 @@ local function farl_test(event)
                         rail_d.lag_s = n
                         rail_d.lag_d = d
 
-                        --rail.position.x = main_rail.position.x + Sd * 2
                         rail.position.x = Sd * 2
                         rail.position.y = main_rail.position.y + math.abs(2 * n)
                         --TODO make sure this works correct for bps with largely different distances
                         rail.block_left = 2 * rail.lag_s
-                        --rail.block_right = 2 * (Dd - Sd)
                         rail_d.block_left = 2 * rail_d.lag_d
-                        --rail_d.block_right = 2 * (Dd - 2 * (Dd - Sd))
 
                         if rail.signal then
                             rail.signal.position.y = rail.signal.position.y + math.abs(2 * n)
                         end
-                        local pos-- = {x = Dd - math.abs(d), y = math.abs(d) + Dd}
-                        -- local pos = {x = Dd, y = Dd}
-                        -- log2(pos, "pos")
-                        -- local m_pos = data[true].main_rail.position
-                        -- local r_pos = lib.diagonal_to_real_pos(data[true].main_rail)
-                        -- log2(Dd, "Dd")
-                        -- log2(d, "d")
+
                         rail_d.position = Position.translate({x = 0, y = 0}, Dd, dir.southeast)
                         if math.abs(Dd) % 2 == 1 then
                             rail_d.direction = (rail_d.direction + 4) % 8
@@ -1427,21 +1419,11 @@ local function farl_test(event)
                         if math.abs(d) % 2 == 1 then
                             rail_d.direction = (rail_d.direction + 4) % 8
                         end
-                        --rail_d.position = lib.real_to_diagonal_pos(rail_d)
-                        -- if (Dd + d) % 2 == 1 then
-                        --     log2(i, "lane odd")
-                        --     rail_d.position = Position.add(lib.diagonal_to_real_pos(data[true].main_rail), pos)
-                        --     rail_d.direction = (rail_d.direction + 4) % 8
-                        --     rail_d.position = lib.real_to_diagonal_pos(rail_d)
-                        -- else
-                        --     log2(i, "lane even")
-                        --     rail_d.position = Position.add(m_pos, pos)
-                        --     --rail_d.position = pos
-                        -- end
+
                         if rail_d.signal then
                             local r_data = librail.rail_data[rail_d.type][rail_d.direction]
                             local _rd = r_data.travel_to_rd[rail_d.travel_dir]
-                            pos = r_data.signals[_rd][1]
+                            local pos = r_data.signals[_rd][1]
                             rail_d.signal.position = Position.add(rail_d.position, pos)
                         end
                     --end
