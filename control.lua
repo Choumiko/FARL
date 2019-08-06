@@ -725,8 +725,13 @@ local function get_starting_rail(rail, rail_direction, limit)
     return start_rail, chiral
 end
 
-local function get_rail_segment_entity(rail, direction, entrance)
-    local res = rail.get_rail_segment_entity(direction, entrance)
+local function get_rail_segment_entity(rail, direction, entrance, reverse_direction)
+    local res
+    if reverse_direction then
+        res = rail.get_rail_segment_entity(direction, not entrance)
+    else
+        res = rail.get_rail_segment_entity(direction, entrance)
+    end
     return (res and signal_types[res.type]) and res or nil
 end
 
@@ -767,17 +772,14 @@ local function each_connected_rail(rail, rail_direction)
     return iterator
 end
 
-local function get_closest_signal(dead_end, de_dir)
+local function get_closest_signal(dead_end, de_dir, reverse_dir)
     local signal = false
     local best = math.huge
-    local child = 0
     local visited = {[dead_end.unit_number] = true}
-    local function _recurse(seg_start, s_dir, start_len, d)
+    local function _recurse(seg_start, s_dir, start_len)
         local distance
         local id
-        d = d and d + 1 or 0
-        render.mark_rail(seg_start, colors.white, child, true)
-        render.mark_entity_text(seg_start, d, nil, {top = true})
+
         for rail, rail_dir, seg_end, se_dir in each_connected_rail(seg_start, s_dir) do
             id = rail.unit_number
             if visited[id] then
@@ -789,69 +791,61 @@ local function get_closest_signal(dead_end, de_dir)
 
             local seg_len = rail.get_rail_segment_length()
             distance = start_len
-            local first_signal = get_rail_segment_entity(rail, opposite_rail_direction[rail_dir], false)
+            local first_signal = get_rail_segment_entity(rail, opposite_rail_direction[rail_dir], false, reverse_dir)
             local second_signal
-            child = child+1
+
             if first_signal then
-                --only then we are a node, else we're just an edge that suddenly gets longer..
+                render.mark_signal(first_signal, "de", colors.green, nil, {alt = true}, round(distance, 1))
                 if distance < best then
                     best = distance
                     signal = first_signal
-                    break
+                    goto continue
                 end
             else
                 distance = distance + seg_len
                 if distance >= best then
-                    --wont get better (we are at least adding this segments length)
-                    -- log2(d, "Early return")
-                    -- log2(distance, "dist")
-                    -- log2(best, "t_best")
-                    render.mark_rail(seg_end, colors.red, distance, true)
                     render.mark_entity_text(seg_end, "early", nil, {top = true})
-                    break
+                    goto continue
                 end
-                second_signal = get_rail_segment_entity(seg_end, se_dir, true)
+                second_signal = get_rail_segment_entity(seg_end, se_dir, true, reverse_dir)
                 if second_signal then
-                    --only then we are a node, else we're just an edge that suddenly gets longer..
+                    render.mark_signal(second_signal, "en", colors.red,  nil, {alt = true}, round(distance, 1))
                     if distance < best then
                         best = distance
                         signal = second_signal
+                        goto continue
                     end
                 end
             end
-            render.draw_line(seg_start, rail, colors.white, true, true)
-            render.mark_rail(seg_end, colors.red, distance, true, {alt = true})
-            _recurse(seg_end, se_dir, distance, d)
-            local opts = {alt = true}
-            render.mark_signal(first_signal, "de", colors.green, nil, opts, round(distance, 1))
-            render.mark_signal(second_signal, "en", colors.red,  nil, opts, round(distance, 1))
+            _recurse(seg_end, se_dir, distance)
+            ::continue::
         end
     end
 
     render.on(true)
-    render.mark_rail(dead_end, colors.green, de_dir)
 
     local seg_starta, s_dira = dead_end.get_rail_segment_end(opposite_rail_direction[de_dir])--jump_to_end(dead_end, opposite_rail_direction[de_dir])
-    render.mark_rail(seg_starta, colors.red, s_dira)
 
     local seg_length = dead_end.get_rail_segment_length()
-    local de_signal = get_rail_segment_entity(dead_end, de_dir, false)
+    local de_signal = get_rail_segment_entity(dead_end, de_dir, false, reverse_dir)
     if de_signal then
-        render.mark_signal(de_signal, "de", colors.green, nil, {alt = true})
-        signal, best = de_signal, 0
+        log("de_signal")
+        render.mark_signal(de_signal, "de1", colors.green, nil, {alt = true}, reverse_dir and seg_length or 0)
+        signal = de_signal
+        best = reverse_dir and seg_length or 0
     else
         --that's the most likely case i guess
-        local seg_start_signal = get_rail_segment_entity(seg_starta, s_dira, true)
+        local seg_start_signal = get_rail_segment_entity(seg_starta, s_dira, true, reverse_dir)
         if seg_start_signal then
-            render.mark_signal(seg_start_signal, "en", colors.red)
-            signal, best = seg_start_signal, seg_length
+            log("seg_start_signal")
+            render.mark_signal(seg_start_signal, "en1", colors.red, nil, nil, reverse_dir and 0 or seg_length)
+            signal = seg_start_signal
+            best = reverse_dir and 0 or seg_length
         end
     end
 
     _recurse(seg_starta, s_dira,  seg_length)
 
-    render.line_to_player(game.players[1], signal, colors.white, true, true)
-    render.mark_entity(game.players[1].character, colors.black, round(best or math.huge, 1), {square = true, alt = true})
     render.mark_signal(signal, "C", colors.blue, nil, nil, best)
     render.restore()
     --?adjust length according to signal data
@@ -861,7 +855,7 @@ end
 local function get_closest_pole(rail, pole_name)
     local reach = game.entity_prototypes[pole_name].max_wire_distance
     local min_distance, pole = 900, nil
-    local pos = rail.position
+    local pos = lib.diagonal_to_real_pos(rail)
     for _, p in pairs(rail.surface.find_entities_filtered { area = Position.expand_to_area(pos, reach), name = pole_name }) do
         local dist = Position.distance(pos, p.position)
         if min_distance > dist then
@@ -930,12 +924,14 @@ local function get_startup_data(entity, pdata)
     end
     --log2(find_key(rd, de_direction), "de_dir")
     --log(log_entity(dead_end, "Starting rail", true))
-    local signal, distance = get_closest_signal(dead_end, de_direction)
+    local signal, distance = get_closest_signal(dead_end, de_direction, false)
 
-    local bp_data = pdata.bp_data[travel_direction % 2 == 1]
     local pole
-    if bp_data.main_pole then
-        pole = get_closest_pole(dead_end, bp_data.main_pole.name)
+    if pdata then
+        local bp_data = pdata.bp_data[travel_direction % 2 == 1]
+        if bp_data.main_pole then
+            pole = get_closest_pole(dead_end, bp_data.main_pole.name)
+        end
     end
 
     render.on(true)
@@ -944,6 +940,26 @@ local function get_startup_data(entity, pdata)
     render.mark_signal(signal, "C", colors.green, nil, nil, distance)
     render.restore()
     return dead_end, signal, pole, distance, travel_direction, de_direction
+end
+
+local function find_parallel_rails(farl, data)
+    local c
+    local pos = farl.last_rail.position
+    local find_entity = farl.surface.find_entities_filtered
+    local create = {force = farl.force, position = {x=0,y=0}, direction = 0, name = farl.rail_name["straight-rail"], limit = 1}
+    local same_dir = farl.last_rail.direction == data.main_rail.direction
+    for li, lane in pairs(data.lanes) do
+        if not lane.main then
+            create.position = Position.add(pos, lane.position)
+            create.direction = same_dir and lane.direction or (lane.direction + 4) % 8
+            c = find_entity(create)
+            if c[1] then
+                log2(c)
+                farl.last_lanes[li] = c[1]
+                render.mark_rail(c[1], nil, "s", true, {alt = true})
+            end
+        end
+    end
 end
 
 local function on_player_driving_changed_state(event)
@@ -965,7 +981,7 @@ local function on_player_driving_changed_state(event)
             pdata.farl = {
                 last_rail = dead_end,
                 --TODO find the last curve and input (up to max lag away)
-                last_curve_dist = 0,
+                last_curve_dist = 100,
                 last_curve_input = 0,
                 last_lanes = {},
                 rail_name = {
@@ -984,9 +1000,20 @@ local function on_player_driving_changed_state(event)
                 surface = loco.surface,
                 bp_data = pdata.bp_data2}
             global.active[loco.train.id] = pdata.farl
-
+            local farl = pdata.farl
             render.on(true)
             rendering.clear("FARL")
+
+            if dead_end.type ~= "curved-rail" then
+                find_parallel_rails(farl, farl.bp_data[farl.travel_direction])
+                for li, lane in pairs(farl.bp_data[farl.travel_direction].lanes) do
+                    if not lane.main and lane.travel_dir and farl.last_lanes[li] then
+                        local de_dir = dead_end.direction == farl.last_lanes[li].direction and travel_rd or opposite_rail_direction[travel_rd]
+                        get_closest_signal(farl.last_lanes[li], de_dir, travel_direction ~= lane.travel_dir)
+                    end
+                end
+            end
+
             render.mark_rail(dead_end, colors.green, "S", true)
             render.mark_signal(signal, "C", colors.green, nil, nil, distance)
             render.mark_entity(pole, colors.green, "P")
