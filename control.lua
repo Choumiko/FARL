@@ -51,6 +51,7 @@ local log2 = lib.log2
           enables customizing each and every direction when desired
     Blueprint parsing:
         - rotate into north/northeast direction
+        - allow either a chain signal or a loco to define the direction
         - bounding box
         - group by type/category
         - calculate required offsets rail <-> signal, pole <-> signal, pole <-> other, wall <-> rail
@@ -187,7 +188,12 @@ local chiral_directions = {
 }
 local opposite_rail_direction = chiral_directions[false]
 
-local function create_rail(create_entity, args)
+local function create_rail(create_entity, args, surface)
+    if surface then
+        if not surface.can_place_entity(args) then
+            game.print("Can't place: " .. serpent.line(args, {keyignore={force = true}}))
+        end
+    end
     local c = create_entity(args)
     if c then
         if not Position.equals(args.position, c.position) then
@@ -213,16 +219,33 @@ local function place_next_rail(farl, input)
     end
 
     if rail then
-        --TODO clear area for curves
-        clear_area(farl, farl.clearance_area)
         create.position = Position.add(pos, rail.position)
         create.direction = rail.direction
         create.name = farl.rail_name[rail.type]
-        c = create_rail(surface.create_entity, create)
+
+        local area = farl.clearance_area
+        render.draw_rectangle(area.left_top, area.right_bottom, colors.blue, true)
+        if rail.type == "curved-rail" then
+            local _area = librail.rail_data["curved-rail"][rail.direction].clear_area
+            local tmp = {left_top = Position.add(_area.left_top, create.position), right_bottom = Position.add(_area.right_bottom, create.position)}
+            render.draw_rectangle(tmp.left_top, tmp.right_bottom, colors.green, true)
+            area.left_top.x = area.left_top.x < tmp.left_top.x and area.left_top.x or tmp.left_top.x
+            area.left_top.y = area.left_top.y < tmp.left_top.y and area.left_top.y or tmp.left_top.y
+
+            area.right_bottom.x = area.right_bottom.x > tmp.right_bottom.x and area.right_bottom.x or tmp.right_bottom.x
+            area.right_bottom.y = area.right_bottom.y > tmp.right_bottom.y and area.right_bottom.y or tmp.right_bottom.y
+            render.draw_rectangle(area.left_top, area.right_bottom, colors.blue, true)
+        end
+        farl.bb = render.draw_rectangle(area.left_top, area.right_bottom, colors.green, nil, {id = farl.bb})
+        clear_area(farl, area)
+        c = create_rail(surface.create_entity, create, farl.surface)
         if not c then
             return
         end
         local ndata = get_rail_data(c)
+        farl.dist = farl.dist + ndata.length
+        --TODO place signal and depending on signal placement option trigger signal placement for lanes (if signals should be placed relative to the main signal)
+        render.mark_entity_text(c, farl.dist, nil, {top = true})
         local chiral = chiral_directions[rdata.chirality == ndata.chirality][farl.travel_rd]
         return c, chiral, ndata.rd_to_travel[chiral], input
     end
@@ -234,7 +257,7 @@ local function place_parallel_rails(farl, _, data, _)
     local create_entity = farl.surface.create_entity
     local create = {force = farl.force, position = {x=0,y=0}, direction = 0, name = farl.rail_name["straight-rail"]}
     local same_dir = farl.last_rail.direction == data.main_rail.direction
-    local block
+    local block, ndata
     for li, lane in pairs(data.lanes) do
         if not lane.main then
             block = farl.last_curve_input * lane.block_left
@@ -242,10 +265,13 @@ local function place_parallel_rails(farl, _, data, _)
             if block - farl.last_curve_dist < 0 then
                 create.position = Position.add(pos, lane.position)
                 create.direction = same_dir and lane.direction or (lane.direction + 4) % 8
-                c = create_rail(create_entity, create)
+                c = create_rail(create_entity, create, farl.surface)
                 if c then
-                    farl.last_lanes[li] = c
+                    farl.last_lanes[li].rail = c
+                    ndata = get_rail_data(c)
+                    farl.last_lanes[li].dist = farl.last_lanes[li].dist + ndata.length
                     render.mark_entity(c, nil, tostring(block))
+                    render.mark_entity_text(c, farl.last_lanes[li].dist, nil, {top = true})
                 end
             end
         end
@@ -254,15 +280,16 @@ end
 
 local function place_parallel_curves(farl, input, bp_data, old_travel, same_input)
     local catchup
-    local pos, rail, data
+    local pos, rail, data, ndata
     local create_entity = farl.surface.create_entity
     local create = {force = farl.force, position = {}, direction = 0, name = false}
     for li, lane in pairs(farl.last_lanes) do
+        --TODO create red rectangle here and clear the area
         log2(li)
         catchup = bp_data.lanes[li].block_left * - farl.last_curve_input
         log2(catchup, "catchup")
-        local c = lane
-        if catchup > 0 and lane.valid then
+        local c = lane.rail
+        if catchup > 0 and c.valid then
             if not same_input then
                 catchup = farl.last_curve_dist > catchup and catchup or farl.last_curve_dist
             end
@@ -276,24 +303,42 @@ local function place_parallel_curves(farl, input, bp_data, old_travel, same_inpu
                     create.position = Position.add(pos, rail.position)
                     create.name = farl.rail_name["straight-rail"]
                     create.direction = rail.direction
-                    c = create_rail(create_entity, create)
+                    c = create_rail(create_entity, create, farl.surface)
                     if c then
-                        farl.last_lanes[li] = c
+                        farl.last_lanes[li].rail = c
+                        ndata = get_rail_data(c)
+                        farl.last_lanes[li].dist = farl.last_lanes[li].dist + ndata.length
+                        render.mark_entity_text(c, farl.last_lanes[li].dist, nil, {top = true})
                     end
                 end
             end
         end
-        data = get_rail_data(farl.last_lanes[li])
+        data = get_rail_data(farl.last_lanes[li].rail)
         rail = data.next_rails[data.travel_to_rd[old_travel]][input]
         if rail then
-            pos = farl.last_lanes[li].position
+            pos = farl.last_lanes[li].rail.position
             create.position = Position.add(pos, rail.position)
             create.name = farl.rail_name["curved-rail"]
             create.direction = rail.direction
-            -- c = surface.create_entity(create)
-            c = create_rail(create_entity, create)
+            local area = farl.clearance_area
+            if rail.type == "curved-rail" then
+                local _area = librail.rail_data["curved-rail"][rail.direction].clear_area
+                local tmp = {left_top = Position.add(_area.left_top, create.position), right_bottom = Position.add(_area.right_bottom, create.position)}
+                render.draw_rectangle(tmp.left_top, tmp.right_bottom, colors.green, true)
+                area.left_top.x = area.left_top.x < tmp.left_top.x and area.left_top.x or tmp.left_top.x
+                area.left_top.y = area.left_top.y < tmp.left_top.y and area.left_top.y or tmp.left_top.y
+
+                area.right_bottom.x = area.right_bottom.x > tmp.right_bottom.x and area.right_bottom.x or tmp.right_bottom.x
+                area.right_bottom.y = area.right_bottom.y > tmp.right_bottom.y and area.right_bottom.y or tmp.right_bottom.y
+                render.draw_rectangle(area.left_top, area.right_bottom, colors.red, true)
+            end
+            clear_area(farl, area)
+            c = create_rail(create_entity, create, farl.surface)
             if c then
-                farl.last_lanes[li] = c
+                farl.last_lanes[li].rail = c
+                ndata = get_rail_data(c)
+                farl.last_lanes[li].dist = farl.last_lanes[li].dist + ndata.length
+                render.mark_entity_text(c, farl.last_lanes[li].dist, nil, {top = true})
             end
         end
     end
@@ -339,7 +384,6 @@ local function on_tick()
 
             render.on(true)
             render.surface = farl.surface
-            farl.bb = render.draw_rectangle(farl.clearance_area.left_top, farl.clearance_area.right_bottom, colors.green, true, {id = farl.bb})
             local old_travel = farl.travel_direction
             local old_curve = farl.last_curve_input
             local new_rail, new_rd, new_travel, actual_input = place_next_rail(farl, input, data)
@@ -565,6 +609,10 @@ librail.rail_data = {
                     [rcd.right] = {type = "curved-rail", direction = dir.south, position = {x = -4, y = -6}}
                 }
             },
+            clear_area = {
+                left_top = {x = -2.5, y = -3.5},
+                right_bottom = {x = 2, y = 4},
+            },
         },
         [dir.northeast] = {
             length = curve_length,
@@ -598,6 +646,10 @@ librail.rail_data = {
                     [rcd.right] = nil
                 }
             },
+            clear_area = {
+                left_top = {x = -2, y = -3.5},
+                right_bottom = {x = 2.5, y = 4}
+            },
         },
     }
 }
@@ -616,7 +668,7 @@ local function get_signal_data2(signal, ent)--luacheck: no unused
     --print(tostring(k))
     local tmp = data.rail_map[ent.type][k]
     if tmp then
-        --print(serpent.block(tmp, {keyignore={rail_data = true}}))
+        -- log2(serpent.block(tmp, {keyignore={rail_data = true}}))
         return tmp
     end
 end
@@ -792,10 +844,12 @@ local function get_closest_signal(dead_end, de_dir, reverse_dir)
             local seg_len = rail.get_rail_segment_length()
             distance = start_len
             local first_signal = get_rail_segment_entity(rail, opposite_rail_direction[rail_dir], false, reverse_dir)
-            local second_signal
+            local second_signal, s_data
 
             if first_signal then
-                render.mark_signal(first_signal, "de", colors.green, nil, {alt = true}, round(distance, 1))
+                render.mark_signal(first_signal, "de", colors.green, nil, nil, round(distance, 1))
+                s_data = get_signal_data2(first_signal, rail)
+                log2(distance - s_data.signal.stops)
                 if distance < best then
                     best = distance
                     signal = first_signal
@@ -809,7 +863,9 @@ local function get_closest_signal(dead_end, de_dir, reverse_dir)
                 end
                 second_signal = get_rail_segment_entity(seg_end, se_dir, true, reverse_dir)
                 if second_signal then
-                    render.mark_signal(second_signal, "en", colors.red,  nil, {alt = true}, round(distance, 1))
+                    render.mark_signal(second_signal, "en", colors.red,  nil, nil, round(distance, 1))
+                    s_data = get_signal_data2(second_signal, seg_end)
+                    log2(distance - seg_len + s_data.signal.stops)
                     if distance < best then
                         best = distance
                         signal = second_signal
@@ -830,6 +886,7 @@ local function get_closest_signal(dead_end, de_dir, reverse_dir)
     local de_signal = get_rail_segment_entity(dead_end, de_dir, false, reverse_dir)
     if de_signal then
         log("de_signal")
+        --! fix distance
         render.mark_signal(de_signal, "de1", colors.green, nil, {alt = true}, reverse_dir and seg_length or 0)
         signal = de_signal
         best = reverse_dir and seg_length or 0
@@ -838,6 +895,7 @@ local function get_closest_signal(dead_end, de_dir, reverse_dir)
         local seg_start_signal = get_rail_segment_entity(seg_starta, s_dira, true, reverse_dir)
         if seg_start_signal then
             log("seg_start_signal")
+            --! fix distance
             render.mark_signal(seg_start_signal, "en1", colors.red, nil, nil, reverse_dir and 0 or seg_length)
             signal = seg_start_signal
             best = reverse_dir and 0 or seg_length
@@ -846,7 +904,7 @@ local function get_closest_signal(dead_end, de_dir, reverse_dir)
 
     _recurse(seg_starta, s_dira,  seg_length)
 
-    render.mark_signal(signal, "C", colors.blue, nil, nil, best)
+    --render.mark_signal(signal, "C", colors.blue, nil, nil, best)
     render.restore()
     --?adjust length according to signal data
     return signal, best
@@ -855,6 +913,7 @@ end
 local function get_closest_pole(rail, pole_name)
     local reach = game.entity_prototypes[pole_name].max_wire_distance
     local min_distance, pole = 900, nil
+    --? should be the position of the pole, not the rail?
     local pos = lib.diagonal_to_real_pos(rail)
     for _, p in pairs(rail.surface.find_entities_filtered { area = Position.expand_to_area(pos, reach), name = pole_name }) do
         local dist = Position.distance(pos, p.position)
@@ -937,26 +996,36 @@ local function get_startup_data(entity, pdata)
     render.on(true)
     render.mark_rail(dead_end, colors.green, "S", true)
     --render.mark_entity_text(dead_end, find_key(rd, de_direction))
-    render.mark_signal(signal, "C", colors.green, nil, nil, distance)
+    --render.mark_signal(signal, "C", colors.green, nil, nil, distance)
     render.restore()
     return dead_end, signal, pole, distance, travel_direction, de_direction
 end
 
 local function find_parallel_rails(farl, data)
-    local c
+    local c, block
     local pos = farl.last_rail.position
     local find_entity = farl.surface.find_entities_filtered
+    local create_entity = farl.surface.create_entity
     local create = {force = farl.force, position = {x=0,y=0}, direction = 0, name = farl.rail_name["straight-rail"], limit = 1}
     local same_dir = farl.last_rail.direction == data.main_rail.direction
     for li, lane in pairs(data.lanes) do
         if not lane.main then
+            block = farl.last_curve_input * lane.block_left
             create.position = Position.add(pos, lane.position)
             create.direction = same_dir and lane.direction or (lane.direction + 4) % 8
             c = find_entity(create)
             if c[1] then
                 log2(c)
-                farl.last_lanes[li] = c[1]
+                farl.last_lanes[li] = {rail = c[1]}
                 render.mark_rail(c[1], nil, "s", true, {alt = true})
+            else
+                c = create_rail(create_entity, create, farl.surface)
+                if c then
+                    farl.last_lanes[li] = {rail = c}
+                    render.mark_entity(c, nil, tostring(block))
+                else
+                    farl.last_lanes[li] = {}
+                end
             end
         end
     end
@@ -990,7 +1059,7 @@ local function on_player_driving_changed_state(event)
                 },
                 pole = pole,
                 signal = signal,
-                distance = distance,
+                dist = distance,
                 travel_direction = travel_direction,
                 travel_rd = travel_rd,
                 player = player,
@@ -1003,19 +1072,21 @@ local function on_player_driving_changed_state(event)
             local farl = pdata.farl
             render.on(true)
             rendering.clear("FARL")
-
+            local bp_data = farl.bp_data[farl.travel_direction]
             if dead_end.type ~= "curved-rail" then
-                find_parallel_rails(farl, farl.bp_data[farl.travel_direction])
-                for li, lane in pairs(farl.bp_data[farl.travel_direction].lanes) do
-                    if not lane.main and lane.travel_dir and farl.last_lanes[li] then
-                        local de_dir = dead_end.direction == farl.last_lanes[li].direction and travel_rd or opposite_rail_direction[travel_rd]
-                        get_closest_signal(farl.last_lanes[li], de_dir, travel_direction ~= lane.travel_dir)
+                find_parallel_rails(farl, bp_data)
+                for li, lane in pairs(bp_data.lanes) do
+                    if not lane.main and lane.travel_dir and farl.last_lanes[li].rail then
+                        local de_dir = dead_end.direction == farl.last_lanes[li].rail.direction and travel_rd or opposite_rail_direction[travel_rd]
+                        local _signal, dist = get_closest_signal(farl.last_lanes[li].rail, de_dir, travel_direction ~= lane.travel_dir)
+                        farl.last_lanes[li].dist = dist
+                        farl.last_lanes[li].signal = _signal
                     end
                 end
             end
 
             render.mark_rail(dead_end, colors.green, "S", true)
-            render.mark_signal(signal, "C", colors.green, nil, nil, distance)
+            render.mark_signal(signal, "C", colors.green, nil, {alt = true}, distance)
             render.mark_entity(pole, colors.green, "P")
             local data = pdata.bp_data[is_diagonal]
             if data then
@@ -1377,6 +1448,7 @@ end
 
 local function farl_test(event)
     on_init()
+    -- lib.saveVar(librail.rail_data, "rail_data")
     local player = game.get_player(event.player_index)
     if player.character then
         player.character_reach_distance_bonus = 100

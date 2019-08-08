@@ -1,5 +1,6 @@
 require('util')
 local find_key = require 'lib_control'.find_key
+local rotate_bounding_box = require 'lib_control'.rotate_bounding_box
 
 --Mostly taken from https://github.com/dewiniaid/RailTools
 local rcd = defines.rail_connection_direction
@@ -78,6 +79,7 @@ function librail.create_lookup()
                 signals = {},
                 travel_to_rd = {},
                 rd_to_travel = {},
+                clear_area = table.deepcopy(entity_data[source].clear_area)
             }
 
             for d, signals in pairs(entity_data[source].signals) do
@@ -110,6 +112,10 @@ function librail.create_lookup()
                 end
             end
             entity_data[dest].next_rails = _t
+
+            if entity_data[source].clear_area then
+                rotate_bounding_box(entity_data[dest].clear_area, dest - source)
+            end
         end
 
         -- Second pass: Create the signal map and determine signal search areas.
