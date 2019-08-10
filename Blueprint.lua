@@ -197,9 +197,11 @@ function Blueprint.parse(bp_data, chain_signal, is_diagonal, ents)
     box.left_top = Position.subtract(box.left_top, p0)
     box.right_bottom = Position.subtract(box.right_bottom, p0)
     box.left_top.x = math.floor(box.left_top.x - 0.5)
-    box.left_top.y = math.floor(box.left_top.y)
     box.right_bottom.x = math.ceil(box.right_bottom.x + 0.5)
-    box.right_bottom.y = math.ceil(box.right_bottom.y)--is_diagonal and math.floor(box.right_bottom.y) or
+    box.left_top.y = math.floor(box.left_top.y)
+    if not is_diagonal then
+        box.right_bottom.y = math.ceil(box.right_bottom.y)--is_diagonal and math.floor(box.right_bottom.y) or
+    end
     box.h = math.abs(box.right_bottom.y - box.left_top.y)
 
     bp_data.bounding_box = box

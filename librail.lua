@@ -79,7 +79,8 @@ function librail.create_lookup()
                 signals = {},
                 travel_to_rd = {},
                 rd_to_travel = {},
-                clear_area = table.deepcopy(entity_data[source].clear_area)
+                clear_area = table.deepcopy(entity_data[source].clear_area),
+                exit_rails = {}
             }
 
             for d, signals in pairs(entity_data[source].signals) do
@@ -115,6 +116,12 @@ function librail.create_lookup()
 
             if entity_data[source].clear_area then
                 rotate_bounding_box(entity_data[dest].clear_area, dest - source)
+            end
+
+            if entity_data[source].exit_rails then
+                for d, er in pairs(entity_data[source].exit_rails) do
+                    t.exit_rails[(d + 2) % 8] = {position = {x = -er.position.y, y = er.position.x}, direction = (er.direction + 2) % 8, type = "straight-rail"}
+                end
             end
         end
 

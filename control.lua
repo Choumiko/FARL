@@ -106,6 +106,10 @@ local function log_entity(ent, description, short)
     return description .. "nil"
 end
 
+local function addItemsToCargo(farl, items)--luacheck: no unused
+    return
+end
+
 local function clear_area(farl, area)
     --! simple-entity isn't necessarily just a rock, could be a modded entity
     local args = {area = area, type = {"tree", "simple-entity", "cliff"}}
@@ -114,8 +118,9 @@ local function clear_area(farl, area)
     if count == 0 then return end
     args.limit = nil
     local amount, name, proto
-    local random = math.random
+    local random, ceil = math.random, math.ceil
     local removed = 0
+    local to_add = {}
     for _, entity in pairs(farl.surface.find_entities_filtered(args) ) do--, force = "neutral" }) do
         if not entity.valid then goto continue end
         if entity.type == "cliff" then
@@ -133,23 +138,23 @@ local function clear_area(farl, area)
                                     name = product.name
                                 end
                                 if name then
+                                    to_add[name] = to_add[name] or 0
                                     if product.amount_max == product.amount_min then
                                         amount = product.amount_max
                                     else
                                         amount = random(product.amount_min, product.amount_max)
                                     end
                                     if amount and amount > 0 then
-                                        log(string.format("added %s %s", amount, name))
-                                        --addItemToCargo(farl, name, math.ceil(amount/2))
+                                       to_add[name] = to_add[name] + ceil(amount/2)
                                     end
                                     name = false
                                 end
                             elseif product.name and product.amount then
                                 name = product.name
+                                to_add[name] = to_add[name] or 0
                                 amount = product.amount
                                 if amount and amount > 0 then
-                                    log(string.format("added %s %s", amount, name))
-                                    --addItemToCargo(farl, name, math.ceil(amount/2))
+                                    to_add[name] = to_add[name] + ceil(amount/2)
                                 end
                                 name = false
                             end
@@ -160,7 +165,8 @@ local function clear_area(farl, area)
         end
         ::continue::
     end
-    log2(removed, "Removed cliffs")
+    addItemsToCargo(farl, to_add)
+    --log2(removed, "Removed cliffs")
 end
 
 local _rail_data = {}
@@ -205,35 +211,39 @@ local function create_rail(create_entity, args, surface)
     end
 end
 
-local function place_next_rail(farl, input)
+local function get_next_rail(rail, travel_rd, input)
+    local rdata = get_rail_data(rail)
+    local r = rdata.next_rails[travel_rd][input]
+    if not r then
+        input = rcd.straight
+        r = rdata.next_rails[travel_rd][input]
+    end
+    return r, rdata
+end
+
+local function place_next_rail(farl, input, data)
     local c
     local surface = farl.surface
     local pos = farl.last_rail.position
     local create = {force = farl.force, position = Position.add(pos, {x=0,y=0}), direction = 0, name = false}
-    local rdata = get_rail_data(farl.last_rail)
 
-    local rail = rdata.next_rails[farl.travel_rd][input]
-    if not rail then
-        input = rcd.straight
-        rail = rdata.next_rails[farl.travel_rd][input]
-    end
+    local rail, rdata = get_next_rail(farl.last_rail, farl.travel_rd, input)
 
     if rail then
         create.position = Position.add(pos, rail.position)
         create.direction = rail.direction
         create.name = farl.rail_name[rail.type]
 
-        local area = farl.clearance_area
+        local bb = data.bounding_box
+        local de_pos = lib.diagonal_to_real_pos(create)
+        local area = {left_top = Position.add(de_pos, bb.left_top), right_bottom = Position.add(de_pos, bb.right_bottom)}
+        farl.clearance_area = area
         render.draw_rectangle(area.left_top, area.right_bottom, colors.blue, true)
         if rail.type == "curved-rail" then
             local _area = librail.rail_data["curved-rail"][rail.direction].clear_area
             local tmp = {left_top = Position.add(_area.left_top, create.position), right_bottom = Position.add(_area.right_bottom, create.position)}
             render.draw_rectangle(tmp.left_top, tmp.right_bottom, colors.green, true)
-            area.left_top.x = area.left_top.x < tmp.left_top.x and area.left_top.x or tmp.left_top.x
-            area.left_top.y = area.left_top.y < tmp.left_top.y and area.left_top.y or tmp.left_top.y
-
-            area.right_bottom.x = area.right_bottom.x > tmp.right_bottom.x and area.right_bottom.x or tmp.right_bottom.x
-            area.right_bottom.y = area.right_bottom.y > tmp.right_bottom.y and area.right_bottom.y or tmp.right_bottom.y
+            Position.merge_area(area, tmp)
             render.draw_rectangle(area.left_top, area.right_bottom, colors.blue, true)
         end
         farl.bb = render.draw_rectangle(area.left_top, area.right_bottom, colors.green, nil, {id = farl.bb})
@@ -247,11 +257,35 @@ local function place_next_rail(farl, input)
         --TODO place signal and depending on signal placement option trigger signal placement for lanes (if signals should be placed relative to the main signal)
         render.mark_entity_text(c, farl.dist, nil, {top = true})
         local chiral = chiral_directions[rdata.chirality == ndata.chirality][farl.travel_rd]
-        return c, chiral, ndata.rd_to_travel[chiral], input
+        local new_travel = ndata.rd_to_travel[chiral]
+        if rail.type == "curved-rail" and new_travel % 2 == 1 then
+            --! seems stupid
+            local r_travel = (new_travel + 4) % 8
+            log2(r_travel)
+            local t = get_next_rail(c, chiral, defines.riding.direction.straight)
+            local fdata = librail.rail_data["straight-rail"][t.direction]
+            log2(fdata)
+            create.position = Position.add(c.position, t.position)
+            create.direction = t.direction
+            create.name = "straight-rail"
+            local bb2 = farl.bp_data[new_travel].bounding_box
+            for i = 1, 5 do
+                t = fdata.next_rails[fdata.travel_to_rd[r_travel]][defines.riding.direction.straight]
+                create.position = Position.add(create.position, t.position)
+                create.direction = t.direction
+                local _de_pos = lib.diagonal_to_real_pos(create)
+                local farea = {left_top = Position.add(_de_pos, bb2.left_top), right_bottom = Position.add(_de_pos, bb2.right_bottom)}
+                render.draw_rectangle(farea.left_top, farea.right_bottom, colors.blue)
+                clear_area(farl, farea)
+                fdata = librail.rail_data["straight-rail"][create.direction]
+            end
+        end
+
+        return c, chiral, new_travel, input
     end
 end
 
-local function place_parallel_rails(farl, _, data, _)
+local function place_parallel_rails(farl, data)
     local c
     local pos = farl.last_rail.position
     local create_entity = farl.surface.create_entity
@@ -283,8 +317,30 @@ local function place_parallel_curves(farl, input, bp_data, old_travel, same_inpu
     local pos, rail, data, ndata
     local create_entity = farl.surface.create_entity
     local create = {force = farl.force, position = {}, direction = 0, name = false}
+    local new_bp_data = old_travel % 2 == 0 and bp_data or farl.bp_data[farl.travel_direction]
+    local left = old_travel % 2 == 0 and (old_travel + 10) % 8 or (farl.travel_direction + 10) % 8
+    local c_pos
+    local area = farl.clearance_area
+    local area2 = farl.clearance_area
     for li, lane in pairs(farl.last_lanes) do
-        --TODO create red rectangle here and clear the area
+        --TODO move calculations to parsing stage?
+        do
+            log2(new_bp_data.lanes[li].distance, "left dist")
+
+            c_pos = Position.translate(farl.last_rail.position, new_bp_data.lanes[li].distance, left)
+            if old_travel % 2 == 0 then
+                c_pos = Position.translate(c_pos, farl.last_curve_input * new_bp_data.lanes[li].block_left, (left + 2) % 8)
+            else
+                c_pos = Position.translate(c_pos, farl.last_curve_input * new_bp_data.lanes[li].block_left, (left + 6) % 8)
+            end
+            log2(c_pos, "curve")
+            local _area = librail.rail_data["curved-rail"][farl.last_rail.direction].clear_area
+            local tmp = {left_top = Position.add(_area.left_top, c_pos), right_bottom = Position.add(_area.right_bottom, c_pos)}
+            render.draw_rectangle(tmp.left_top, tmp.right_bottom, colors.green, true)
+            Position.merge_area(area2, tmp)
+            clear_area(farl, area2)
+            render.draw_rectangle(area2.left_top, area2.right_bottom, colors.red)
+        end
         log2(li)
         catchup = bp_data.lanes[li].block_left * - farl.last_curve_input
         log2(catchup, "catchup")
@@ -320,21 +376,19 @@ local function place_parallel_curves(farl, input, bp_data, old_travel, same_inpu
             create.position = Position.add(pos, rail.position)
             create.name = farl.rail_name["curved-rail"]
             create.direction = rail.direction
-            local area = farl.clearance_area
             if rail.type == "curved-rail" then
                 local _area = librail.rail_data["curved-rail"][rail.direction].clear_area
                 local tmp = {left_top = Position.add(_area.left_top, create.position), right_bottom = Position.add(_area.right_bottom, create.position)}
                 render.draw_rectangle(tmp.left_top, tmp.right_bottom, colors.green, true)
-                area.left_top.x = area.left_top.x < tmp.left_top.x and area.left_top.x or tmp.left_top.x
-                area.left_top.y = area.left_top.y < tmp.left_top.y and area.left_top.y or tmp.left_top.y
-
-                area.right_bottom.x = area.right_bottom.x > tmp.right_bottom.x and area.right_bottom.x or tmp.right_bottom.x
-                area.right_bottom.y = area.right_bottom.y > tmp.right_bottom.y and area.right_bottom.y or tmp.right_bottom.y
+                Position.merge_area(area, tmp)
                 render.draw_rectangle(area.left_top, area.right_bottom, colors.red, true)
             end
             clear_area(farl, area)
             c = create_rail(create_entity, create, farl.surface)
             if c then
+                assert(Position.equals(c.position, c_pos))
+                assert(Position.equals(area.left_top, area2.left_top))
+                assert(Position.equals(area.right_bottom, area2.right_bottom))
                 farl.last_lanes[li].rail = c
                 ndata = get_rail_data(c)
                 farl.last_lanes[li].dist = farl.last_lanes[li].dist + ndata.length
@@ -355,27 +409,20 @@ local function on_tick()
         --{last_rail = dead_end, distance = distance, player = player, loco = loco}
         if Position.distance_squared(farl.last_rail.position, farl.loco.position) < 36 then
             local input = farl.driver.riding_state.direction
-            local is_diagonal = farl.travel_direction % 2 == 1
             local data = farl.bp_data[farl.travel_direction]
             assert(data)
-            local bb = data.bounding_box
-            local de_pos = Position.translate(lib.diagonal_to_real_pos(farl.last_rail), bb.h, farl.travel_direction)
-            --render.draw_circle(de_pos, 0.15)
-            farl.clearance_area = {left_top = Position.add(de_pos, bb.left_top), right_bottom = Position.add(de_pos, bb.right_bottom)}
 
             --TODO move this to parsing stage!?
             local max = 0
             local t
             for i, lane in pairs(data.lanes) do
-                --if i ~= which_index then
-                    t = farl.last_curve_input * lane.block_left
-                    max = t > max and t or max
-                --end
+                t = farl.last_curve_input * lane.block_left
+                max = t > max and t or max
             end
-            log2(max, "BLOCK")
+            -- log2(max, "BLOCK")
             -- block = block > block2 and block or block2
             -- log2(block, "BLOCK")
-            log2(farl.last_curve_dist, "curve_dist")
+            -- log2(farl.last_curve_dist, "curve_dist")
             local drd = defines.riding.direction
             local input_2_curve = {[drd.left] = 1, [drd.straight] = 0, [drd.right] = -1}
             if input_2_curve[input] == farl.last_curve_input and max - farl.last_curve_dist > 0 then
@@ -391,7 +438,7 @@ local function on_tick()
                 farl.last_rail, farl.travel_rd, farl.travel_direction = new_rail, new_rd, new_travel
                 if new_rail.type == "straight-rail" then
                     farl.last_curve_dist = farl.last_curve_dist + 1
-                    place_parallel_rails(farl, actual_input, data, is_diagonal)
+                    place_parallel_rails(farl, data)
                 else
                     farl.last_curve_input = actual_input == defines.riding.direction.left and 1 or -1
                     place_parallel_curves(farl, actual_input, data, old_travel, farl.last_curve_input == old_curve)
@@ -583,6 +630,10 @@ librail.rail_data = {
                 [dir.northwest] = rd.back,
                 [dir.south] = rd.front
             },
+            exit_rails = {
+                [dir.northwest] = {position = {x = -1, y = -3}, direction = dir.southwest, type = "straight-rail"},
+                [dir.south] = {position = {x = 1, y = 3}, direction = dir.north, type = "straight-rail"}
+            },
             rd_to_travel = {
                 [rd.front] = dir.south,
                 [rd.back] = dir.northwest
@@ -619,6 +670,10 @@ librail.rail_data = {
             travel_to_rd = {
                 [dir.northeast] = rd.back,
                 [dir.south] = rd.front
+            },
+            exit_rails = {
+                [dir.northeast] = {position = {x = 1, y = -3}, direction = dir.southeast, type = "straight-rail"},
+                [dir.south] = {position = {x = -1, y = 3}, direction = dir.north, type = "straight-rail"}
             },
             rd_to_travel = {
                 [rd.front] = dir.south,
@@ -1448,7 +1503,7 @@ end
 
 local function farl_test(event)
     on_init()
-    -- lib.saveVar(librail.rail_data, "rail_data")
+    lib.saveVar(librail.rail_data, "rail_data")
     local player = game.get_player(event.player_index)
     if player.character then
         player.character_reach_distance_bonus = 100
@@ -1584,8 +1639,8 @@ local function farl_test(event)
             local offset = Position.subtract(selected.position, global.selected.position)
             print2(log_entity(global.selected), "Prev")
             print2(offset, "Diff")
-            print2(Position.distance(selected.position, global.selected.position), "Dist")
-            print2(Position.distance(lib.diagonal_to_real_pos(selected), lib.diagonal_to_real_pos(global.selected))/math.sqrt(2), "real Dist")
+            --print2(Position.distance(selected.position, global.selected.position), "Dist")
+            --print2(Position.distance(lib.diagonal_to_real_pos(selected), lib.diagonal_to_real_pos(global.selected))/math.sqrt(2), "real Dist")
         end
         global.selected = selected
 

@@ -35,6 +35,14 @@ function Position.expand_to_area(pos, radius)
     return { left_top = { x = pos.x - radius, y = pos.y - radius}, right_bottom = { x = pos.x + radius, y = pos.y + radius } }
 end
 
+function Position.merge_area(area, tmp)
+    area.left_top.x = area.left_top.x < tmp.left_top.x and area.left_top.x or tmp.left_top.x
+    area.left_top.y = area.left_top.y < tmp.left_top.y and area.left_top.y or tmp.left_top.y
+
+    area.right_bottom.x = area.right_bottom.x > tmp.right_bottom.x and area.right_bottom.x or tmp.right_bottom.x
+    area.right_bottom.y = area.right_bottom.y > tmp.right_bottom.y and area.right_bottom.y or tmp.right_bottom.y
+end
+
 function Position.distance_squared(pos1, pos2)
     local axbx = pos1.x - pos2.x
     local ayby = pos1.y - pos2.y
