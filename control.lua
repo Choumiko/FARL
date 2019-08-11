@@ -1063,6 +1063,7 @@ local function find_parallel_rails(farl, data)
     local create_entity = farl.surface.create_entity
     local create = {force = farl.force, position = {x=0,y=0}, direction = 0, name = farl.rail_name["straight-rail"], limit = 1}
     local same_dir = farl.last_rail.direction == data.main_rail.direction
+    local dead_end_dir, travel_rd, travel_direction = farl.last_rail.direction, farl.travel_rd, farl.travel_direction
     for li, lane in pairs(data.lanes) do
         if not lane.main then
             block = farl.last_curve_input * lane.block_left
@@ -1082,8 +1083,59 @@ local function find_parallel_rails(farl, data)
                     farl.last_lanes[li] = {}
                 end
             end
+            if lane.travel_dir and farl.last_lanes[li].rail then
+                local de_dir = dead_end_dir == farl.last_lanes[li].rail.direction and travel_rd or opposite_rail_direction[travel_rd]
+                local _signal, dist = get_closest_signal(farl.last_lanes[li].rail, de_dir, travel_direction ~= lane.travel_dir)
+                farl.last_lanes[li].dist = dist
+                farl.last_lanes[li].signal = _signal
+            end
         end
     end
+end
+
+local function find_parallel_curves(farl)
+    local c
+    local find_entity = farl.surface.find_entities_filtered
+    local create_entity = farl.surface.create_entity
+    local create = {force = farl.force, position = {x=0,y=0}, direction = 0, name = farl.rail_name["curved-rail"], limit = 1}
+
+    local old_travel = (get_rail_data(farl.last_rail).rd_to_travel[opposite_rail_direction[farl.travel_rd]] + 4) % 8
+    local curve_input = (farl.travel_direction + 1) % 8 == old_travel and 1 or -1
+    local new_bp_data = old_travel % 2 == 0 and farl.bp_data[old_travel] or farl.bp_data[farl.travel_direction]
+    local left = old_travel % 2 == 0 and (old_travel + 10) % 8 or (farl.travel_direction + 10) % 8
+    local dead_end_dir, travel_rd, travel_direction = farl.last_rail.direction, farl.travel_rd, farl.travel_direction
+    for li, lane in pairs(new_bp_data.lanes) do
+        if not lane.main then
+            create.position = Position.translate(farl.last_rail.position, lane.distance, left)
+            if old_travel % 2 == 0 then
+                create.position = Position.translate(create.position, curve_input * lane.block_left, (left + 2) % 8)
+            else
+                create.position = Position.translate(create.position, curve_input * lane.block_left, (left + 6) % 8)
+            end
+            create.direction = lane.direction
+            log2(create.position, "curve")
+            c = find_entity(create)
+            if c[1] then
+                farl.last_lanes[li] = {rail = c[1]}
+                render.mark_rail(c[1], nil, "s", true, {alt = true})
+            else
+                c = create_rail(create_entity, create, farl.surface)
+                if c then
+                    farl.last_lanes[li] = {rail = c}
+                    render.mark_entity(c, nil, "c")
+                else
+                    farl.last_lanes[li] = {}
+                end
+            end
+            if lane.travel_dir and farl.last_lanes[li].rail then
+                local de_dir = dead_end_dir == farl.last_lanes[li].rail.direction and travel_rd or opposite_rail_direction[travel_rd]
+                local _signal, dist = get_closest_signal(farl.last_lanes[li].rail, de_dir, travel_direction ~= lane.travel_dir)
+                farl.last_lanes[li].dist = dist
+                farl.last_lanes[li].signal = _signal
+            end
+        end
+    end
+    return curve_input
 end
 
 local function on_player_driving_changed_state(event)
@@ -1130,14 +1182,9 @@ local function on_player_driving_changed_state(event)
             local bp_data = farl.bp_data[farl.travel_direction]
             if dead_end.type ~= "curved-rail" then
                 find_parallel_rails(farl, bp_data)
-                for li, lane in pairs(bp_data.lanes) do
-                    if not lane.main and lane.travel_dir and farl.last_lanes[li].rail then
-                        local de_dir = dead_end.direction == farl.last_lanes[li].rail.direction and travel_rd or opposite_rail_direction[travel_rd]
-                        local _signal, dist = get_closest_signal(farl.last_lanes[li].rail, de_dir, travel_direction ~= lane.travel_dir)
-                        farl.last_lanes[li].dist = dist
-                        farl.last_lanes[li].signal = _signal
-                    end
-                end
+            else
+                farl.last_curve_input = find_parallel_curves(farl)
+                farl.last_curve_dist = 0
             end
 
             render.mark_rail(dead_end, colors.green, "S", true)
