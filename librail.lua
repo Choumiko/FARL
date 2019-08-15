@@ -70,6 +70,16 @@ function librail.create_lookup()
     local number_of_chiralities = 100
     for entity_type, entity_data in pairs(librail.rail_data) do
         log(entity_type)
+        for _, edata in pairs(entity_data) do
+            edata.signals_travel = {}
+            edata.next_rails_travel = {}
+            for d, _ in pairs(edata.signals) do
+                edata.signals_travel[edata.rd_to_travel[d]] = edata.signals[d]
+            end
+            for d, _ in pairs(edata.next_rails) do
+                edata.next_rails_travel[edata.rd_to_travel[d]] = edata.next_rails[d]
+            end
+        end
         -- Add rotations for directions other than north and northeast.
         -- This could be simplified, but this reads better.  And it's not a performance critical segment of code.
         for source, dest in each_rotation() do
@@ -77,14 +87,25 @@ function librail.create_lookup()
             t = {
                 length = entity_data[source].length,
                 signals = {},
+                signals_travel = {},
+                next_rails_travel = {},
                 travel_to_rd = {},
                 rd_to_travel = {},
                 clear_area = table.deepcopy(entity_data[source].clear_area),
                 exit_rails = {}
             }
 
+            local t_rd = entity_data[source].travel_to_rd
+            local calc_td--, set_rd
+            for td, _rd in pairs(t_rd) do
+                calc_td = (td + 2) % 8
+                t.travel_to_rd[calc_td] = _rd
+                t.rd_to_travel[_rd] = calc_td
+            end
+
             for d, signals in pairs(entity_data[source].signals) do
                 t.signals[d] = {}
+                t.signals_travel[t.rd_to_travel[d]] = t.signals[d]
                 for i = 1, #signals do
                     t.signals[d][i] = rotate_cw(signals[i])
                     t.signals[d][i].stops = signals[i].stops
@@ -93,13 +114,6 @@ function librail.create_lookup()
             end
             entity_data[dest] = t
 
-            local t_rd = entity_data[source].travel_to_rd
-            local calc_td--, set_rd
-            for td, _rd in pairs(t_rd) do
-                calc_td = (td + 2) % 8
-                entity_data[dest].travel_to_rd[calc_td] = _rd
-                entity_data[dest].rd_to_travel[_rd] = calc_td
-            end
             local _t = {}
             for d, connected_rails in pairs(entity_data[source].next_rails) do
                 _t[d] = {}
@@ -111,6 +125,7 @@ function librail.create_lookup()
                         _t[d][conn_dir] = librail.rotate_next_rails(connected_rails[conn_dir])
                     end
                 end
+                entity_data[dest].next_rails_travel[entity_data[dest].rd_to_travel[d]] = _t
             end
             entity_data[dest].next_rails = _t
 
