@@ -228,34 +228,59 @@ local function get_next_rail(rail, travel_rd, input)
     end
     return r, rdata
 end
-local signal_distance = 6
-local function place_signal(farl, position, current_distance, signals, create, reverse)
+
+--first signal
+--local _distance = reverse_dir and (distance + s_data.signal.stops) or distance + l - s_data.signal.starts
+--best = reverse_dir and (s_data.signal.stops) or (rail_l - s_data.signal.starts)
+--second signal
+--local _distance = reverse_dir and distance - seg_len + s_data.signal.starts or distance - seg_len + s_data.signal.stops
+--best = reverse_dir and (seg_length - (rail_l - s_data.signal.stops)) or (rail_l - s_data.signal.starts)
+
+local function signal_distances(current, signal, length, reverse)
     if reverse then
-        log2(signals, "signals")
+        return current + length - signal.starts, signal.stops
+    else
+        return current + signal.stops, length - signal.starts
+    end
+end
+
+local signal_distance = 13
+local function place_signal(farl, position, current_distance, data, signal_dir, create, reverse)
+    local signals = data.signals_travel[signal_dir]
+    local add_d, new_d
+    if reverse then
         local signal
+        log2(signals, "signals r")
         for i = #signals, 1, -1 do
             signal = signals[i]
-            log2(current_distance - signal.starts, " signal dist")
-            if current_distance - signal.starts >= signal_distance then
+            add_d, new_d = signal_distances(current_distance, signal, data.length, reverse)
+            log2(add_d, " signal dist r " .. i)
+            if add_d >= signal_distance then
+                log2(signal, "signal r")
                 create.name = "rail-signal"
                 create.direction = signal.d
                 create.position = Position.add(position, signal)
                 create_rail(farl.surface.create_entity, create, farl.surface)
-                return signal.stops
+                log2(new_d, "length")
+                return new_d
             end
         end
     else
         for _, signal in pairs(signals) do
-            log2(current_distance + signal.stops, " signal dist")
-            if current_distance + signal.stops >= signal_distance then
+            --log2(current_distance + signal.stops, " signal dist")
+            add_d, new_d = signal_distances(current_distance, signal, data.length, reverse)
+            if add_d >= signal_distance then
+                --log2(signal, "signal")
                 create.name = "rail-signal"
                 create.direction = signal.d
                 create.position = Position.add(position, signal)
                 create_rail(farl.surface.create_entity, create, farl.surface)
-                return -signal.starts
+                --log2(new_d, "length")
+                return new_d
             end
         end
     end
+    return current_distance + data.length
 end
 
 local function place_next_rail(farl, input, data)
@@ -313,13 +338,13 @@ local function place_next_rail(farl, input, data)
 
         --TODO place signal and depending on signal placement option trigger signal placement for lanes (if signals should be placed relative to the main signal)
         --!variable signal distance
-        local distance = farl.dist
-        if distance + ndata.length >= signal_distance then
+        local distance = farl.dist + ndata.length
+        if distance >= signal_distance then
             -- log2(farl.dist, "current dist")
             -- log2(farl.dist + ndata.length, "max dist")
-            distance = place_signal(farl, c.position, farl.dist, ndata.signals[chiral], create) or distance
+            distance = place_signal(farl, c.position, farl.dist, ndata, new_travel, create)
         end
-        farl.dist = distance + ndata.length
+        farl.dist = distance
 
         render.mark_entity_text(c, round(farl.dist, 1), nil, {top = true})
         if rail.type == "curved-rail" and new_travel % 2 == 1 then
@@ -366,16 +391,16 @@ local function place_parallel_rails(farl, data)
                 if c then
                     ndata = get_rail_data(c)
                     local signal_dir = lane.travel_dir
-                    local distance = farl.last_lanes[li].dist
-                    if lane.travel_dir and distance + ndata.length >= signal_distance then
-                        -- log2(farl.dist, "current dist")
+                    local distance = farl.last_lanes[li].dist + ndata.length
+                    if lane.travel_dir and distance >= signal_distance then
+                        log2(c.direction, "rail dir")
                         -- log2(farl.dist + ndata.length, "max dist")
-                        distance = place_signal(farl, c.position, farl.last_lanes[li].dist, ndata.signals_travel[signal_dir], create, signal_dir ~= farl.travel_direction) or distance
+                        distance = place_signal(farl, c.position, farl.last_lanes[li].dist, ndata, signal_dir, create, signal_dir ~= farl.travel_direction)
                         create.name = farl.rail_name["straight-rail"]
                     end
                     farl.last_lanes[li].rail = c
-                    farl.last_lanes[li].dist = distance + ndata.length
-                    render.mark_entity(c, nil, tostring(block))
+                    farl.last_lanes[li].dist = distance
+                    --render.mark_entity(c, nil, tostring(block))
                     render.mark_entity_text(c, round(farl.last_lanes[li].dist, 1), nil, {top = true})
                 end
             end
@@ -411,14 +436,12 @@ local function place_parallel_curves(farl, bp_data, input, old_travel, same_inpu
                         ndata = get_rail_data(c)
 
                     local signal_dir = bp_data.lanes[li].travel_dir
-                    local distance = lane.dist
-                    if bp_data.lanes[li].travel_dir and distance + ndata.length >= signal_distance then
-                        -- log2(farl.dist, "current dist")
-                        -- log2(farl.dist + ndata.length, "max dist")
-                        distance = place_signal(farl, c.position, lane.dist, ndata.signals_travel[signal_dir], create, signal_dir ~= old_travel) or distance
+                    local distance = lane.dist + ndata.length
+                    if bp_data.lanes[li].travel_dir and distance >= signal_distance then
+                        distance = place_signal(farl, c.position, lane.dist, ndata, signal_dir, create, signal_dir ~= old_travel)
                     end
                         lane.rail = c
-                        lane.dist = distance + ndata.length
+                        lane.dist = distance
                         render.mark_entity_text(c, lane.dist, nil, {top = true})
                     end
                 end
@@ -443,17 +466,17 @@ local function place_parallel_curves(farl, bp_data, input, old_travel, same_inpu
                 local signal_dir = reverse and farl.bp_data[old_travel].lanes[li].travel_dir or  farl.travel_direction
                 -- log2(bp_data.lanes[li].travel_dir, "lane td")
                 -- log2(signal_dir, "signal_dir")
-                local distance = lane.dist
-                if signal_dir and distance + ndata.length >= signal_distance then
+                local distance = lane.dist + ndata.length
+                if signal_dir and distance >= signal_distance then
                     log2(distance, "current dist")
                     log2(distance + ndata.length, "max dist")
-                    distance = place_signal(farl, c.position, lane.dist, ndata.signals_travel[signal_dir], create, reverse) or distance
+                    distance = place_signal(farl, c.position, lane.dist, ndata, signal_dir, create, reverse)
                     -- log2(distance, "dist")
                     -- log2(distance + ndata.length, "new dist")
                 end
 
                 farl.last_lanes[li].rail = c
-                farl.last_lanes[li].dist = distance + ndata.length
+                farl.last_lanes[li].dist = distance
                 --farl.last_lanes[li].dist = distance + ndata.length
                 render.mark_entity_text(c, farl.last_lanes[li].dist, nil, {top = true})
             end
@@ -619,10 +642,15 @@ librail.rail_data = {
             },
             signals = {
                     [rd.front] = {
+                        --stops: add to current signal distance, too see if it needs to be placed
+                        --starts: subtract from length to get the new signal distance
                         {x=1.5, y= 0.5, d=dir.south, stops=-1, starts=0},  -- Train stops 1 unit before this rail begins
                         {x=1.5, y=-0.5, d=dir.south, stops=1, starts=2}
                     },
                     [rd.back] = {
+                        --REVERSE case:
+                        --stops: new signal distance
+                        --starts: add length - starts to signal distance for check
                         {x=-1.5, y=-0.5, d=dir.north, stops=-1, starts=0},
                         {x=-1.5, y= 0.5, d=dir.north, stops=1, starts=2},
                     },
@@ -651,8 +679,10 @@ librail.rail_data = {
                 [rd.back] = dir.southeast
             },
             signals = {
-                [rd.front] = {{x=1.5, y=-1.5, d=dir.southeast, stops=-1, starts=1}},
-                [rd.back] = {{x=-0.5, y=0.5, d=dir.northwest, stops=0, starts=1}},
+                [rd.front] = {{x=1.5, y=-1.5, d=dir.southeast, stops=-1, starts=sqrt2}},
+                [rd.back] = {{x=-0.5, y=0.5, d=dir.northwest, stops=0, starts=sqrt2}},
+                -- [rd.front] = {{x=1.5, y=-1.5, d=dir.southeast, stops=-1, starts=1}},
+                -- [rd.back] = {{x=-0.5, y=0.5, d=dir.northwest, stops=0, starts=1}},
             },
             next_rails = {
                 [rd.front] = {
@@ -951,8 +981,12 @@ local function get_closest_signal(dead_end, de_dir, reverse_dir)
 
             if first_signal then
                 s_data = get_signal_data2(first_signal, rail)
-                local _distance = reverse_dir and distance - s_data.signal.starts or distance - s_data.signal.stops
+                local l = get_rail_data(rail).length
+                --local _distance = reverse_dir and distance + s_data.signal.stops or distance + l - s_data.signal.starts
+                local _distance = signal_distances(distance, s_data.signal, l, not reverse_dir)
+                log2(distance, "start_len")
                 log2(_distance, "first signal")
+                log2(s_data.signal)
                 render.mark_signal(first_signal, "de", colors.green, nil, nil, round(_distance, 1))
                 if _distance < best then
                     best = _distance
@@ -967,10 +1001,13 @@ local function get_closest_signal(dead_end, de_dir, reverse_dir)
                 end
                 second_signal = get_rail_segment_entity(seg_end, se_dir, true, reverse_dir)
                 if second_signal then
+                    log2(distance, "start_len")
                     render.mark_signal(second_signal, "en", colors.red,  nil, nil, round(distance, 1))
                     s_data = get_signal_data2(second_signal, seg_end)
+
                     local _distance = reverse_dir and distance - seg_len + s_data.signal.starts or distance - seg_len + s_data.signal.stops
                     log2(_distance, "second signal")
+                    log2(s_data.signal)
                     if _distance < best then
                         best = _distance
                         signal = second_signal
@@ -989,25 +1026,38 @@ local function get_closest_signal(dead_end, de_dir, reverse_dir)
 
     local seg_length = dead_end.get_rail_segment_length()
     local de_signal = get_rail_segment_entity(dead_end, de_dir, false, reverse_dir)
+    local rail_l = get_rail_data(dead_end).length
+    local s_data, _
     if de_signal then
-        log("de_signal")
         --! fix distance
-        render.mark_signal(de_signal, "de1", colors.green, nil, {alt = true}, reverse_dir and seg_length or 0)
-        signal = de_signal
-        best = reverse_dir and seg_length or 0
+        s_data = get_signal_data2(de_signal, dead_end)
+        if s_data then
+            log("de_signal")
+            signal = de_signal
+            log2(s_data.signal)
+            -- best = reverse_dir and (s_data.signal.stops) or (rail_l - s_data.signal.starts)
+            _, best = signal_distances(0, s_data.signal, rail_l, reverse_dir)
+            render.mark_signal(de_signal, "de1", colors.green, nil, {alt = true}, best)
+        end
     else
         --that's the most likely case i guess
         local seg_start_signal = get_rail_segment_entity(seg_starta, s_dira, true, reverse_dir)
         if seg_start_signal then
-            log("seg_start_signal")
             --! fix distance
-            render.mark_signal(seg_start_signal, "en1", colors.red, nil, nil, reverse_dir and 0 or seg_length)
-            signal = seg_start_signal
-            best = reverse_dir and 0 or seg_length
+            s_data = get_signal_data2(seg_start_signal, seg_starta)
+            if s_data then
+                log("seg_start_signal")
+                signal = seg_start_signal
+                log2(s_data.signal)
+
+                best = reverse_dir and (seg_length - (rail_l - s_data.signal.stops)) or (seg_length - rail_l) + (rail_l - s_data.signal.starts)
+                render.mark_signal(seg_start_signal, "en1", colors.red, nil, nil, best)
+            end
         end
     end
-
-    _recurse(seg_starta, s_dira,  seg_length)
+    if not signal then
+        _recurse(seg_starta, s_dira,  seg_length)
+    end
 
     --render.mark_signal(signal, "C", colors.blue, nil, nil, best)
     render.restore()
@@ -1243,7 +1293,7 @@ local function on_player_driving_changed_state(event)
 
             render.mark_rail(dead_end, colors.green, "S", true)
             render.mark_entity_text(dead_end, tostring(distance))
-            render.mark_signal(signal, "C", colors.green, nil, {alt = true}, distance)
+            --render.mark_signal(signal, "C", colors.green, nil, {alt = true}, distance)
             render.mark_entity(pole, colors.green, "P")
             local data = pdata.bp_data[is_diagonal]
             if data then
