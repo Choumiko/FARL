@@ -171,26 +171,28 @@ function Blueprint.parse(bp_data, chain_signal, is_diagonal, ents)
         local real_pos = main_rail.position
         local pos
         for _, ent in pairs(ents) do
-            if ent.type == "straight-rail" and not ent.main then
-                --move all rails on one horizontal line
-                ent.position.y = main_rail.position.y
-                ent.position.x = 2 * ent.track_distance + main_rail.position.x
-                ent.direction = main_rail.direction
-                lib.rotate_bounding_box(game.entity_prototypes[ent.name].collision_box, ent.direction, box, lib.diagonal_to_real_pos(ent))
-                if ent.signal then
-                    local data = librail.rail_data[ent.type][ent.direction]
-                    local _rd = data.travel_to_rd[ent.travel_dir]
-                    pos = data.signals[_rd][1]
-                    ent.signal.position = Position.add(ent.position, pos)
-                    lib.rotate_bounding_box(game.entity_prototypes[ent.signal.name].collision_box, ent.signal.direction, box, ent.signal.position)
+            if not (ent.type == "straight.rail" and ent.main) then
+                if ent.type == "straight-rail" and not ent.main then
+                    --move all rails on one horizontal line
+                    ent.position.y = main_rail.position.y
+                    ent.position.x = 2 * ent.track_distance + main_rail.position.x
+                    ent.direction = main_rail.direction
+                    lib.rotate_bounding_box(game.entity_prototypes[ent.name].collision_box, ent.direction, box, lib.diagonal_to_real_pos(ent))
+                    if ent.signal then
+                        local data = librail.rail_data[ent.type][ent.direction]
+                        local _rd = data.travel_to_rd[ent.travel_dir]
+                        pos = data.signals[_rd][1]
+                        ent.signal.position = Position.add(ent.position, pos)
+                        lib.rotate_bounding_box(game.entity_prototypes[ent.signal.name].collision_box, ent.signal.direction, box, ent.signal.position)
+                    end
+                elseif not (ent.type == "rail-signal" or ent.type == "rail-chain-signal") then
+                    log2(ent.type)
+                    pos = Position.subtract(ent.position, real_pos)
+                    log2(pos, "Pos")
+                    ent.position.x = ent.position.x + pos.y
+                    ent.position.y = ent.position.y - pos.y
+                    lib.rotate_bounding_box(game.entity_prototypes[ent.name].collision_box, ent.direction, box, lib.diagonal_to_real_pos(ent))
                 end
-
-            elseif not (ent.type == "rail-signal" or ent.type == "rail-chain-signal") then
-                pos = Position.subtract(ent.position, real_pos)
-                log2(pos, "Pos")
-                ent.position.x = ent.position.x + pos.y
-                ent.position.y = ent.position.y - pos.y
-                lib.rotate_bounding_box(game.entity_prototypes[ent.name].collision_box, ent.direction, box, lib.diagonal_to_real_pos(ent))
             end
         end
     end
