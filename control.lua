@@ -250,18 +250,18 @@ local function place_signal(farl, position, current_distance, data, signal_dir, 
     local add_d, new_d
     if reverse then
         local signal
-        log2(signals, "signals r")
+        --log2(signals, "signals r")
         for i = #signals, 1, -1 do
             signal = signals[i]
             add_d, new_d = signal_distances(current_distance, signal, data.length, reverse)
-            log2(add_d, " signal dist r " .. i)
+            --log2(add_d, " signal dist r " .. i)
             if add_d >= signal_distance then
-                log2(signal, "signal r")
+                --log2(signal, "signal r")
                 create.name = "rail-signal"
                 create.direction = signal.d
                 create.position = Position.add(position, signal)
                 create_rail(farl.surface.create_entity, create, farl.surface)
-                log2(new_d, "length")
+                --log2(new_d, "length")
                 return new_d
             end
         end
@@ -283,35 +283,59 @@ local function place_signal(farl, position, current_distance, data, signal_dir, 
     return current_distance + data.length
 end
 
-local function place_pole(farl, rail, data, travel_dir)--luacheck: no unused
-    if not data.main_pole then return end
-    --log2(data.main_pole)
-    local pole_pos = Position.add(lib.diagonal_to_real_pos(rail), data.main_pole.real_pos)
-    local pole_distance = Position.distance(farl.pole.position, pole_pos)
-    render.draw_circle(pole_pos, nil, nil)
-    log2(pole_distance, "p dist 1")
+local function place_pole(farl, rail, data, travel_dir, old_data, r_data)--luacheck: no unused
+    if not data.main_pole or rail.type == "curved-rail" then return end
+    local block = farl.last_curve_input * data.lanes[data.main_pole.lane].block_left
+    local pole_pos, pole_distance
+        log2(travel_dir, "travel_dir")
+        log2(farl.last_curve_dist, "dist")
+        log2(block, "block")
+    if block - farl.last_curve_dist > 0 then
+        log2("blocked")
+        -- pole_pos = Position.add(lib.diagonal_to_real_pos(rail), data.main_pole.real_pos)
+        -- render.draw_circle(pole_pos, nil, colors.black)
+        -- if travel_dir % 2 == 0 then
+        --     pole_pos = Position.translate(pole_pos, 1, travel_dir)
+        --     render.draw_circle(pole_pos, nil, colors.black)
+        -- end
+        return
+    end
+
+    pole_pos = Position.add(lib.diagonal_to_real_pos(rail), data.main_pole.real_pos)
+    pole_distance = Position.distance(farl.pole.position, pole_pos)
+
+    if pole_distance >= farl.pole_distance then
+        render.draw_circle(pole_pos, nil, nil)
         if pole_distance <= farl.pole_reach then
             farl.pole_candidate.position = pole_pos
             farl.pole_candidate.direction = data.main_pole.direction
+            farl.pole_distance = pole_distance
             if travel_dir % 2 == 0 then
                 pole_pos = Position.translate(pole_pos, 1, travel_dir)
                 pole_distance = Position.distance(farl.pole.position, pole_pos)
-                render.draw_circle(pole_pos, nil, nil)
-                log2(pole_distance, "p dist 2")
-                if pole_distance <= farl.pole_reach then
-                    farl.pole_candidate.position = pole_pos
-                    farl.pole_candidate.direction = data.main_pole.direction
-                else
-                    farl.pole = create_rail(farl.surface.create_entity, farl.pole_candidate, farl.surface)
+                render.draw_circle(pole_pos, nil, colors.blue)
+
+                --seperate case; depending on pole reach we could end up closer to the last pole
+                if pole_distance >= farl.pole_distance then
+                    if pole_distance <= farl.pole_reach then
+                        farl.pole_candidate.position = pole_pos
+                        farl.pole_candidate.direction = data.main_pole.direction
+                        farl.pole_distance = pole_distance
+                    else
+                        farl.pole = create_rail(farl.surface.create_entity, farl.pole_candidate, farl.surface)
+                        farl.pole_distance = 0
+                    end
                 end
             end
         else
             farl.pole = create_rail(farl.surface.create_entity, farl.pole_candidate, farl.surface)
+            farl.pole_distance = 0
         end
+    end
 end
 
 
-local function place_next_rail(farl, input, data)
+local function place_next_rail(farl, input, data, same_input)
     local c
     local surface = farl.surface
     local pos = farl.last_rail.position
@@ -354,7 +378,7 @@ local function place_next_rail(farl, input, data)
             Position.merge_area(area, _ca)
         end
         farl.bb = render.draw_rectangle(area.left_top, area.right_bottom, colors.green, nil, {id = farl.bb})
-        render.draw_rectangle(area.left_top, area.right_bottom, colors.blue)
+        --render.draw_rectangle(area.left_top, area.right_bottom, colors.blue)
         clear_area(farl, area)
         c = create_rail(surface.create_entity, create, farl.surface)
         if not c then
@@ -367,32 +391,66 @@ local function place_next_rail(farl, input, data)
         --TODO place signal and depending on signal placement option trigger signal placement for lanes (if signals should be placed relative to the main signal)
         farl.dist = place_signal(farl, c.position, farl.dist, ndata, new_travel, create)
 
-        place_pole(farl, c, farl.bp_data[new_travel], new_travel)
+        place_pole(farl, c, farl.bp_data[new_travel], new_travel, data, ndata)
 
         render.mark_entity_text(c, round(farl.dist, 1), nil, {top = true})
-        if rail.type == "curved-rail" and new_travel % 2 == 1 then
-            --! seems stupid
-            local r_travel = (new_travel + 4) % 8
-            log2(r_travel)
-            local t = get_next_rail(c, chiral, defines.riding.direction.straight)
-            local fdata = librail.rail_data["straight-rail"][t.direction]
-            --log2(fdata)
-            create.position = Position.add(c.position, t.position)
-            create.direction = t.direction
-            create.name = "straight-rail"
-            local bb2 = farl.bp_data[new_travel].bounding_box
-            for i = 1, 5 do
-                t = fdata.next_rails[fdata.travel_to_rd[r_travel]][defines.riding.direction.straight]
-                create.position = Position.add(create.position, t.position)
+        if rail.type == "curved-rail" then
+            if new_travel % 2 == 1 then
+                --! seems stupid
+                local r_travel = (new_travel + 4) % 8
+                log2(r_travel)
+                local t = get_next_rail(c, chiral, defines.riding.direction.straight)
+                local fdata = librail.rail_data["straight-rail"][t.direction]
+                --log2(fdata)
+                create.position = Position.add(c.position, t.position)
                 create.direction = t.direction
-                local _de_pos = lib.diagonal_to_real_pos(create)
-                local farea = {left_top = Position.add(_de_pos, bb2.left_top), right_bottom = Position.add(_de_pos, bb2.right_bottom)}
-                render.draw_rectangle(farea.left_top, farea.right_bottom, colors.blue)
-                clear_area(farl, farea)
-                fdata = librail.rail_data["straight-rail"][create.direction]
+                create.name = "straight-rail"
+                local bb2 = farl.bp_data[new_travel].bounding_box
+                for i = 1, 5 do
+                    t = fdata.next_rails[fdata.travel_to_rd[r_travel]][defines.riding.direction.straight]
+                    create.position = Position.add(create.position, t.position)
+                    create.direction = t.direction
+                    local _de_pos = lib.diagonal_to_real_pos(create)
+                    local farea = {left_top = Position.add(_de_pos, bb2.left_top), right_bottom = Position.add(_de_pos, bb2.right_bottom)}
+                    render.draw_rectangle(farea.left_top, farea.right_bottom, colors.blue)
+                    clear_area(farl, farea)
+                    fdata = librail.rail_data["straight-rail"][create.direction]
+                end
+            end
+            if data.main_pole then
+                local catchup = data.lanes[data.main_pole.lane].block_left * - input_2_curve[input] / 2
+                log2(catchup, "catchup1")
+                if catchup > 0 then
+                    if not same_input then
+                        catchup = farl.last_curve_dist > catchup and catchup or farl.last_curve_dist
+                    end
+                    log2(catchup, "catchup")
+                    if new_travel % 2 == 1 then
+                        catchup = catchup * 2
+                    end
+                    --? always catchup one position more?
+                    catchup = catchup + 1
+                    log2(farl.pole_candidate)
+                    local pole_pos = farl.pole_candidate.position
+                    local pole_distance
+                    local p = farl.pole.position
+                    for i = 1, catchup do
+                        pole_pos = Position.translate(pole_pos, 1, farl.travel_direction)
+                        pole_distance = Position.distance(pole_pos, p)
+                        render.draw_circle(pole_pos, nil, colors.orange)
+                        if pole_distance <= farl.pole_reach then
+                            farl.pole_candidate.position = pole_pos
+                            farl.pole_candidate.direction = data.main_pole.direction
+                            farl.pole_distance = pole_distance
+                        else
+                            farl.pole = create_rail(farl.surface.create_entity, farl.pole_candidate, farl.surface)
+                            p = farl.pole.position
+                            farl.pole_distance = 0
+                        end
+                    end
+                end
             end
         end
-
         return c, chiral, new_travel, input
     end
 end
@@ -527,7 +585,7 @@ local function on_tick()
             render.surface = farl.surface
             local old_travel = farl.travel_direction
             local old_curve = farl.last_curve_input
-            local new_rail, new_rd, new_travel, actual_input = place_next_rail(farl, input, data)
+            local new_rail, new_rd, new_travel, actual_input = place_next_rail(farl, input, data, farl.last_curve_input == old_curve)
             if new_rail then
                 farl.last_rail, farl.travel_rd, farl.travel_direction = new_rail, new_rd, new_travel
                 if new_rail.type == "straight-rail" then
@@ -1292,6 +1350,7 @@ local function on_player_driving_changed_state(event)
                 },
                 pole = pole,
                 pole_reach = reach,
+                pole_distance = 0,
                 pole_candidate = {name = bp_data.main_pole.name, position = {x = 0, y = 0}, direction = bp_data.main_pole.direction, force = loco.force},
                 signal = signal,
                 dist = distance,
@@ -1650,8 +1709,11 @@ local function farl_test(event)
             log("")
             local cblock_left, cblock_right = 0, 0
             local dcblock_left, dcblock_right = 0, 0
-            local max_lag_s, max_lag_d = 0, 0
+            --local max_lag_s, max_lag_d = 0, 0
+            local left_lane, right_lane
+            local left_lane_d, right_lane_d
             if data[false] and data[true] and #data[true].lanes == #data[false].lanes then
+                --sorted from left to right (left < 0 distance)
                 for i, rail in pairs(data[false].lanes) do
                     --if not rail.main then
                         local rail_d = data[true].lanes[i]
@@ -1668,8 +1730,27 @@ local function farl_test(event)
                         rail_d.lag_s = n
                         rail_d.lag_d = d
 
-                        max_lag_s = math.abs(n) > max_lag_s and math.abs(n) or max_lag_s
-                        max_lag_d = math.abs(d) > max_lag_d and math.abs(d) or max_lag_d
+                        -- max_lag_s = math.abs(n) > max_lag_s and math.abs(n) or max_lag_s
+                        -- max_lag_d = math.abs(d) > max_lag_d and math.abs(d) or max_lag_d
+                        if data[false].main_pole then
+                            if not left_lane then
+                                -- log2(rail.distance < data[false].main_pole.distance, "ll")
+                                left_lane = rail.distance < data[false].main_pole.distance and i
+                            end
+                            if not right_lane then
+                                right_lane = rail.distance > data[false].main_pole.distance and i
+                            end
+                        end
+                        if data[true].main_pole then
+                            --if not left_lane_d then
+                                log2(rail_d.distance < data[true].main_pole.distance, "ll d" .. i)
+                                left_lane_d = rail_d.distance < data[true].main_pole.distance and i
+                            --end
+                            if not right_lane_d then
+                                log2(rail_d.distance > data[true].main_pole.distance, "rl d" .. i)
+                                right_lane_d = rail_d.distance > data[true].main_pole.distance and i
+                            end
+                        end
 
                         rail.position.x = Sd * 2
                         rail.position.y = main_rail.position.y + math.abs(2 * n)
@@ -1705,15 +1786,65 @@ local function farl_test(event)
                 end
                 data[false].curve_block = {[-1] = cblock_right, [1] = cblock_left}
                 data[true].curve_block = {[-1] = dcblock_right, [1] = dcblock_left}
-                data[false].max_lag = max_lag_s
-                data[true].max_lag = max_lag_d
+                -- data[false].max_lag = max_lag_s
+                -- data[true].max_lag = max_lag_d
+
+                if data[false].main_pole and data[true].main_pole then
+                    local pole, pole_d = data[false].main_pole, data[true].main_pole
+                    -- local n = pole.distance - pole_d.distance
+                    -- local d = - pole_d.distance-- - n
+                    -- pole.lag_s = n
+                    -- pole.lag_d = d
+                    -- pole.block_left = 2 * n
+                    local dist_l = left_lane and math.abs(pole.distance - data[false].lanes[left_lane].distance) or math.huge
+                    local dist_r = right_lane and math.abs(pole.distance - data[false].lanes[right_lane].distance) or math.huge
+
+                    if dist_l < dist_r then
+                        pole.lane = left_lane
+                    elseif dist_l > dist_r then
+                        pole.lane = right_lane
+                    elseif dist_l == dist_r then
+                        --choose the NOT main lane
+                        pole.lane = (left_lane and data[false].lanes[left_lane].main) and right_lane or left_lane or right_lane
+                    end
+
+                    dist_l = left_lane_d and math.abs(pole_d.distance - data[true].lanes[left_lane_d].distance) or math.huge
+                    dist_r = right_lane_d and math.abs(pole_d.distance - data[true].lanes[right_lane_d].distance) or math.huge
+
+                    if dist_l < dist_r then
+                        pole_d.lane = left_lane_d
+                    elseif dist_l > dist_r then
+                        pole_d.lane = right_lane_d
+                    elseif dist_l == dist_r then
+                        --choose the NOT main lane
+                        pole_d.lane = (left_lane_d and data[true].lanes[left_lane_d].main) and right_lane_d or left_lane_d or right_lane_d
+                    end
+
+                    -- pole_d.lag_s = n
+                    -- pole_d.lag_d = d
+                    -- pole_d.block_left = 2 * d
+                    log2(data[false].main_pole.distance, "main pole")
+                    log2(data[true].main_pole.distance, "main pole d")
+                end
 
                 if data[false].main_pole then
-                    data[false].main_pole.position = Position.translate(data[false].main_pole.position, 2 * max_lag_s + 1, defines.direction.south)
+                    data[false].main_pole.position = Position.translate(data[false].main_rail.position, data[false].main_pole.distance, defines.direction.east)
+                    local lag = math.abs(data[false].lanes[data[false].main_pole.lane].lag_s) * 2
+                    data[false].main_pole.position = Position.translate(data[false].main_pole.position, lag, defines.direction.south)
+
                     data[false].main_pole.real_pos = data[false].main_pole.position
                 end
                 if data[true].main_pole then
-                    data[true].main_pole.position = Position.translate(data[true].main_pole.position, max_lag_d, dir.southwest)
+                    if data[true].main_rail.direction == dir.northwest then
+                        data[true].main_pole.position = Position.translate(data[true].main_rail.position, 1, dir.west)
+                    else
+                        data[true].main_pole.position = Position.translate(data[true].main_rail.position, 1, dir.south)
+                    end
+                    data[true].main_pole.position = Position.translate(data[true].main_pole.position, data[true].main_pole.distance, dir.southeast)
+
+                    local lag = math.abs(data[true].lanes[data[true].main_pole.lane].lag_d)
+                    data[true].main_pole.position = Position.translate(data[true].main_pole.position, lag, dir.southwest)
+
                     data[true].main_pole.real_pos = Position.subtract(data[true].main_pole.position, lib._diagonal_data[data[true].main_rail.direction])
                 end
 
@@ -1735,6 +1866,10 @@ local function farl_test(event)
                             lane.signal.position = Position.rotate(lane.signal.position, deg)
                         end
                     end
+                    if data[i].main_pole then
+                        data[i].main_pole.position = Position.rotate(data[i].main_pole.position, deg)
+                        data[i].main_pole.real_pos = Position.rotate(data[i].main_pole.real_pos, deg)
+                    end
                 end
                 for i = 2, 6, 2 do
                     data[i] = util.table.deepcopy(pdata.bp_data[false])
@@ -1751,13 +1886,17 @@ local function farl_test(event)
                             lane.signal.position = Position.rotate(lane.signal.position, deg)
                         end
                     end
+                    if data[i].main_pole then
+                        data[i].main_pole.position = Position.rotate(data[i].main_pole.position, deg)
+                        data[i].main_pole.real_pos = Position.rotate(data[i].main_pole.real_pos, deg)
+                    end
                 end
                 pdata.bp_data2 = data
 
                 for i = 0, 7 do
                     local c_pos
                     local right = (i + 2) % 8
-                    log2(i, "travel dir")
+                    --log2(i, "travel dir")
                     local bb = data[i].bounding_box
                     local area
                     local mrail = data[i].main_rail
@@ -1773,7 +1912,7 @@ local function farl_test(event)
                             curve = get_next_rail(mrail, librail.rail_data["straight-rail"][mrail.direction].travel_to_rd[i], input)
                         end
                         area = {left_top = Position.add(de_pos, bb.left_top), right_bottom = Position.add(de_pos, bb.right_bottom)}
-                        log2(curve, "curve")
+                        --log2(curve, "curve")
                         local _area = librail.rail_data["curved-rail"][curve.direction].clear_area
                         for li, lane in pairs(data[i].lanes) do
                             c_pos = Position.translate({x = 0, y = 0}, lane.distance, right)
