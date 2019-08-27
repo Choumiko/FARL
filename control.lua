@@ -1712,7 +1712,10 @@ local function farl_test(event)
             --local max_lag_s, max_lag_d = 0, 0
             local left_lane, right_lane
             local left_lane_d, right_lane_d
+            local pole, pole_d
             if data[false] and data[true] and #data[true].lanes == #data[false].lanes then
+                pole = data[false].main_pole
+                pole_d = data[true].main_pole
                 --sorted from left to right (left < 0 distance)
                 for i, rail in pairs(data[false].lanes) do
                     --if not rail.main then
@@ -1732,23 +1735,23 @@ local function farl_test(event)
 
                         -- max_lag_s = math.abs(n) > max_lag_s and math.abs(n) or max_lag_s
                         -- max_lag_d = math.abs(d) > max_lag_d and math.abs(d) or max_lag_d
-                        if data[false].main_pole then
+                        if pole then
                             if not left_lane then
-                                -- log2(rail.distance < data[false].main_pole.distance, "ll")
-                                left_lane = rail.distance < data[false].main_pole.distance and i
+                                -- log2(rail.distance < pole.distance, "ll")
+                                left_lane = rail.distance < pole.distance and i
                             end
                             if not right_lane then
-                                right_lane = rail.distance > data[false].main_pole.distance and i
+                                right_lane = rail.distance > pole.distance and i
                             end
                         end
-                        if data[true].main_pole then
+                        if pole_d then
                             --if not left_lane_d then
-                                log2(rail_d.distance < data[true].main_pole.distance, "ll d" .. i)
-                                left_lane_d = rail_d.distance < data[true].main_pole.distance and i
+                                log2(rail_d.distance < pole_d.distance, "ll d" .. i)
+                                left_lane_d = rail_d.distance < pole_d.distance and i
                             --end
                             if not right_lane_d then
-                                log2(rail_d.distance > data[true].main_pole.distance, "rl d" .. i)
-                                right_lane_d = rail_d.distance > data[true].main_pole.distance and i
+                                log2(rail_d.distance > pole_d.distance, "rl d" .. i)
+                                right_lane_d = rail_d.distance > pole_d.distance and i
                             end
                         end
 
@@ -1789,8 +1792,7 @@ local function farl_test(event)
                 -- data[false].max_lag = max_lag_s
                 -- data[true].max_lag = max_lag_d
 
-                if data[false].main_pole and data[true].main_pole then
-                    local pole, pole_d = data[false].main_pole, data[true].main_pole
+                if pole and pole_d then
                     -- local n = pole.distance - pole_d.distance
                     -- local d = - pole_d.distance-- - n
                     -- pole.lag_s = n
@@ -1823,29 +1825,32 @@ local function farl_test(event)
                     -- pole_d.lag_s = n
                     -- pole_d.lag_d = d
                     -- pole_d.block_left = 2 * d
-                    log2(data[false].main_pole.distance, "main pole")
-                    log2(data[true].main_pole.distance, "main pole d")
+                    log2(pole.distance, "main pole")
+                    log2(pole_d.distance, "main pole d")
                 end
 
-                if data[false].main_pole then
-                    data[false].main_pole.position = Position.translate(data[false].main_rail.position, data[false].main_pole.distance, defines.direction.east)
-                    local lag = math.abs(data[false].lanes[data[false].main_pole.lane].lag_s) * 2
-                    data[false].main_pole.position = Position.translate(data[false].main_pole.position, lag, defines.direction.south)
-
-                    data[false].main_pole.real_pos = data[false].main_pole.position
+                if pole then
+                    local correct = round(pole.position.y, 0)- pole.position.y--adjust for medium/big poles (1x1/2x2 poles)
+                    pole.position = Position.translate(data[false].main_rail.position, correct, dir.south)
+                    pole.position = Position.translate(pole.position, pole.distance, dir.east)
+                    log2(pole.position, "distance")
+                    local lag = math.abs(data[false].lanes[pole.lane].lag_s) * 2
+                    pole.position = Position.translate(pole.position, lag, dir.south)
+                    log2(pole.position, "lag")
+                    pole.real_pos = pole.position
                 end
-                if data[true].main_pole then
+                if pole_d then
                     if data[true].main_rail.direction == dir.northwest then
-                        data[true].main_pole.position = Position.translate(data[true].main_rail.position, 1, dir.west)
+                        pole_d.position = Position.translate(data[true].main_rail.position, 1, dir.west)
                     else
-                        data[true].main_pole.position = Position.translate(data[true].main_rail.position, 1, dir.south)
+                        pole_d.position = Position.translate(data[true].main_rail.position, 1, dir.south)
                     end
-                    data[true].main_pole.position = Position.translate(data[true].main_pole.position, data[true].main_pole.distance, dir.southeast)
+                    pole_d.position = Position.translate(pole_d.position, pole_d.distance, dir.southeast)
 
-                    local lag = math.abs(data[true].lanes[data[true].main_pole.lane].lag_d)
-                    data[true].main_pole.position = Position.translate(data[true].main_pole.position, lag, dir.southwest)
+                    local lag = math.abs(data[true].lanes[pole_d.lane].lag_d)
+                    pole_d.position = Position.translate(pole_d.position, lag, dir.southwest)
 
-                    data[true].main_pole.real_pos = Position.subtract(data[true].main_pole.position, lib._diagonal_data[data[true].main_rail.direction])
+                    pole_d.real_pos = Position.subtract(pole_d.position, lib._diagonal_data[data[true].main_rail.direction])
                 end
 
                 --create tables for the remaining directions, so i don't have to do all the calculations over and over again
