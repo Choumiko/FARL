@@ -43,6 +43,26 @@ function Position.merge_area(area, tmp)
     area.right_bottom.y = area.right_bottom.y > tmp.right_bottom.y and area.right_bottom.y or tmp.right_bottom.y
 end
 
+function Position.add_area(area, pos, tmp)
+    if tmp then
+        tmp.left_top = Position.add(area.left_top, pos)
+        tmp.right_bottom = Position.add(area.right_bottom, pos)
+        return tmp
+    else
+        return {
+            left_top = Position.add(area.left_top, pos),
+            right_bottom = Position.add(area.right_bottom, pos)
+        }
+    end
+end
+
+function Position.shift_area_center(area, center)
+    return {
+        left_top = Position.subtract(area.left_top, center),
+        right_bottom = Position.subtract(area.right_bottom, center)
+    }
+end
+
 function Position.distance_squared(pos1, pos2)
     local axbx = pos1.x - pos2.x
     local ayby = pos1.y - pos2.y

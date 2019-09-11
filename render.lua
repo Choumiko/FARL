@@ -290,6 +290,11 @@ function render.draw_rectangle(from, to, color, alt, opts)
     end
 end
 
+function render.draw_area(area, color, opts)
+    opts = not_nil_defaults(opts)
+    return render.draw_rectangle(area.left_top, area.right_bottom, color, opts.alt, opts)
+end
+
 function render.draw_circle(center, radius, color, alt, opts)
     opts = not_nil_defaults(opts)
     return rendering.draw_circle{
