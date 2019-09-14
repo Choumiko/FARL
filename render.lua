@@ -24,7 +24,8 @@ local render = {
     defaults = {
         alt = false,
         square = false,
-        color = colors.white
+        color = colors.white,
+        filled = false
     },
     old_render = false,
 }
@@ -278,6 +279,7 @@ function render.draw_rectangle(from, to, color, alt, opts)
         return rendering.draw_rectangle{
             color = color or colors.orange,
             width = opts.width or 2,
+            filled = opts.filled,
             left_top = from,
             left_top_offset = opts.left_top_offset,
             right_bottom = to,

@@ -345,130 +345,57 @@ local function calculate_area(farl, pos, rail, bb)--luacheck: no unused
     return area
 end
 
-local function clear_curve_area(farl, last_rail, bp_data, is_diagonal, old_travel, last_curve_input, travel_direction)
+local function clear_curve_area(farl, last_rail, bp_data, is_diagonal, old_travel, last_curve_input, travel_direction, li)--luacheck: no unused
     local curve_data_old = farl.bp_data[old_travel].curves[last_curve_input]
-    local curve_data_o_l = curve_data_old[1]
-    local curve_data_o_r = curve_data_old[#bp_data.lanes]
+    local curve_data_o_l = curve_data_old[li]
+
     local pos_l = Position.add(last_rail.position, curve_data_o_l.entrance_pos)
-    local pos_r = Position.add(last_rail.position, curve_data_o_r.entrance_pos)
-
-    local bb_l = util.table.deepcopy(bp_data.curves[last_curve_input][1].bb)
-    local bb_r = util.table.deepcopy(bp_data.curves[last_curve_input][#bp_data.lanes].bb)
-
-    if last_curve_input == input_2_curve[drd.right] and not is_diagonal then
-        lib.rotate_bounding_box(bb_l, dir.east)
-        lib.rotate_bounding_box(bb_r, dir.east)
-    end
+    local bb_l = util.table.deepcopy(farl.bp_data[old_travel].lanes[li].bb)--util.table.deepcopy(bp_data.curves[last_curve_input][1].bb)
 
     render.draw_circle(pos_l, nil, colors.green)
-    render.draw_circle(pos_r, nil, colors.green)
-
-    if last_curve_input == input_2_curve[drd.right] and not is_diagonal then
-        pos_l = Position.translate(pos_l, 1, (travel_direction + 6) % 8)
-        pos_r = Position.translate(pos_r, 1, (travel_direction + 6) % 8)
-    end
 
     local tmp_l = Position.add_area(bb_l, pos_l)
-    local tmp_r = Position.add_area(bb_r, pos_r)
-
-    --if not is_diagonal then
-        render.draw_area(tmp_l, colors.green, {alt = true})
-        render.draw_area(tmp_r, colors.green, {alt = true})
-        clear_area(farl, tmp_l)
-        clear_area(farl, tmp_r)
-    --end
 
     local tmp_bb = {left_top = {x = 0, y = 0}, right_bottom = {x = 0, y = 0}}
-    local amount = is_diagonal and 1 or 3
-    for i = 1, amount do
-        pos_l = Position.translate(pos_l, 1, old_travel)
-        pos_r = Position.translate(pos_r, 1, old_travel)
-        if is_diagonal then
-            Position.merge_area(tmp_l, Position.add_area(bb_l, pos_l, tmp_bb))
-            Position.merge_area(tmp_r, Position.add_area(bb_r, pos_r, tmp_bb))
-        else
-            tmp_l = Position.add_area(bb_l, pos_l, tmp_l)
-            tmp_r = Position.add_area(bb_r, pos_r, tmp_r)
-        end
+    if is_diagonal then
+        pos_l = Position.translate(pos_l, 2, old_travel)
+        Position.merge_area(tmp_l, Position.add_area(bb_l, pos_l, tmp_bb))
         render.draw_area(tmp_l, colors.green, {alt = true})
-        render.draw_area(tmp_r, colors.green, {alt = true})
         clear_area(farl, tmp_l)
-        clear_area(farl, tmp_r)
+    else
+        render.draw_area(tmp_l, colors.green, {alt = true})
+        clear_area(farl, tmp_l)
+        for i = 1, 3 do
+            pos_l = Position.translate(pos_l, 1, old_travel)
+            tmp_l = Position.add_area(bb_l, pos_l, tmp_l)
+            render.draw_area(tmp_l, colors.green, {alt = true})
+            clear_area(farl, tmp_l)
+        end
     end
 
-    bb_l = util.table.deepcopy(bp_data.curves[last_curve_input][1].bb2)
-    bb_r = util.table.deepcopy(bp_data.curves[last_curve_input][#bp_data.lanes].bb2)
+    bb_l = util.table.deepcopy(farl.bp_data[travel_direction].lanes[li].bb)
 
     pos_l = Position.add(last_rail.position, curve_data_o_l.exit_pos)
-    pos_r = Position.add(last_rail.position, curve_data_o_r.exit_pos)
-
-    if last_curve_input == input_2_curve[drd.left] then
-        if is_diagonal then
-            lib.rotate_bounding_box(bb_l, dir.east)
-            lib.rotate_bounding_box(bb_r, dir.east)
-            pos_l = Position.translate(pos_l, 1, (travel_direction + 7) % 8)
-            pos_r = Position.translate(pos_r, 1, (travel_direction + 7) % 8)
-        end
-    end
     tmp_l = Position.add_area(bb_l, pos_l)
-    tmp_r = Position.add_area(bb_r, pos_r)
 
     if is_diagonal then
-        render.draw_area(tmp_l, colors.black, {alt = true})
-        render.draw_area(tmp_r, colors.black, {alt = true})
+        render.draw_area(tmp_l, colors.red, {alt = true})
         clear_area(farl, tmp_l)
-        clear_area(farl, tmp_r)
-    end
-
-    amount = is_diagonal and 4 or 1
-    -- local block_l = farl.bp_data[old_travel].lanes[1].distance
-    -- local block_r = farl.bp_data[old_travel].lanes[#bp_data.lanes].distance
-    -- local l_l = farl.bp_data[old_travel].lanes[1].lag_s * - farl.last_curve_input
-    -- local l_r = farl.bp_data[old_travel].lanes[#bp_data.lanes].lag_s * - farl.last_curve_input
-    log2(farl.bp_data[old_travel].curves[last_curve_input][1].foo, "foo l")
-    log2(farl.bp_data[old_travel].curves[last_curve_input][#bp_data.lanes].foo, "foo r")
-    log2(bp_data.curves[last_curve_input][1].foo, "foo l new")
-    log2(bp_data.curves[last_curve_input][#bp_data.lanes].foo, "foo r new")
-    local pos_l_o = Position.add(last_rail.position, curve_data_o_l.exit_pos)
-    local pos_r_o = Position.add(last_rail.position, curve_data_o_r.exit_pos)
-    local _pos
-    for _, _data in pairs({
-        {foo = bp_data.curves[last_curve_input][1].foo, pos = pos_l_o, bb = bb_l},
-        {foo = bp_data.curves[last_curve_input][#bp_data.lanes].foo, pos = pos_r_o, bb = bb_r}}) do
-        local _bb = util.table.deepcopy(_data.bb)
-        _pos = _data.pos
-        if last_curve_input == input_2_curve[drd.left] then
-            if is_diagonal then
-                lib.rotate_bounding_box(_bb, dir.west)
-                _pos = Position.translate(_pos, -2, travel_direction)
+        for i = 1, 4 do
+            pos_l = Position.translate(pos_l, -1, travel_direction)
+            if i == 4 then
+                pos_l = Position.translate(pos_l, 0.5, travel_direction)
+                pos_l = Position.translate(pos_l, 0.5, (travel_direction + 1) % 8)
             end
-        end
-
-        for i = 1, _data.foo do
-            _pos = Position.translate(_pos, is_diagonal and 1 or 2, travel_direction)
-            render.draw_circle(_pos, nil, colors.orange)
-            tmp_l = Position.add_area(_bb, _pos, tmp_l)
-            render.draw_area(tmp_l, colors.red)
-        end
-    end
-    for i = 1, amount do
-        pos_l = Position.translate(pos_l, -1, travel_direction)
-        pos_r = Position.translate(pos_r, -1, travel_direction)
-        if i == amount then
-            pos_l = Position.translate(pos_l, 0.5, travel_direction)
-            pos_r = Position.translate(pos_r, 0.5, travel_direction)
-        end
-        if not is_diagonal then
-            Position.merge_area(tmp_l, Position.add_area(bb_l, pos_l, tmp_bb))
-            Position.merge_area(tmp_r, Position.add_area(bb_r, pos_r, tmp_bb))
-        else
             tmp_l = Position.add_area(bb_l, pos_l, tmp_l)
-            tmp_r = Position.add_area(bb_r, pos_r, tmp_r)
+            render.draw_area(tmp_l, colors.red, {alt = true})
+            clear_area(farl, tmp_l)
         end
-        render.draw_area(tmp_l, colors.black, {alt = true})
-        render.draw_area(tmp_r, colors.black, {alt = true})
+    else
+        pos_l = Position.translate(pos_l, -2, travel_direction)
+        Position.merge_area(tmp_l, Position.add_area(bb_l, pos_l, tmp_bb))
+        render.draw_area(tmp_l, colors.red, {alt = true})
         clear_area(farl, tmp_l)
-        clear_area(farl, tmp_r)
     end
 end
 
@@ -484,10 +411,10 @@ local function place_next_rail(farl, input, data, same_input)
         create.direction = rail.direction
         create.name = farl.rail_name[rail.type]
 
-        local bb = data.bounding_box
+        local bb = data.main_lane.bb--data.bounding_box
         local de_pos = lib.diagonal_to_real_pos(create)
         local area = {left_top = Position.add(de_pos, bb.left_top), right_bottom = Position.add(de_pos, bb.right_bottom)}
-        --render.draw_rectangle(area.left_top, area.right_bottom, colors.blue, true)
+
         if rail.type == "curved-rail" then
             local ndata = get_rail_data(rail)
             local new_travel = ndata.rd_to_travel[chiral_directions[rdata.chirality == ndata.chirality][farl.travel_rd]]
@@ -496,15 +423,15 @@ local function place_next_rail(farl, input, data, same_input)
                 local _ca = {
                     left_top = Position.add(clear_a.left_top, create.position),
                     right_bottom = Position.add(clear_a.right_bottom, create.position)}
-                render.draw_area(_ca, colors.red)
+                render.draw_area(_ca, colors.black)
                 clear_area(farl, _ca)
             end
 
-            clear_curve_area(farl, create, data, farl.travel_direction % 2 == 0, farl.travel_direction, input_2_curve[input], new_travel)
+            clear_curve_area(farl, create, data, farl.travel_direction % 2 == 0, farl.travel_direction, input_2_curve[input], new_travel, data.main_index)
 
         else
             --farl.bb = render.draw_rectangle(area.left_top, area.right_bottom, colors.green, nil, {id = farl.bb})
-            render.draw_rectangle(area.left_top, area.right_bottom, colors.blue, true)
+            --render.draw_rectangle(area.left_top, area.right_bottom, colors.blue, true)
             clear_area(farl, area)
         end
         c = create_rail(surface.create_entity, create, farl.surface)
@@ -574,6 +501,13 @@ local function place_parallel_rails(farl, data)
             if block - farl.last_curve_dist < 0 then
                 create.position = Position.add(pos, lane.position)
                 create.direction = same_dir and lane.direction or (lane.direction + 4) % 8
+
+                local bb = lane.bb
+                local de_pos = lib.diagonal_to_real_pos(create)
+                local area = {left_top = Position.add(de_pos, bb.left_top), right_bottom = Position.add(de_pos, bb.right_bottom)}
+                --render.draw_area(area, colors.blue, {alt = true})
+                clear_area(farl, area)
+
                 c = create_rail(create_entity, create, farl.surface)
                 if c then
                     ndata = get_rail_data(c)
@@ -593,179 +527,13 @@ local function place_parallel_rails(farl, data)
     end
 end
 
-local function place_parallel_curves(farl, bp_data, input, old_travel, same_input, old_rail)--luacheck: no unused
+local function place_parallel_curves(farl, bp_data, input, old_travel, same_input, new_travel)
     local catchup
     local pos, rail, data, ndata
-    --local is_diagonal = farl.travel_direction % 2 == 1
+    local is_diagonal = farl.travel_direction % 2 == 1
     local create_entity = farl.surface.create_entity
     local create = {force = farl.force, position = {}, direction = 0, name = false}
     log2(farl.last_curve_input, "last input")
-    local bb1 = farl.last_curve_input == -1 and bp_data.bb_l or bp_data.bb_r
-    local bb2 = farl.last_curve_input == -1 and bp_data.bb_r or bp_data.bb_l
-    local which2 = farl.last_curve_input == -1 and 1 or #bp_data.lanes
-    local which3 = farl.last_curve_input == -1 and #bp_data.lanes or 1
-    local clear_c1 = bp_data.lanes[which2].block_left * - farl.last_curve_input
-    local clear_c2 = bp_data.lanes[which3].block_left * - farl.last_curve_input
-    clear_c1 = clear_c1 < 0 and 0 or clear_c1
-    --clear_c2 = clear_c2 < 0 and 2 or clear_c2 + 2
-    clear_c2 = old_travel % 2 == 1 and 0 or clear_c2
-    if farl.last_curve_input == input_2_curve[drd.left] then
-        clear_c1 = clear_c1 - 2
-    end
-    log2(bb1, "bb_l/r")
-    for _, clear_data in pairs{{c = clear_c1, bb = bb1}, {c = clear_c2, bb = bb2}} do
-        local clear_c = clear_data.c
-        local bb = clear_data.bb
-        if not same_input then
-            clear_c = farl.last_curve_dist > clear_c and clear_c or farl.last_curve_dist
-        end
-        log2(clear_c, "catchup " .. _)
-
-        --local c_rail = old_rail
-        local area, c_pos, c_rail_d
-        create.name = farl.rail_name["straight-rail"]
-        create.position = old_rail.position
-        create.direction = old_rail.direction
-        create.type = "straight-rail"
-        for i = 1, clear_c do
-            data = get_rail_data(create)
-            c_rail_d = data.next_rails[data.travel_to_rd[old_travel]][defines.riding.direction.straight]
-            create.position = Position.add(create.position, c_rail_d.position)
-            create.direction = c_rail_d.direction
-
-            render.draw_circle(create.position, nil, colors.red, true)
-            c_pos = lib.diagonal_to_real_pos(create)
-            area = {left_top = Position.add(c_pos, bb.left_top), right_bottom = Position.add(c_pos, bb.right_bottom)}
-            render.draw_area(area, colors.red)
-            clear_area(farl, area)
-        end
-        create.type = nil
-    end
-
-    -- local curve_data_old = farl.bp_data[old_travel].curves[farl.last_curve_input]
-    -- local curve_data_o_l = curve_data_old[1]
-    -- local curve_data_o_r = curve_data_old[#bp_data.lanes]
-    -- local pos_l = Position.add(farl.last_rail.position, curve_data_o_l.entrance_pos)
-    -- local pos_r = Position.add(farl.last_rail.position, curve_data_o_r.entrance_pos)
-
-    -- local bb_l = util.table.deepcopy(bp_data.curves[farl.last_curve_input][1].bb)
-    -- local bb_r = util.table.deepcopy(bp_data.curves[farl.last_curve_input][#bp_data.lanes].bb)
-
-    -- if farl.last_curve_input == input_2_curve[drd.right] and not is_diagonal then
-    --     lib.rotate_bounding_box(bb_l, dir.east)
-    --     lib.rotate_bounding_box(bb_r, dir.east)
-    -- end
-
-    -- render.draw_circle(pos_l, nil, colors.green)
-    -- render.draw_circle(pos_r, nil, colors.green)
-
-    -- if farl.last_curve_input == input_2_curve[drd.right] and not is_diagonal then
-    --     pos_l = Position.translate(pos_l, 1, (farl.travel_direction + 6) % 8)
-    --     pos_r = Position.translate(pos_r, 1, (farl.travel_direction + 6) % 8)
-    -- end
-
-    -- local tmp_l = Position.add_area(bb_l, pos_l)
-    -- local tmp_r = Position.add_area(bb_r, pos_r)
-
-    -- --if not is_diagonal then
-    --     render.draw_area(tmp_l, colors.green, {alt = true})
-    --     render.draw_area(tmp_r, colors.green, {alt = true})
-    --     clear_area(farl, tmp_l)
-    --     clear_area(farl, tmp_r)
-    -- --end
-
-    -- local tmp_bb = {left_top = {x = 0, y = 0}, right_bottom = {x = 0, y = 0}}
-    -- local amount = is_diagonal and 1 or 3
-    -- for i = 1, amount do
-    --     pos_l = Position.translate(pos_l, 1, old_travel)
-    --     pos_r = Position.translate(pos_r, 1, old_travel)
-    --     if is_diagonal then
-    --         Position.merge_area(tmp_l, Position.add_area(bb_l, pos_l, tmp_bb))
-    --         Position.merge_area(tmp_r, Position.add_area(bb_r, pos_r, tmp_bb))
-    --     else
-    --         tmp_l = Position.add_area(bb_l, pos_l, tmp_l)
-    --         tmp_r = Position.add_area(bb_r, pos_r, tmp_r)
-    --     end
-    --     render.draw_area(tmp_l, colors.green, {alt = true})
-    --     render.draw_area(tmp_r, colors.green, {alt = true})
-    --     clear_area(farl, tmp_l)
-    --     clear_area(farl, tmp_r)
-    -- end
-
-    -- bb_l = util.table.deepcopy(bp_data.curves[farl.last_curve_input][1].bb2)
-    -- bb_r = util.table.deepcopy(bp_data.curves[farl.last_curve_input][#bp_data.lanes].bb2)
-
-    -- pos_l = Position.add(farl.last_rail.position, curve_data_o_l.exit_pos)
-    -- pos_r = Position.add(farl.last_rail.position, curve_data_o_r.exit_pos)
-
-    -- if farl.last_curve_input == input_2_curve[drd.left] then
-    --     if is_diagonal then
-    --         lib.rotate_bounding_box(bb_l, dir.east)
-    --         lib.rotate_bounding_box(bb_r, dir.east)
-    --         pos_l = Position.translate(pos_l, 1, (farl.travel_direction + 7) % 8)
-    --         pos_r = Position.translate(pos_r, 1, (farl.travel_direction + 7) % 8)
-    --     end
-    -- end
-    -- tmp_l = Position.add_area(bb_l, pos_l)
-    -- tmp_r = Position.add_area(bb_r, pos_r)
-
-    -- if is_diagonal then
-    --     render.draw_area(tmp_l, colors.black, {alt = true})
-    --     render.draw_area(tmp_r, colors.black, {alt = true})
-    --     clear_area(farl, tmp_l)
-    --     clear_area(farl, tmp_r)
-    -- end
-
-    -- amount = is_diagonal and 4 or 1
-    -- -- local block_l = farl.bp_data[old_travel].lanes[1].distance
-    -- -- local block_r = farl.bp_data[old_travel].lanes[#bp_data.lanes].distance
-    -- -- local l_l = farl.bp_data[old_travel].lanes[1].lag_s * - farl.last_curve_input
-    -- -- local l_r = farl.bp_data[old_travel].lanes[#bp_data.lanes].lag_s * - farl.last_curve_input
-    -- log2(farl.bp_data[old_travel].curves[farl.last_curve_input][1].foo, "foo l")
-    -- log2(farl.bp_data[old_travel].curves[farl.last_curve_input][#bp_data.lanes].foo, "foo r")
-    -- log2(bp_data.curves[farl.last_curve_input][1].foo, "foo l new")
-    -- log2(bp_data.curves[farl.last_curve_input][#bp_data.lanes].foo, "foo r new")
-    -- local pos_l_o = Position.add(farl.last_rail.position, curve_data_o_l.exit_pos)
-    -- local pos_r_o = Position.add(farl.last_rail.position, curve_data_o_r.exit_pos)
-    -- local _pos
-    -- for _, _data in pairs({
-    --     {foo = bp_data.curves[farl.last_curve_input][1].foo, pos = pos_l_o, bb = bb_l},
-    --     {foo = bp_data.curves[farl.last_curve_input][#bp_data.lanes].foo, pos = pos_r_o, bb = bb_r}}) do
-    --     local _bb = util.table.deepcopy(_data.bb)
-    --     _pos = _data.pos
-    --     if farl.last_curve_input == input_2_curve[drd.left] then
-    --         if is_diagonal then
-    --             lib.rotate_bounding_box(_bb, dir.west)
-    --             _pos = Position.translate(_pos, -2, farl.travel_direction)
-    --         end
-    --     end
-
-    --     for i = 1, _data.foo do
-    --         _pos = Position.translate(_pos, is_diagonal and 1 or 2, farl.travel_direction)
-    --         render.draw_circle(_pos, nil, colors.orange)
-    --         tmp_l = Position.add_area(_bb, _pos, tmp_l)
-    --         render.draw_area(tmp_l, colors.red)
-    --     end
-    -- end
-    -- for i = 1, amount do
-    --     pos_l = Position.translate(pos_l, -1, farl.travel_direction)
-    --     pos_r = Position.translate(pos_r, -1, farl.travel_direction)
-    --     if i == amount then
-    --         pos_l = Position.translate(pos_l, 0.5, farl.travel_direction)
-    --         pos_r = Position.translate(pos_r, 0.5, farl.travel_direction)
-    --     end
-    --     if not is_diagonal then
-    --         Position.merge_area(tmp_l, Position.add_area(bb_l, pos_l, tmp_bb))
-    --         Position.merge_area(tmp_r, Position.add_area(bb_r, pos_r, tmp_bb))
-    --     else
-    --         tmp_l = Position.add_area(bb_l, pos_l, tmp_l)
-    --         tmp_r = Position.add_area(bb_r, pos_r, tmp_r)
-    --     end
-    --     render.draw_area(tmp_l, colors.black, {alt = true})
-    --     render.draw_area(tmp_r, colors.black, {alt = true})
-    --     clear_area(farl, tmp_l)
-    --     clear_area(farl, tmp_r)
-    -- end
 
     for li, lane in pairs(farl.last_lanes) do
         catchup = bp_data.lanes[li].block_left * - farl.last_curve_input
@@ -783,7 +551,15 @@ local function place_parallel_curves(farl, bp_data, input, old_travel, same_inpu
                     create.position = Position.add(pos, rail.position)
                     create.name = farl.rail_name["straight-rail"]
                     create.direction = rail.direction
+
+                    local bb = bp_data.lanes[li].bb
+                    local de_pos = lib.diagonal_to_real_pos(create)
+                    local area = {left_top = Position.add(de_pos, bb.left_top), right_bottom = Position.add(de_pos, bb.right_bottom)}
+                    render.draw_area(area, colors.blue, {alt = true})
+                    clear_area(farl, area)
+
                     c = create_rail(create_entity, create, farl.surface)
+
                     if c then
                         ndata = get_rail_data(c)
 
@@ -806,6 +582,15 @@ local function place_parallel_curves(farl, bp_data, input, old_travel, same_inpu
             create.position = Position.add(pos, rail.position)
             create.name = farl.rail_name["curved-rail"]
             create.direction = rail.direction
+
+            local clear_a = librail.rail_data["curved-rail"][rail.direction].clear_area
+            local _ca = {
+                left_top = Position.add(clear_a.left_top, create.position),
+                right_bottom = Position.add(clear_a.right_bottom, create.position)}
+            render.draw_area(_ca, colors.black)
+            clear_area(farl, _ca)
+
+            clear_curve_area(farl, farl.last_rail, bp_data, is_diagonal, old_travel, farl.last_curve_input, new_travel, li)
 
             c = create_rail(create_entity, create, farl.surface)
             if c then
@@ -858,7 +643,7 @@ local function on_tick()
             render.surface = farl.surface
             local old_travel = farl.travel_direction
             local old_curve = farl.last_curve_input
-            local old_rail = farl.last_rail
+            --local old_rail = farl.last_rail
             local new_rail, new_rd, new_travel, actual_input = place_next_rail(farl, input, data, farl.last_curve_input == old_curve)
             if new_rail then
                 farl.last_rail, farl.travel_rd, farl.travel_direction = new_rail, new_rd, new_travel
@@ -867,7 +652,7 @@ local function on_tick()
                     place_parallel_rails(farl, data)
                 else
                     farl.last_curve_input = input_2_curve[actual_input]
-                    place_parallel_curves(farl, data, actual_input, old_travel, farl.last_curve_input == old_curve, old_rail)
+                    place_parallel_curves(farl, data, actual_input, old_travel, farl.last_curve_input == old_curve, new_travel)
                     farl.last_curve_dist = 0
                 end
                 farl.line = render.draw_line(farl.loco, farl.loco, colors.red, false, false, {id = farl.line,
@@ -1982,33 +1767,33 @@ local function farl_test(event)
             end
 
             --split bounding box into #lanes parts
+            local start = box.left_top.x - bp_data.lanes[1].position.x
+            local stop = box.right_bottom.x - bp_data.lanes[#bp_data.lanes].position.x
             for li, lane in pairs(bp_data.lanes) do
-                log2(lane.distance, "lane " .. li)
+                if lane.main then
+                    bp_data.main_lane = lane
+                    bp_data.main_index = li
+                end
                 local dist = is_diagonal and lane.distance * 2 or lane.distance
                 render.draw_circle(player.character, nil, nil, true, {target_offset = {dist, 0}})
-                lane.bb = {left_top = {x = box.left_top.x, y = box.left_top.y}, right_bottom = {x = box.right_bottom.x, y = box.right_bottom.y}}
-                if li - 1 > 0 then
-                    lane.bb.left_top.x = bp_data.lanes[li - 1].bb.right_bottom.x
+                lane.bb = {
+                    left_top = {x = start, y = box.left_top.y},
+                    right_bottom = {x = box.right_bottom.x, y = box.right_bottom.y}}
+                if li == 1 then
+                    lane.bb.left_top.x = start
+                else
+                    lane.bb.left_top.x = - bp_data.lanes[li - 1].bb.right_bottom.x
                 end
-                if li+1 <= #bp_data.lanes then
+                if li == #bp_data.lanes then
+                    lane.bb.right_bottom.x = stop
+                else
                     local dist2 = is_diagonal and bp_data.lanes[li+1].distance * 2 or bp_data.lanes[li+1].distance
                     local tmp = (math.abs(dist) + dist2)  / 2
-                    if dist < 0 then
-                        lane.bb.right_bottom.x = dist + tmp
-                    elseif dist == 0 then
-                        if li - 1 > 0 then
-                            lane.bb.left_top.x = bp_data.lanes[li - 1].bb.right_bottom.x
-                        end
-                        if li + 1 <= #bp_data.lanes then
-                            lane.bb.right_bottom.x = tmp
-                        end
-                    else
-                        lane.bb.left_top.x = dist + tmp
-                    end
-                    render.draw_circle(player.character, nil, colors.green, false, {target_offset = {dist + tmp, 0}})
+                    lane.bb.right_bottom.x = tmp
                 end
-                log2(lane.bb, "lane bb")
-                render.draw_rectangle(player.character, player.character, colors.red, nil, {left_top_offset = lane.bb.left_top, right_bottom_offset = lane.bb.right_bottom})
+                render.draw_rectangle(player.character, player.character, colors.red, nil, {
+                    left_top_offset = Position.add({x = dist, y = 0}, lane.bb.left_top),
+                    right_bottom_offset = Position.add({x = dist, y = 0}, lane.bb.right_bottom)})
             end
 
             --All important entities (rail, main pole) should exist now
@@ -2178,6 +1963,7 @@ local function farl_test(event)
                             lane.signal.direction = (lane.signal.direction + i - 1) % 8
                             lane.signal.position = Position.rotate(lane.signal.position, deg)
                         end
+                        lane.bb = lib.rotate_bounding_box(lane.bb, i - 1)
                     end
                     if both_poles then
                         data[i].main_pole.position = Position.rotate(data[i].main_pole.position, deg)
@@ -2200,6 +1986,7 @@ local function farl_test(event)
                             lane.signal.direction = (lane.signal.direction + i) % 8
                             lane.signal.position = Position.rotate(lane.signal.position, deg)
                         end
+                        lane.bb = lib.rotate_bounding_box(lane.bb, i)
                     end
                     if both_poles then
                         data[i].main_pole.position = Position.rotate(data[i].main_pole.position, deg)
@@ -2237,14 +2024,9 @@ local function farl_test(event)
                             if i % 2 == 0 then
                                 mv = j * lane.block_left
                                 c_pos = Position.translate(c_pos, mv, (i + 4) % 8)
-                                c_pos.foo = mv
-                                if j == 1 and li == #data[i].lanes then
-                                    c_pos.foo = -mv * 2
-                                end
                             else
                                 mv = j * ((data[(i+1) % 8].lanes[li].block_left) + lane.distance)
                                 c_pos = Position.translate(c_pos, mv, i)
-                                c_pos.foo = -j * data[i].lanes[li].lag_s
                             end
                             if li == 1 or li == #data[i].lanes then
                                 --local which = (i % 2 == 0 ) and i or
