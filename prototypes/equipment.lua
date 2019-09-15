@@ -34,11 +34,20 @@ farlRoboport.construction_radius = 0
 farlRoboport.categories = {"farl-equipment"}
 
 local farlRoboportRecipe = copyPrototype("recipe", "personal-roboport-equipment", "farl-roboport", true)
-farlRoboportRecipe.ingredients = {
-    {"iron-gear-wheel", 5},
-    {"electronic-circuit", 5},
-    {"steel-plate", 5},
-}
+
+if not mods["IndustrialRevolution"] then
+    farlRoboportRecipe.ingredients = {
+        {"iron-gear-wheel", 5},
+        {"electronic-circuit", 5},
+        {"steel-plate", 5},
+    }
+else
+    farlRoboportRecipe.ingredients = {
+        {"iron-gear-wheel", 5},
+        {"controller-mk1", 1},
+        {"iron-plate-heavy", 5},
+    }
+end
 
 
 local farlRoboportItem = copyPrototype("item", "personal-roboport-equipment", "farl-roboport", true)

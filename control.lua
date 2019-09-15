@@ -209,9 +209,6 @@ local function on_load()
 end
 
 local function on_configuration_changed(data)
-    if not data or not data.mod_changes then
-        return
-    end
     if data.mod_changes[MOD_NAME] then
         local newVersion = data.mod_changes[MOD_NAME].new_version
         newVersion = v(newVersion)
@@ -442,11 +439,13 @@ local function on_configuration_changed(data)
         on_init()
         global.version = tostring(newVersion)
     end
-
+    log(serpent.block(data))
     if data.mod_startup_settings_changed then
-        if settings.startup.farl_enable_module.value then
-            for _, force in pairs(game.forces) do
-                if force.technologies["rail-signals"].researched then
+        local tech_name = game.active_mods["IndustrialRevolution"] and "automated-rail-transportation" or "rail-signals"
+        for _, force in pairs(game.forces) do
+            if force.technologies[tech_name].researched then
+                force.recipes["farl"].enabled = true
+                if settings.startup.farl_enable_module.value then
                     force.recipes["farl-roboport"].enabled = true
                 end
             end
