@@ -439,7 +439,7 @@ local function on_configuration_changed(data)
         on_init()
         global.version = tostring(newVersion)
     end
-    log(serpent.block(data))
+
     if data.mod_startup_settings_changed then
         local tech_name = game.active_mods["IndustrialRevolution"] and "automated-rail-transportation" or "rail-signals"
         for _, force in pairs(game.forces) do
