@@ -149,6 +149,7 @@ local function update_bounding_box(box, pos, min_x, min_y, max_x, max_y)--luache
 end
 
 function M.rotate_bounding_box(sel_box, direction, box, pos)
+    if not sel_box then return end
     local rot = box_rotations[direction or 0]
     local rect = {false, false, false, false}
     rect[1] = sel_box.left_top.x
