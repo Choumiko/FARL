@@ -6,5 +6,5 @@
   "author": "Choumiko",
   "homepage": "https://forums.factorio.com/viewforum.php?f=61",
   "description": "Fully automated rail-layer",
-  "dependencies": ["(?) VehiclesEquipement", "(?) TheFatController", "(?) IndustrialRevolution"]
+  "dependencies": ["(?) VehiclesEquipement", "(?) TheFatController"]
 }
