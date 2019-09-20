@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 3.1.14
+Date: 15. 09. 2019
+  Bugfixes:
+    - Fixed circular dependency with IndustrialRevolution and Multiple Unit Train Control
+---------------------------------------------------------------------------------------------------
 Version: 3.1.13
 Date: 15. 09. 2019
   Changes:
