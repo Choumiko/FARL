@@ -2187,7 +2187,7 @@ FARL.placeRails = function(self, nextRail, newTravelDir)
     if canplace and hasRail then
         newRail.force = self.locomotive.force
         local _, ent = self:genericPlace(newRail)
-        if ent then
+        if ent and ent.valid then
             self:removeItemFromCargo(removeItem, removeAmount)
         else
             self:deactivate({ "msg-no-entity" })
@@ -2324,11 +2324,11 @@ FARL.placeParallelCurve = function(self, traveldir, rail, lane_index)
                     --              if self:place_fake_signal(dir, last, lane_index) then self.fake_signalCount[lane_index] = 0 end
                     --            end
                     --          end
-                    if not ent then
+                    if ent and ent.valid then
+                        self:removeItemFromCargo(ent.name, 1)
+                    else
                         self:print("Failed to create track @" .. Position.tostring(last.position))
                         self:flyingText2("E", RED, true, last.position)
-                    else
-                        self:removeItemFromCargo(ent.name, 1)
                     end
                 else
                     self:deactivate({ "msg-out-of-rails" })
@@ -2367,11 +2367,11 @@ FARL.placeParallelCurve = function(self, traveldir, rail, lane_index)
     self:prepareAreaForCurve(new_curve)
     --local _, ent = self:genericPlaceGhost(new_curve)
     local _, ent = self:genericPlace(new_curve)
-    if not ent then
-        self:print("Failed to create curve @" .. Position.tostring(new_curve.position))
-    else
+    if ent and ent.valid then
         self.signalCount[lane_index] = self.signalCount[lane_index] + get_signal_weight(ent, self.settings)
         self:removeItemFromCargo(remove_item, remove_amount)
+    else
+        self:print("Failed to create curve @" .. Position.tostring(new_curve.position))
     end
     return self.lastCurve.blocked[lane_index]
 end
@@ -2421,22 +2421,18 @@ FARL.placeParallelTrack = function(self, traveldir, lastRail, lane_index)
         --          if self:place_fake_signal(traveldir, new_rail, lane_index) then self.fake_signalCount[lane_index] = 0 end
         --        end
         --      end
-        if not ent then
+        if ent and ent.valid then
+            self:removeItemFromCargo(ent.name, 1)
+            return ent
+        else
             local placed_rail = self.surface.find_entity(new_rail.name, new_rail.position)
-            log('searched rail')
             if not placed_rail then
                 self:print("Failed to create track @" .. Position.tostring(new_rail.position))
-                log("not found")
-                log(serpent.line(new_rail, {comment=false}))
                 self:flyingText2("E", RED, true, new_rail.position)
                 return new_rail
             else
-                log('found')
                 return ent
             end
-        else
-            self:removeItemFromCargo(ent.name, 1)
-            return ent
         end
     end
 end
@@ -2458,7 +2454,7 @@ FARL.placeParallelSignals = function(self, traveldir, rail, lane_index)
                 self:prepareArea(signal)
                 --local success, entity = self:genericPlaceGhost(signal)
                 local success, entity = self:genericPlace(signal, false, place_ghost)
-                if entity then
+                if entity and entity.valid then
                     self:protect(entity)
                     if entity.type ~= "entity-ghost" then
                         self:removeItemFromCargo(signal.name, 1)
@@ -2555,7 +2551,7 @@ FARL.placePoleEntities = function(self, traveldir, pole)
                     --local _, ent = self:genericPlaceGhost {
                     --name = poleEntities[i].name, position = pos, direction = direction, pickup_position = pickup_position, drop_position = drop_position,
                     --request_filters = poleEntities[i].request_filters, recipe  = poleEntities[i].recipe, force = self.locomotive.force }
-                    if ent then
+                    if ent and ent.valid then
                         self:protect(ent)
                         if ent.type ~= "entity-ghost" then
                             self:removeItemFromCargo(poleEntities[i].name, 1, cargo_count)
@@ -2586,7 +2582,7 @@ FARL.placeRailEntities = function(self, traveldir, rail)
                 if self:prepareArea(entity) then
                     local _, ent = self:genericPlace( { name = railEntities[i].name, position = pos, direction = 0, force = self.locomotive.force }, false, place_ghost )
                     --local _, ent = self:genericPlaceGhost { name = railEntities[i].name, position = pos, direction = 0, force = self.locomotive.force }
-                    if ent then
+                    if ent and ent.valid then
                         self:protect(ent)
                         if ent.type ~= "entity-ghost" then
                             self:removeItemFromCargo(railEntities[i].name, 1, cargo_count)
@@ -2734,21 +2730,24 @@ FARL.placePole = function(self, polePos, poleDir)
             pole = placed_pole
         end
         if pole then
-            debugLog("--Placed pole@" .. Position.tostring(polePos))
-            if self.settings.poleEntities then
-                self:placePoleEntities(poleDir, polePos)
-            end
-            if pole.type ~= "entity-ghost" then
-                if not pole.neighbours.copper[1] then
-                    self:flyingText({ "msg-unconnected-pole" }, RED, true)
+            if pole.valid then
+                if self.settings.poleEntities then
+                    self:placePoleEntities(poleDir, polePos)
                 end
-                self:removeItemFromCargo(name, 1, cargo_count)
-                self:connectCCNet(pole)
+                if pole.type ~= "entity-ghost" then
+                    if not pole.neighbours.copper[1] then
+                        self:flyingText({ "msg-unconnected-pole" }, RED, true)
+                    end
+                    self:removeItemFromCargo(name, 1, cargo_count)
+                    self:connectCCNet(pole)
+                end
+                local s_pole = { name = pole.name, position = pole.position }
+                self.lastPole = s_pole
+                self:protect(pole)
+                return true
+            else
+                debugDump("Can`t place pole@" .. Position.tostring(polePos), true)
             end
-            local s_pole = { name = pole.name, position = pole.position }
-            self.lastPole = s_pole
-            self:protect(pole)
-            return true
         else
             if not canPlace then
                 debugDump("Can`t place pole@" .. Position.tostring(polePos), true)
@@ -2773,7 +2772,7 @@ FARL.placeSignal = function(self, traveldir, rail)
             signal.force = self.locomotive.force
             self:prepareArea(signal)
             local success, entity = self:genericPlace(signal, false, place_ghost)
-            if entity then
+            if entity and entity.valid then
                 self:protect(entity)
                 if entity.type ~= "entity-ghost" then
                     self:removeItemFromCargo(signal.name, 1)
@@ -2808,7 +2807,7 @@ FARL.place_fake_signal = function(self, traveldir, rail, lane_index)
     signal.name = "fake-signal"
     signal.force = self.locomotive.force
     local success, entity = self:genericPlace(signal)
-    if entity then
+    if entity and entity.valid then
         if lane_index and self.fake_signal_in then
             self.fake_signal_in[lane_index] = false
         end
