@@ -2731,9 +2731,9 @@ FARL.placePole = function(self, polePos, poleDir)
         end
         if pole then
             if pole.valid then
-                if self.settings.poleEntities then
-                    self:placePoleEntities(poleDir, polePos)
-                end
+                local s_pole = { name = pole.name, position = pole.position }
+                self.lastPole = s_pole
+                self:protect(pole)
                 if pole.type ~= "entity-ghost" then
                     if not pole.neighbours.copper[1] then
                         self:flyingText({ "msg-unconnected-pole" }, RED, true)
@@ -2741,9 +2741,9 @@ FARL.placePole = function(self, polePos, poleDir)
                     self:removeItemFromCargo(name, 1, cargo_count)
                     self:connectCCNet(pole)
                 end
-                local s_pole = { name = pole.name, position = pole.position }
-                self.lastPole = s_pole
-                self:protect(pole)
+                if self.settings.poleEntities then
+                    self:placePoleEntities(poleDir, polePos)
+                end
                 return true
             else
                 debugDump("Can`t place pole@" .. Position.tostring(polePos), true)

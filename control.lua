@@ -659,9 +659,11 @@ script.on_event(defines.events.on_tick, on_tick)
 script.on_event(defines.events.on_gui_click, on_gui_click)
 script.on_event(defines.events.on_gui_checked_state_changed, on_gui_checked_state_changed)
 
-script.on_event(defines.events.on_pre_player_mined_item, on_preplayer_mined_item)
-script.on_event(defines.events.on_entity_died, on_entity_died)
-script.on_event(defines.events.on_marked_for_deconstruction, on_marked_for_deconstruction)
+local stock_filter = {{filter = "rolling-stock"}}
+
+script.on_event(defines.events.on_pre_player_mined_item, on_preplayer_mined_item, stock_filter)
+script.on_event(defines.events.on_entity_died, on_entity_died, stock_filter)
+script.on_event(defines.events.on_marked_for_deconstruction, on_marked_for_deconstruction, stock_filter)
 script.on_event(defines.events.script_raised_destroy, script_raised_destroy)
 
 --script.on_event(defines.events.script_raised_built, script_raised_built)
