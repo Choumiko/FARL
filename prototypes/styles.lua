@@ -46,26 +46,8 @@ data.raw["gui-style"].default["farl_button"] =
         type = "button_style",
         parent = "button",
         font = "farl-small-bold",
-        --maximal_height = 33,
         minimal_height = 33,
-        --maximal_width = 33,
         minimal_width = 33,
-        --top_padding = 0,
-        --bottom_padding = 0,
-        --right_padding = 0,
-        --left_padding = 0,
-        left_click_sound = {
-            {
-                filename = "__core__/sound/gui-click.ogg",
-                volume = 1
-            }
-        },
-        right_click_sound = {
-            {
-                filename = "__core__/sound/gui-click.ogg",
-                volume = 1
-            }
-        }
     }
 data.raw["gui-style"].default["farl_checkbox"] =
     {
