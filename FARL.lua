@@ -573,7 +573,7 @@ FARL.update = function(self, _)
                             if self.path[c - 2].rail.type == "curved-rail" and #rails > 0 then
                                 rails[1].range[1] = -1
                             end
-                            local bestpole, bestrail = self:getBestPole(self.lastPole, rails, "o")
+                            local bestpole, bestrail = self:getBestPole(self.lastPole, rails, dir)
                             if bestpole then
                                 --debugLog("--pole: "..Position.tostring(bestpole.p))
                                 self.lastCheckPole = bestpole.p
@@ -2655,9 +2655,12 @@ FARL.getPolePoints = function(self, rail)
     return checks
 end
 
-FARL.getBestPole = function(self, lastPole, rails)
+FARL.getBestPole = function(self, lastPole, rails, travel_dir)
     local name = self.settings.activeBP.diagonal.pole.name
     local reach = game.entity_prototypes[name].max_wire_distance
+    if travel_dir % 2 == 0 and reach ~= floor(reach) then
+        reach = floor(reach)
+    end
     local max_distance = -1
     local maxPole, maxRail
     local points = {}
@@ -2710,7 +2713,7 @@ FARL.placePole = function(self, polePos, poleDir)
     --local name = (self.direction % 2 == 1) and self.settings.activeBP.diagonal.pole.name or self.settings.activeBP.straight.pole.name
     --name = is_placer_or_base[name] and "ret-pole-placer" or name
     --local name = self.settings.medium and "medium-electric-pole" or "big-electric-pole"
-    --debugDump(Position.distance(pole.position, self.lastPole.position),true)
+    --debugDump(Position.distance(polePos, self.lastPole.position),true)
     local canPlace = self:prepareArea({ name = name, position = polePos })
     local placed_pole
     if not canPlace then

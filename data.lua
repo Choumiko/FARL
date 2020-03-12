@@ -7,8 +7,7 @@ require("__FARL__/prototypes/item/item")
 require("__FARL__/prototypes/recipe/recipe")
 require("__FARL__/prototypes/styles")
 
-local player_name = mods.base < '0.17.35' and "player" or "character" --TODO remove in a while
-local player = copyPrototype(player_name, player_name, "farl_player")
+local player = copyPrototype("character", "character", "farl_player")
 player.healing_per_tick = 100
 player.collision_mask = {"ghost-layer"}
 player.inventory_size = 0
