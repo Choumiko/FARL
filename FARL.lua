@@ -930,7 +930,7 @@ FARL.fillWater = function(self, area)
                             dw = dw + 1
                         end
                         tile_prototypes[tileName] = tile_prototypes[tileName] or _tile_prototypes[tileName]
-                        table.insert(tiles, { old_tile = tile_prototypes[tileName], name = place_result, position = { x=x, y=y } })
+                        table.insert(tiles, { name = place_result, position = { x=x, y=y } })
                     end
                 end
             end
@@ -953,17 +953,6 @@ FARL.replaceWater = function(self, tiles, w, dw)
         if self:getCargoCount("landfill") >= lfills then
             self.surface.set_tiles(tiles)
             self:removeItemFromCargo("landfill", lfills)
-            local event = {
-                player_index = ((self.driver and self.driver.valid and self.driver.name ~= "farl_player") and (self.driver.index)) or ((self.startedBy and self.startedBy.valid) and self.startedBy.index),
-                surface_index = self.surface.index,
-                tiles = tiles, --array of {old_tile=.., position={x=..,y=y}}
-                item = game.item_prototypes['landfill'],
-                tile = game.tile_prototypes['landfill'],
-                --stack = nil,
-            }
-            event.player_index = event.player_index or 1
-            --log(serpent.block(event))
-            script.raise_event(defines.events.on_player_built_tile, event)
         end
     end
 end
@@ -1023,7 +1012,7 @@ FARL.placeConcrete = function(self, dir, rail)
                     dw = dw + 1
                 end
                 tile_prototypes[tileName] = tile_prototypes[tileName] or _tile_prototypes[tileName]
-                table.insert(tiles, { name = place_result, old_tile = tile_prototypes[tileName], position = { x=pos.x, y=pos.y } })
+                table.insert(tiles, { name = place_result, position = { x=pos.x, y=pos.y } })
                 table.insert(pave[name], entity)
             end
         elseif tileName ~= name and tileName ~= "out-of-map" then
