@@ -573,6 +573,7 @@ FARL.update = function(self, _)
                             if self.path[c - 2].rail.type == "curved-rail" and #rails > 0 then
                                 rails[1].range[1] = -1
                             end
+                            --local bestpole, bestrail = self:getBestPole(self.lastPole, rails, newTravelDir)
                             local bestpole, bestrail = self:getBestPole(self.lastPole, rails, dir)
                             if bestpole then
                                 --debugLog("--pole: "..Position.tostring(bestpole.p))
@@ -916,7 +917,7 @@ FARL.fillWater = function(self, area)
             local dw, w = 0, 0
             local water_tiles = {water = true, deepwater = true, ['water-shallow'] = true, ['water-mud'] = true}
             local place_result = game.item_prototypes["landfill"] and game.item_prototypes["landfill"].place_as_tile_result
-            place_result = place_result and place_result.name or "grass-1"
+            place_result = place_result and place_result.result.name or "landfill"
             local _tile_prototypes = game.tile_prototypes
             local tile_prototypes = {}
             for x = st.x, ft.x, 1 do
@@ -963,7 +964,7 @@ FARL.replaceWater = function(self, tiles, w, dw)
             }
             event.player_index = event.player_index or 1
             --log(serpent.block(event))
-            script.raise_event(defines.events.on_player_built_tile, event)
+            script.raise_event(defines.events.script_raised_set_tiles, event)
         end
     end
 end
@@ -2658,6 +2659,7 @@ end
 FARL.getBestPole = function(self, lastPole, rails, travel_dir)
     local name = self.settings.activeBP.diagonal.pole.name
     local reach = game.entity_prototypes[name].max_wire_distance
+    --if (travel_dir % 2 == 0 and (travel_dir ~= 0 and travel_dir ~= 6)) and reach ~= floor(reach) then
     if travel_dir % 2 == 0 and reach ~= floor(reach) then
         reach = floor(reach)
     end

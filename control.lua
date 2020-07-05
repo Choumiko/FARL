@@ -79,19 +79,6 @@ end
 
 local function on_tick(event)
     local status, err = pcall(function()
-        --    if event.tick % 10 == 8  then
-        --      global.player_opened = global.player_opened or {}
-        --      for _, player in pairs(game.connected_players) do
-        --        if player.opened ~= nil and player.opened.type == "locomotive" and not global.player_opened[player.index] then
-        --          on_player_opened(player.opened, player)
-        --          global.player_opened[player.index] = player.opened
-        --        end
-        --        if global.player_opened[player.index] and player.opened == nil then
-        --          on_player_closed(global.player_opened[player.index], player)
-        --          global.player_opened[player.index] = nil
-        --        end
-        --      end
-        --    end
 
         if global.overlayStack and global.overlayStack[event.tick] then
             for _, overlay in pairs(global.overlayStack[event.tick]) do
