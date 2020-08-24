@@ -682,18 +682,6 @@ script.on_event("toggle-train-control", function(event)
     end
 end)
 
--- script.on_event({defines.events.on_player_built_tile,defines.events.on_robot_built_tile}, function(event)
---     --log(serpent.block(event))
---     if event.item then log("item " .. serpent.line({n=event.item.name,t=event.item.type})) end
---     log("tile " .. serpent.line(event.tile.name))
---     if event.stack then log("stack " .. serpent.line{n=event.stack.name,t=event.stack.type}) end
---     log("tiles")
---     log(serpent.block(event.tiles))
---     for _, t in pairs(event.tiles) do
---         log(serpent.line{old_tile = t.old_tile.name, p=t.position})
---     end
--- end)
-
 local command_to_button = {
     farl_read_bp = "blueprint",
     farl_clear_bp = "bpClear",

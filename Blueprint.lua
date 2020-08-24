@@ -73,16 +73,6 @@ local rails_signals = {
     },
 }
 
--- local is_placer_or_base = {
---     ["ret-pole-placer"] = true,
---     ["ret-signal-pole-placer"] = true,
---     ["ret-chain-pole-placer"] = true,
---     ["ret-pole-base-straight"] = true,
---     ["ret-pole-base-diagonal"] = true,
---     ["ret-signal-pole-base"] = true,
---     ["ret-chain-pole-base"] = true
--- }
-
 ---Group entities in the blueprint
 --@param e entities
 --@return Untyped Type of the blueprint

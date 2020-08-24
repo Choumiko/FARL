@@ -12,15 +12,7 @@ local endsWith = lib.endsWith
 local math = math
 local floor, ceil = math.floor, math.ceil
 local abs, min, max = math.abs, math.min, math.max
--- local is_placer_or_base = {
---     ["ret-pole-placer"] = true,
---     ["ret-signal-pole-placer"] = true,
---     ["ret-chain-pole-placer"] = true,
---     ["ret-pole-base-straight"] = true,
---     ["ret-pole-base-diagonal"] = true,
---     ["ret-signal-pole-base"] = true,
---     ["ret-chain-pole-base"] = true
--- }
+
 local function round(num, idp)
     local mult = 10 ^ (idp or 0)
     return floor(num * mult + 0.5) / mult
