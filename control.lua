@@ -419,6 +419,30 @@ local function on_configuration_changed(data)
                     end
                 end
                 global.trigger_events = nil
+
+                if oldVersion < v'4.0.3' then
+                    for i, player in pairs(game.players) do
+                        local psettings = global.players[i]
+                        psettings.bp = {diagonal=defaultsDiagonal, straight=defaultsStraight}
+                        psettings.activeBP = psettings.bp
+                        global.savedBlueprints[i] = {}
+                        player.print("FARL: Cleared blueprints")
+                    end
+                    local farl, frame_flow
+                    for _, player in pairs(game.players) do
+                        frame_flow = mod_gui.get_frame_flow(player)
+                        if frame_flow.farl and frame_flow.farl.valid then
+                            FARL.onPlayerLeave(player)
+                            frame_flow.farl.destroy()
+                            farl = FARL.onPlayerEnter(player)
+                            if farl then
+                                farl:deactivate()
+                                GUI.createGui(player)
+                                GUI.updateGui(farl)
+                            end
+                        end
+                    end
+                end
             end
         else
             debugDump("FARL version: ".. tostring(newVersion), true)

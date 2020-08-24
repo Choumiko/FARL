@@ -1,6 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 4.0.3
+Date: 2020-08-24
+  Bugfixes:
+    - Fixed FARL clearing/landfilling huge areas unless "Gridsize/Absolute reference point" is checked in the blueprints.
+---------------------------------------------------------------------------------------------------
 Version: 4.0.2
-Date: 05.. 07. 2020
+Date: 05. 07. 2020
   Bugfixes:
     - Fixed error when placing landfill
 ---------------------------------------------------------------------------------------------------
