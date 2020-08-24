@@ -1896,6 +1896,7 @@ FARL.parseBlueprints = function(self, blueprints)
         local e = blueprints[j].get_blueprint_entities()
         if e then
             local bpType, rails, poles, box, offsets, original_string = Blueprint.group_entities(blueprints[j])
+            --log(serpent.block(offsets))
             if not bpType then
                 --self:print(rails)
                 return
@@ -2093,6 +2094,9 @@ FARL.parseBlueprints = function(self, blueprints)
                             table.insert(clearance_points, { x = i, y = i })
                         end
                     end
+                    --log("adjusted")
+                    --log(serpent.block({tl=tl, br =br}))
+                    --log(serpent.block(mainRail))
                     --debugDump({tl=tl,br=br},true)
                     local blueprint = {
                         mainRail = mainRail,

@@ -93,9 +93,27 @@ local rails_signals = {
 Blueprint.group_entities = function(bp)
     local original_string = bp.export_stack()
     local e = bp.get_blueprint_entities()
-    --saveVar(e, "preRotate", "e")
-    --log(serpent.block(e))
-    for i=1, #e do
+    local first = false
+    for i, ent in pairs(e) do
+        if not first and game.entity_prototypes[ent.name].type == "straight-rail" then
+            -- +1 because rails are always at uneven positions (set_blueprint_entities does some corrections)
+            first = {x = ent.position.x+1, y = ent.position.y+1}
+            break
+        end
+    end
+    for i=1, table_size(e) do
+        e[i].position = Position.subtract(e[i].position, first)
+    end
+    bp.set_blueprint_entities(e)
+    local tiles = bp.get_blueprint_tiles()
+    if tiles then
+        for i, tile in pairs(tiles) do
+            tile.position = Position.subtract(tile.position, first)
+        end
+        bp.set_blueprint_tiles(tiles)
+    end
+
+    for i=1, table_size(e) do
         if e[i].name == "rail-chain-signal" then
             local dir = e[i].direction or 0
             --local _, name = table.find(defines.direction, function(v, _, direction) return v == direction end, (dir + 4) % 8) --luacheck: ignore
@@ -105,13 +123,6 @@ Blueprint.group_entities = function(bp)
                 --log(string.format("Rotating blueprint by %d degrees (dir: %d)", rot, dir))
                 Blueprint.rotate(bp,rot)
                 e = bp.get_blueprint_entities()
-                -- for j=1, #e do
-                --     if e[j].name == "rail-chain-signal" then
-                --        _, name = table.find(defines.direction, function(v, _, direction) return v == direction end, (dir + 4) % 8) --luacheck: ignore
-                --        --log(string.format('Found chainsignal for driving due %s, direction: %d', tostring(name), dir))
-                --        break
-                --     end
-                -- end
             end
             break
         end
@@ -143,7 +154,6 @@ Blueprint.group_entities = function(bp)
             table.insert(all_signals, {name = "rail-signal", direction = dir, position = e[i].position, entity_number = e[i].entity_number})
             -- collect all poles in bp
         elseif prototype and prototype.type == "electric-pole" then
-        --elseif (prototype and prototype.type == "electric-pole") or is_placer_or_base[name] then
             table.insert(poles, {name = name, direction = dir, position = e[i].position, distance_to_chain = 0})
         elseif prototype and prototype.type == "straight-rail" then
             rails = rails + 1
@@ -160,18 +170,16 @@ Blueprint.group_entities = function(bp)
             table.insert(offsets.signals, {name = name, direction = dir, position = e[i].position, entity_number = e[i].entity_number})
             table.insert(all_signals, {name = "rail-signal", direction = dir, position = e[i].position, entity_number = e[i].entity_number})
         else
-            --if not is_placer_or_base[name] then
-                local e_type = game.entity_prototypes[name].type
-                local rail_entities = {["wall"]=true}
-                if not rail_entities[e_type] then
-                    table.insert(offsets.poleEntities, {
-                        name = name, direction = dir, position = e[i].position, pickup_position = e[i].pickup_position,
-                        drop_position = e[i].drop_position, request_filters = e[i].request_filters, recipe = e[i].recipe
-                    })
-                else
-                    table.insert(offsets.railEntities, {name = name, direction = dir, position = e[i].position})
-                end
-            --end
+            local e_type = game.entity_prototypes[name].type
+            local rail_entities = {["wall"]=true}
+            if not rail_entities[e_type] then
+                table.insert(offsets.poleEntities, {
+                    name = name, direction = dir, position = e[i].position, pickup_position = e[i].pickup_position,
+                    drop_position = e[i].drop_position, request_filters = e[i].request_filters, recipe = e[i].recipe
+                })
+            else
+                table.insert(offsets.railEntities, {name = name, direction = dir, position = e[i].position})
+            end
         end
     end
 
@@ -195,7 +203,6 @@ Blueprint.group_entities = function(bp)
             pole.distance_to_chain = Position.distance_squared(chain_position, pole.position)
         end
     end
-    --log(serpent.block(offsets.rails))
     return bpType, rails, poles, box, offsets, original_string
 end
 
