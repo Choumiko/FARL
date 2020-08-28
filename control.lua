@@ -32,14 +32,47 @@ local function getRailTypes()
     global.rails = {}
     global.rails_by_index = {}
     global.rails_localised = {}
-    local rails_by_item = {}
+    local rails_by_item = {
+        rail = {
+            curved = "curved-rail",
+            straight = "straight-rail",
+            item = "rail"
+        }
+    }
+    local curved, straight = game.entity_prototypes["curved-rail"], game.entity_prototypes["straight-rail"]
+    if curved and straight then
+        local vanilla = 0
+        if curved.items_to_place_this then
+            for _, item in pairs(curved.items_to_place_this) do
+                if item.name == "rail" then
+                    vanilla = 1
+                end
+            end
+        end
+        if straight.items_to_place_this then
+            for _, item in pairs(straight.items_to_place_this) do
+                if item.name == "rail" then
+                    vanilla = vanilla + 1
+                end
+            end
+        end
+        if vanilla ~= 2 then
+            rails_by_item = {}
+        end
+    end
+    local items = game.get_filtered_item_prototypes{{filter="place-result", elem_filters={{filter="rail"}}}}
     local railstring = ""
-    for name, proto in pairs(game.entity_prototypes) do
+    local rails = game.get_filtered_entity_prototypes({{filter="rail"}})
+    for name, proto in pairs(rails) do
         if proto.type == "straight-rail" and proto.items_to_place_this then
             for _, item in pairs(proto.items_to_place_this) do
-                rails_by_item[item.name] = rails_by_item[item.name] or {}
-                rails_by_item[item.name].straight = name
-                rails_by_item[item.name].item = item.name
+                if not rails_by_item[item.name] then
+                    rails_by_item[item.name] = {}
+                end
+                if not rails_by_item[item.name].straight then
+                    rails_by_item[item.name].straight = name
+                    rails_by_item[item.name].item = item.name
+                end
             end
         end
         if proto.type == "curved-rail" then
@@ -48,8 +81,12 @@ local function getRailTypes()
                 local item_proto = game.item_prototypes[item.name]
                 --log(serpent.block(item_proto.place_result.name))
                 if item_proto and game.entity_prototypes[item_proto.place_result.name].type == "straight-rail" then
-                    rails_by_item[item.name] = rails_by_item[item.name] or {}
-                    rails_by_item[item.name].curved = name
+                    if not rails_by_item[item.name] then
+                        rails_by_item[item.name] = {}
+                    end
+                    if not rails_by_item[item.name].curved then
+                        rails_by_item[item.name].curved = name
+                    end
                 end
             end
         end
@@ -73,8 +110,9 @@ local function getRailTypes()
         end
     end
     --log(serpent.block(rails_by_item))
+    local rails_encoded = game.encode_string(game.table_to_json(rails_by_item))
     global.rails = rails_by_item
-    return railstring
+    return railstring, rails_encoded
 end
 
 local function on_tick(event)
@@ -187,12 +225,20 @@ local function on_init()
     init_forces()
     init_players()
     setMetatables()
-    getRailTypes()
+    global.railString, global.encoded_rails = getRailTypes()
 end
 
 local function on_load()
     register_events()
     setMetatables()
+end
+
+local function reset_rail_types()
+    for i, psettings in pairs(global.players) do
+        game.get_player(i).print("Rail types where changed, resetting to vanilla rail.")
+        psettings.railType = 1
+        psettings.rail = global.rails_by_index[1]
+    end
 end
 
 local function on_configuration_changed(data)
@@ -443,6 +489,12 @@ local function on_configuration_changed(data)
                         end
                     end
                 end
+                if oldVersion < v'4.0.4' then
+                    local railstring, encoded_rails = getRailTypes()
+                    reset_rail_types()
+                    global.railString = railstring
+                    global.encoded_rails = encoded_rails
+                end
             end
         else
             debugDump("FARL version: ".. tostring(newVersion), true)
@@ -468,19 +520,14 @@ local function on_configuration_changed(data)
     --    remote.call("satellite-uplink", "add_item", "rail", 1)
     --  end
 
-    local railstring = getRailTypes()
+    local railstring, encoded_rails = getRailTypes()
     --rails where added/removed, reset to index 1
     --log(string.format("%s == %s", railstring, global.railString))
-    if railstring ~= global.railString then
-        for i, psettings in pairs(global.players) do
-            if psettings.railType ~= 1 then
-                game.get_player(i).print("Rail types where changed, resetting to vanilla rail.")
-            end
-            psettings.railType = 1
-            psettings.rail = global.rails_by_index[1]
-        end
+    if railstring ~= global.railString or encoded_rails ~= global.encoded_rails then
+        reset_rail_types()
     end
     global.railString = railstring
+    global.encoded_rails = encoded_rails
     setMetatables()
     for _,s in pairs(global.players) do
         s:checkMods()

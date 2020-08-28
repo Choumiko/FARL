@@ -555,10 +555,12 @@ GUI = {
         local psettings = Settings.loadByPlayer(player)
         for i,p in pairs(s) do
             if psettings[i] ~= nil then
-                if i == "railType" and p ~= psettings[i] then
-                    psettings[i] = p
-                    psettings.rail = global.rails_by_index[p]
-                    farl:deactivate()
+                if i == "railType" then
+                    if p ~= psettings[i] then
+                        farl:deactivate()
+                    end
+                        psettings[i] = p
+                        psettings.rail = global.rails_by_index[p]
                 else
                     psettings[i] = p
                 end
