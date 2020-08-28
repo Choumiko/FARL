@@ -17,146 +17,134 @@ defaultsStraight = {--luacheck: allow defined top
 
 defaults_concrete_diag = {--luacheck: allow defined top
     entities = {
-        {
-            direction = 7,
-            entity_number = 1,
-            name = "straight-rail",
-            position = {x = -2,y = -2}},
-        {
-            direction = 5,
-            entity_number = 2,
-            name = "rail-chain-signal",
-            position = {x = -1.5,y = -1.5}},
-        {
-            entity_number = 3,
-            name = "big-electric-pole",
-            position = {x = 0,y = -1}},
-        {
-            direction = 7,
-            entity_number = 4,
-            name = "straight-rail",
-            position = {x = 2,y = 2}},
-        {
-            direction = 1,
-            entity_number = 5,
-            name = "rail-signal",
-            position = {x = 0.5,y = 0.5}},
-        {
-            entity_number = 6,
-            name = "stone-wall",
-            position = {x = -4.5,y = -4.5}},
-        {
-            entity_number = 7,
-            name = "stone-wall",
-            position = {x = -3.5,y = -4.5}},
-        {
-            entity_number = 8,
-            name = "stone-wall",
-            position = {x = 3.5,y = 2.5}},
-        {
-            entity_number = 9,
-            name = "stone-wall",
-            position = {x = 3.5,y = 3.5}}
+    {
+      entity_number = 1,
+      name = "stone-wall",
+      position = {x = -2.5,y = -2.5}
+    },
+    {
+      entity_number = 2,
+      name = "stone-wall",
+      position = {x = -1.5,y = -2.5}
+    },
+    {
+      direction = 3,
+      entity_number = 3,
+      name = "straight-rail",
+      position = {x = -1,y = -1}
+    },
+    {
+      entity_number = 4,
+      name = "big-electric-pole",
+      position = {x = 2,y = 1}
+    },
+    {
+      direction = 5,
+      entity_number = 5,
+      name = "rail-chain-signal",
+      position = {x = 0.5,y = 0.5}
+    },
+    {
+      direction = 3,
+      entity_number = 6,
+      name = "straight-rail",
+      position = {x = 3,y = 3}
+    },
+    {
+      direction = 1,
+      entity_number = 7,
+      name = "rail-signal",
+      position = {x = 2.5,y = 2.5}
+    },
+    {
+      entity_number = 8,
+      name = "stone-wall",
+      position = {x = 5.5,y = 4.5}
+    },
+    {
+      entity_number = 9,
+      name = "stone-wall",
+      position = {x = 5.5,y = 5.5}
+    }
     },
     tiles = {
-        { name = "concrete", position = {x = -4,y = -4}},
-        { name = "concrete", position = {x = -3,y = -4}},
-        { name = "concrete", position = {x = -3,y = -3}},
-        { name = "concrete", position = {x = -2,y = -3}},
-        { name = "concrete", position = {x = -2,y = -2}},
-        { name = "concrete", position = {x = -1,y = -2}},
-        { name = "concrete", position = {x = -1,y = -1}},
-        { name = "concrete", position = {x = 0,y = -1}},
-        { name = "concrete", position = {x = 0,y = 0}},
-        { name = "concrete", position = {x = 1,y = 0}},
-        { name = "concrete", position = {x = 1,y = 1}},
-        { name = "concrete", position = {x = 2,y = 1}},
-        { name = "concrete", position = {x = 2,y = 2}}
+        {name = "concrete",position = {x = -2,y = -2}},
+        {name = "concrete",position = {x = -1,y = -2}},
+        {name = "concrete",position = {x = -1,y = -1}},
+        {name = "concrete",position = {x = 0,y = -1}},
+        {name = "concrete",position = {x = 0,y = 0}},
+        {name = "concrete",position = {x = 1,y = 0}},
+        {name = "concrete",position = {x = 1,y = 1}},
+        {name = "concrete",position = {x = 2,y = 1}},
+        {name = "concrete",position = {x = 2,y = 2}},
+        {name = "concrete",position = {x = 3,y = 2}},
+        {name = "concrete",position = {x = 3,y = 3}},
+        {name = "concrete",position = {x = 4,y = 3}},
+        {name = "concrete",position = {x = 4,y = 4}}
     }
 }
 
 defaults_concrete_vert = { --luacheck: allow defined top
     entities = {
-        {
-            entity_number = 1,
-            name = "big-electric-pole",
-            position = {x = -1,y = 0}},
-        {
-            entity_number = 2,
-            name = "straight-rail",
-            position = {x = -4,y = 0}},
-        {
-            direction = 4,
-            entity_number = 3,
-            name = "rail-chain-signal",
-            position = {x = -2.5,y = 0.5}},
-        {
-            entity_number = 4,
-            name = "rail-signal",
-            position = {x = 0.5,y = 0.5}},
-        {
-            entity_number = 5,
-            name = "straight-rail",
-            position = {x = 2,y = 0}},
-        {
-            entity_number = 6,
-            name = "stone-wall",
-            position = {x = -6.5,y = 0.5}},
-        {
-            entity_number = 7,
-            name = "stone-wall",
-            position = {x = -6.5,y = -0.5}},
-        {
-            entity_number = 8,
-            name = "stone-wall",
-            position = {x = 4.5,y = 0.5}},
-        {
-            entity_number = 9,
-            name = "stone-wall",
-            position = {x = 4.5,y = -0.5}
-        }
+    {
+      entity_number = 1,
+      name = "stone-wall",
+      position = {x = -3.5,y = -0.5}},
+    {
+      entity_number = 2,
+      name = "stone-wall",
+      position = {x = -3.5,y = -1.5}},
+    {
+      entity_number = 3,
+      name = "straight-rail",
+      position = {x = -1,y = -1}},
+    {
+      entity_number = 4,
+      name = "big-electric-pole",
+      position = {x = 2,y = -1}},
+    {
+      direction = 4,
+      entity_number = 5,
+      name = "rail-chain-signal",
+      position = {x = 0.5,y = -1.5}},
+    {
+      entity_number = 6,
+      name = "rail-signal",
+      position = {x = 3.5,y = -1.5}},
+    {
+      entity_number = 7,
+      name = "straight-rail",
+      position = {x = 5,y = -1}},
+    {
+      entity_number = 8,
+      name = "stone-wall",
+      position = {x = 7.5,y = -0.5}},
+    {
+      entity_number = 9,
+      name = "stone-wall",
+      position = {x = 7.5,y = -1.5}}
     },
     tiles = {
-        { name = "concrete",
-            position = {x = -6,y = -1}},
-        { name = "concrete",
-            position = {x = -6,y = 0}},
-        { name = "concrete",
-            position = {x = -5,y = -1}},
-        { name = "concrete",
-            position = {x = -5,y = 0}},
-        { name = "concrete",
-            position = {x = -4,y = -1}},
-        { name = "concrete",
-            position = {x = -4,y = 0}},
-        { name = "concrete",
-            position = {x = -3,y = -1}},
-        { name = "concrete",
-            position = {x = -3,y = 0}},
-        { name = "concrete",
-            position = {x = -2,y = -1}},
-        { name = "concrete",
-            position = {x = -2,y = 0}},
-        { name = "concrete",
-            position = {x = -1,y = -1}},
-        { name = "concrete",
-            position = {x = -1,y = 0}},
-        { name = "concrete",
-            position = {x = 0,y = -1}},
-        { name = "concrete",
-            position = {x = 0,y = 0}},
-        { name = "concrete",
-            position = {x = 1,y = -1}},
-        { name = "concrete",
-            position = {x = 1,y = 0}},
-        { name = "concrete",
-            position = {x = 2,y = -1}},
-        { name = "concrete",
-            position = {x = 2,y = 0}},
-        { name = "concrete",
-            position = {x = 3,y = -1}},
-        { name = "concrete",
-            position = {x = 3,y = 0}}
+        {name = "concrete",position = {x = -3,y = -2}},
+        {name = "concrete",position = {x = -3,y = -1}},
+        {name = "concrete",position = {x = -2,y = -2}},
+        {name = "concrete",position = {x = -2,y = -1}},
+        {name = "concrete",position = {x = -1,y = -2}},
+        {name = "concrete",position = {x = -1,y = -1}},
+        {name = "concrete",position = {x = 0,y = -2}},
+        {name = "concrete",position = {x = 0,y = -1}},
+        {name = "concrete",position = {x = 1,y = -2}},
+        {name = "concrete",position = {x = 1,y = -1}},
+        {name = "concrete",position = {x = 2,y = -2}},
+        {name = "concrete",position = {x = 2,y = -1}},
+        {name = "concrete",position = {x = 3,y = -2}},
+        {name = "concrete",position = {x = 3,y = -1}},
+        {name = "concrete",position = {x = 4,y = -2}},
+        {name = "concrete",position = {x = 4,y = -1}},
+        {name = "concrete",position = {x = 5,y = -2}},
+        {name = "concrete",position = {x = 5,y = -1}},
+        {name = "concrete",position = {x = 6,y = -2}},
+        {name = "concrete",position = {x = 6,y = -1}}
     }
 }
 
