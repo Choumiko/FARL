@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 4.0.4
+Date: ????
+  Bugfixes:
+    - Fixed curved rails being sleepy rails with Naked Rails mod active
+    - Fixed error when removing Naked Rails mod
+    - Fixed blueprints created from the settings UI not working
+---------------------------------------------------------------------------------------------------
 Version: 4.0.3
 Date: 2020-08-24
   Bugfixes:

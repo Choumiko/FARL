@@ -2,6 +2,7 @@ build
 build/*
 factorio_mods
 *.iml
+*.zip
 /.buildpath
 /.project
 /.settings
