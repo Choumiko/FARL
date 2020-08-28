@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 4.0.4
-Date: ????
+Date: 2020-08-28
   Bugfixes:
     - Fixed curved rails being sleepy rails with Naked Rails mod active
     - Fixed error when removing Naked Rails mod
