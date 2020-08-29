@@ -234,10 +234,13 @@ local function on_load()
 end
 
 local function reset_rail_types()
-    for i, psettings in pairs(global.players) do
-        game.get_player(i).print("Rail types where changed, resetting to vanilla rail.")
-        psettings.railType = 1
-        psettings.rail = global.rails_by_index[1]
+    for _, player in pairs(game.players) do
+        player.print("Rail types where changed, resetting to vanilla rail.")
+        local psettings = global.players[player.index]
+        if psettings then
+            psettings.railType = 1
+            psettings.rail = global.rails_by_index[1]
+        end
     end
 end
 

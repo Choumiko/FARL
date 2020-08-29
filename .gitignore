@@ -1,11 +1,2 @@
-build
-build/*
-factorio_mods
-*.iml
 *.zip
-/.buildpath
-/.project
-/.settings
-/factorio_mods15/
-thumbnail.xcf
-cookiejar.txt
+*.xcf
