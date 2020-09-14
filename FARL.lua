@@ -791,13 +791,35 @@ FARL.removeTrees = function(self, area)
     --log(game.tick .. ' removeTrees end')
 end
 
+FARL.removeCreep = function(self, area)
+    if self.surface.count_tiles_filtered{area = area, name = "kr-creep"} > 0 then
+        local tiles = {}
+        local tiles_filtered = self.surface.find_tiles_filtered{area = area, name = "kr-creep"}
+        local collected = 0
+        for _, tile in pairs(tiles_filtered) do
+            table.insert(tiles, {name = "landfill", position = tile.position})
+            collected = collected + 1
+        end
+        if collected > 0 and not self.cheat_mode then
+            collected = round(collected * (math.random(30,80)/100))
+            if collected > 0 then
+                self:addItemToCargo("biomass", collected)
+            end
+        end
+        if #tiles > 0 then
+            self.surface.set_tiles(tiles)
+        end
+    end
+end
+
 FARL.removeStone = function(self, area)
+    self:removeCreep(area)
     local amount, name, proto
     local random = math.random
     for _, entity in pairs(self.surface.find_entities_filtered { area = area, type = "simple-entity", force = "neutral" }) do
         proto = entity.prototype.mineable_properties
         if proto and proto.minable and proto.products then
-            if entity.destroy() and self.settings.collectWood  and not self.cheat_mode then
+            if entity.destroy() and self.settings.collectWood and not self.cheat_mode then
                 local products = proto.products
                 for _, product in pairs(products) do
                     if product.type == "item" then
