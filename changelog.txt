@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 4.0.5
-Date: ????
+Date: 2020-09-14
   Changes:
     - FARL will now remove Krastorio 2 "biter creep" tiles and collect biomass
   Bugfixes:
