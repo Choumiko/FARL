@@ -31,3 +31,16 @@ if not data.raw["custom-input"] or not data.raw["custom-input"]["toggle-train-co
         }
     })
 end
+
+data:extend{
+    {
+        type = "custom-input",
+        name = "farl-toggle-cruise-control",
+        key_sequence = "SHIFT + C"
+    },
+    {
+        type = "custom-input",
+        name = "farl-toggle-active",
+        key_sequence = "SHIFT + A"
+    }
+}

@@ -332,6 +332,7 @@ FARL.onPlayerEnter = function(player, loco)
                 farl.settings.YARM_old_expando = remote.call("YARM", "hide_expando", player.index)
             end
             global.activeFarls[FARL.getIdFromTrain(farl.train)] = farl
+            farl.settings.cruiseSpeed = farl.settings.fullCruise and farl.train.max_forward_speed or 0.4
             return farl
         end
     end)

@@ -157,6 +157,7 @@ defaultSettings = --luacheck: allow defined top
         collectWood = true,
         curvedWeight = 4,
         cruiseSpeed = 0.4,
+        fullCruise = false,
         dropWood = true,
         flipPoles = false,
         signalDistance = 15,

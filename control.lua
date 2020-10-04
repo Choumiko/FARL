@@ -600,6 +600,30 @@ script.on_event("toggle-train-control", function(event)
     end
 end)
 
+script.on_event("farl-toggle-cruise-control", function(event)
+    local player = game.get_player(event.player_index)
+    local vehicle = player.vehicle
+    if vehicle and FARL.isFARLLocomotive(vehicle) then
+        local farl = FARL.findByPlayer(player)
+        if farl then farl:toggleCruiseControl() end
+    end
+end)
+
+script.on_event("farl-toggle-active", function(event)
+    local player = game.get_player(event.player_index)
+    local vehicle = player.vehicle
+    if vehicle and FARL.isFARLLocomotive(vehicle) then
+        local farl = FARL.findByPlayer(player)
+        if farl then
+            if farl.active then
+                farl:deactivate()
+            else
+                farl:activate()
+            end
+        end
+    end
+end)
+
 local command_to_button = {
     farl_read_bp = "blueprint",
     farl_clear_bp = "bpClear",

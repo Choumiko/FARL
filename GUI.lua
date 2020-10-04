@@ -64,6 +64,7 @@ GUI = {
             bridge = settings.bridge,
             collectWood = settings.collectWood,
             dropWood = settings.dropWood,
+            fullCruise = settings.fullCruise,
         }
     end,
 
@@ -208,12 +209,15 @@ GUI = {
         local psettings = Settings.loadByPlayer(player)
         if name == "signals" or name == "poles" or name == "ccNet" or name == "flipPoles" or name == "collectWood" or name == "dropWood"
             or name == "poleEntities" or name == "parallelTracks" or name == "concrete" or name == "railEntities" or name == "mirrorConcrete"
-            or name == "signalEveryPole" or name == "place_ghosts" or name == "remove_cliffs" then
+            or name == "signalEveryPole" or name == "place_ghosts" or name == "remove_cliffs" or name == "fullCruise" then
             psettings[name] = not psettings[name]
             if name == "poles" then
                 if psettings[name] and farl.active then
                     farl:findLastPole()
                 end
+            end
+            if name == "fullCruise" then
+                psettings.cruiseSpeed = psettings.fullCruise and farl.train.max_forward_speed or 0.4
             end
         elseif name == "bridge" then
             psettings.bridge = not psettings.bridge
@@ -355,6 +359,9 @@ GUI = {
 
             GUI.add(settings,{type="checkbox", name="dropWood", caption={"stg-dropWood"}}, "dropWood")
             GUI.add(settings,{type="checkbox", name="collectWood", caption={"stg-collectWood"}}, "collectWood")
+
+            GUI.add(settings,{type="checkbox", name="fullCruise", caption={"stg-fullCruise"}}, "fullCruise")
+            GUI.addPlaceHolder(settings)
 
             GUI.add(settings, {type="label", caption={"stg-signalDistance"}})
             GUI.add(settings, {type="textfield", name="signalDistance", style="farl_textfield_small"}, psettings.signalDistance)
