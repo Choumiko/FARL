@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 4.0.6
-Date: ????
+Date: 2020-10-04
   Changes:
     - Added hotkeys to start/stop FARL (Shift + A) and toggle cruise control (Shift + C)
     - Added an option to use maximum speed when in cruise mode
