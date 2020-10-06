@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 4.0.7
-Date: ????
+Date: 2020-10-06
   Bugfixes:
     - Changed default hotkey to Start/stop FARL to Control + A, to fix not being able to copy/paste while moving left
 ---------------------------------------------------------------------------------------------------
