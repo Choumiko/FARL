@@ -1,3 +1,5 @@
+local Position = require '__FARL__/stdlib/area/position'
+
 local M = {}
 
 function M.saveVar(var, name)
@@ -43,6 +45,23 @@ end
 
 function M.endsWith(haystack,needle)
     return needle=='' or string.sub(haystack,-string.len(needle))==needle
+end
+
+M.diagonal_data = {
+    [1] = { x = 0.5, y = -0.5 },
+    [3] = { x = 0.5, y = 0.5 },
+    [5] = { x = -0.5, y = 0.5 },
+    [7] = { x = -0.5, y = -0.5 }
+}
+
+function M.diagonal_to_real_pos(rail)
+    local data = M.diagonal_data
+    if rail.type and rail.type == "straight-rail" then
+        local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 } --fix for diagonal rails??!
+        return Position.add(off, rail.position)
+    else
+        return rail.position
+    end
 end
 
 return M

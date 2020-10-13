@@ -5,6 +5,7 @@ local Blueprint = {}
 local Position = require '__FARL__/stdlib/area/position'
 --local saveVar = require '__FARL__/lib_control.lua'['saveVar']
 local math = math
+local diagonal_to_real_pos = require "lib_control"
 
 --TODO check this:
 --signal dir + 4 = travel dir ?
@@ -127,7 +128,7 @@ Blueprint.group_entities = function(bp)
     local all_signals = {}
     local box = {tl={x=0,y=0}, br={x=0,y=0}}
     for i=1,#e do
-        local position = FARL.diagonal_to_real_pos(e[i])
+        local position = diagonal_to_real_pos(e[i])
         local prototype = game.entity_prototypes[e[i].name]
         if box.tl.x > position.x then box.tl.x = position.x end
         if box.tl.y > position.y then box.tl.y = position.y end

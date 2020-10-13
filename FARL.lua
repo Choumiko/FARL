@@ -7,6 +7,7 @@ local lib = require "__FARL__/lib_control"
 local debugDump = lib.debugDump
 local debugLog = lib.debugLog
 local endsWith = lib.endsWith
+local diagonal_to_real_pos = lib.diagonal_to_real_pos
 --local saveVar = lib.saveVar
 
 local math = math
@@ -172,26 +173,8 @@ FARL.real_signalOffset =
         },
     }
 
-FARL.diagonal_data =
-    {
-        [1] = { x = 0.5, y = -0.5 },
-        [3] = { x = 0.5, y = 0.5 },
-        [5] = { x = -0.5, y = 0.5 },
-        [7] = { x = -0.5, y = -0.5 }
-    }
-
-FARL.diagonal_to_real_pos = function(rail)--luacheck: allow defined top
-    local data = FARL.diagonal_data
-    if rail.type and rail.type == "straight-rail" then
-        local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 } --fix for diagonal rails??!
-        return Position.add(off, rail.position)
-    else
-        return rail.position
-    end
-end
-
 local function moveRail(rail, direction, distance)
-    local data = FARL.diagonal_data
+    local data = lib.diagonal_data
     distance = (rail.type == "straight-rail" and rail.direction % 2 == 1) and distance or distance * 2
     local off = data[rail.direction] and data[rail.direction] or { x = 0, y = 0 }
     local pos = Position.add(off, rail.position)
@@ -207,7 +190,7 @@ local function moveRail(rail, direction, distance)
 end
 
 local function get_signal_for_rail(rail, traveldir, end_of_rail)
-    local rail_pos = FARL.diagonal_to_real_pos(rail)
+    local rail_pos = diagonal_to_real_pos(rail)
     local offset = FARL.real_signalOffset[traveldir][rail.direction]
     local pos = Position.add(rail_pos, offset)
     local dir = (traveldir + 4) % 8
@@ -677,7 +660,7 @@ end
 
 FARL.show_path = function(self)
     for i = 1, #self.path do
-        self:flyingText2(i, RED, true, FARL.diagonal_to_real_pos(self.path[i].rail))
+        self:flyingText2(i, RED, true, diagonal_to_real_pos(self.path[i].rail))
         --self:flyingText(i..":"..self.path[i].travel_dir, RED, true, self.path[i].rail.position)
         --debugDump(path[i].rail.position,true)
     end
@@ -685,7 +668,7 @@ end
 
 FARL.createBoundingBox = function(self, rail, direction)
     local bb = direction % 2 == 1 and self.settings.activeBP.diagonal.boundingBox or self.settings.activeBP.straight.boundingBox
-    local realpos = FARL.diagonal_to_real_pos(rail)
+    local realpos = diagonal_to_real_pos(rail)
     local area = {
         move_right_forward(realpos, direction, bb.tl.x, bb.tl.y),
         move_right_forward(realpos, direction, bb.br.x, bb.br.y)
@@ -985,7 +968,7 @@ FARL.placeConcrete = function(self, dir, rail)
     local tiles = {}
     local pave = {}
     local w, dw = 0, 0
-    local railpos = FARL.diagonal_to_real_pos(rail)
+    local railpos = diagonal_to_real_pos(rail)
 
     --mirror directional concrete from color-coding
     local textured = {}
@@ -1158,7 +1141,7 @@ FARL.bulldoze_area = function(self, rail, travel_dir)
 
         self:prepareArea(rail, area)
         self:removeConcrete(area)
-        local area2 = Position.expand_to_area(FARL.diagonal_to_real_pos(rail), 1.5)
+        local area2 = Position.expand_to_area(diagonal_to_real_pos(rail), 1.5)
         for _, t in pairs(types) do
             self:removeEntitiesFiltered({ area = area, type = t }, self.protected)
             self:removeEntitiesFiltered({ area = area2, type = t }, self.protected)
@@ -1953,7 +1936,7 @@ FARL.parseBlueprints = function(self, blueprints)
                     end
                     local railPos = mainRail.position
                     if bpType == "diagonal" then
-                        railPos = FARL.diagonal_to_real_pos(mainRail)
+                        railPos = diagonal_to_real_pos(mainRail)
                     end
                     --log(serpent.block(railPos))
                     --log(serpent.block(offsets.pole.position))
@@ -2011,7 +1994,7 @@ FARL.parseBlueprints = function(self, blueprints)
                                 }
                             local move_dir = tmp.position.y < 0 and 1 or 5
                             if bpType == "diagonal" then
-                                lane_distance = Position.subtract(FARL.diagonal_to_real_pos(l), FARL.diagonal_to_real_pos(mainRail))
+                                lane_distance = Position.subtract(diagonal_to_real_pos(l), diagonal_to_real_pos(mainRail))
                                 lane_distance = lane_distance.x + lane_distance.y
                             else
                                 lane_distance = tmp.position.x
@@ -2082,8 +2065,8 @@ FARL.parseBlueprints = function(self, blueprints)
                                 entity_number = l.entity_number
                             })
                     end
-                    local tl = Position.subtract(box.tl, FARL.diagonal_to_real_pos(mainRail))
-                    local br = Position.subtract(box.br, FARL.diagonal_to_real_pos(mainRail))
+                    local tl = Position.subtract(box.tl, diagonal_to_real_pos(mainRail))
+                    local br = Position.subtract(box.br, diagonal_to_real_pos(mainRail))
                     --forward
                     tl.y = tl.y < -1.5 and tl.y or -1.5
                     br.y = br.y > 1.5 and br.y or 1.5
@@ -2516,7 +2499,7 @@ FARL.calcPole = function(self, lastrail, traveldir)
                 offset = FARL.mirrorEntity(offset, traveldir)
             end
             if diagonal then
-                local railPos = FARL.diagonal_data[lastrail.direction] or { x = 0, y = 0 }
+                local railPos = lib.diagonal_data[lastrail.direction] or { x = 0, y = 0 }
                 offset = Position.add(railPos, offset)
             end
             return offset
@@ -2586,7 +2569,7 @@ FARL.placeRailEntities = function(self, traveldir, rail)
             if self.settings.place_ghosts or cargo_count > 0 then
                 local offset = railEntities[i].position
                 offset = rotate(offset, rad)
-                local pos = Position.add(FARL.diagonal_to_real_pos(rail), offset)
+                local pos = Position.add(diagonal_to_real_pos(rail), offset)
                 --debugDump(pos, true)
                 local entity = { name = railEntities[i].name, position = pos }
                 if self:prepareArea(entity) then
@@ -2898,7 +2881,7 @@ FARL.debugInfo = function(self)
         if rail then
             --self:flyingText2("B", GREEN, true, rail.position)
             self:print("Rail@" .. Position.tostring(rail.position) .. " dir:" .. rail.direction)
-            local fixed = FARL.diagonal_to_real_pos(rail)
+            local fixed = diagonal_to_real_pos(rail)
             if rail.direction % 2 == 1 then
                 --self:flyingText2("F", GREEN, true, fixed)
                 self:print("Fixed: " .. Position.tostring(fixed) .. " dir:" .. rail.direction)
@@ -3042,14 +3025,14 @@ FARL.showArea = function(self, rail, direction, area, duration)
     max_y = ceil(max_y - 0.5) + 0.5
     for right = min_x, max_x do
         for forward = min_y, max_y do
-            local pos = move_right_forward(FARL.diagonal_to_real_pos(rail), direction, right, forward)
+            local pos = move_right_forward(diagonal_to_real_pos(rail), direction, right, forward)
             --self:create_overlay({x=right,y=forward},duration)
             self:create_overlay(pos, duration)
         end
     end
     --    for right=min(bb.tl.x,bb.br.x),max(bb.tl.x,bb.br.x) do
     --      for forward=min(bb.tl.y,bb.br.y),max(bb.tl.y,bb.br.y) do
-    --        local pos = move_right_forward(FARL.diagonal_to_real_pos(rail),direction,right,forward)
+    --        local pos = move_right_forward(diagonal_to_real_pos(rail),direction,right,forward)
     --        --self:create_overlay({x=right,y=forward},duration)
     --        self:create_overlay(pos, duration)
     --      end

@@ -25,7 +25,7 @@ data:extend
 }
 
 local farlRoboport =  copyPrototype("roboport-equipment", "personal-roboport-equipment", "farl-roboport", true)
-farlRoboport.energy_consumption = "0W"
+farlRoboport.energy_consumption = nil
 --farlRoboport.robot_limit = 50
 farlRoboport.robot_limit = 0
 farlRoboport.charging_station_count = 0
