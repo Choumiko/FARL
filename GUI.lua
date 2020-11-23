@@ -91,7 +91,7 @@ GUI = {
         end
         local ret = parent.add(e)
         if bind and e.type == "textfield" then
-            ret.text = bind
+            ret.text = tostring(bind)
         end
         if e.type == "checkbox" and e.state == nil then
             e.state = false

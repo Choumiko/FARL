@@ -5,7 +5,7 @@ local Blueprint = {}
 local Position = require '__FARL__/stdlib/area/position'
 --local saveVar = require '__FARL__/lib_control.lua'['saveVar']
 local math = math
-local diagonal_to_real_pos = require "lib_control"
+local diagonal_to_real_pos = require("lib_control").diagonal_to_real_pos
 
 --TODO check this:
 --signal dir + 4 = travel dir ?
