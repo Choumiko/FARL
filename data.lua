@@ -41,6 +41,6 @@ data:extend{
     {
         type = "custom-input",
         name = "farl-toggle-active",
-        key_sequence = "CONTROL + A",
+        key_sequence = "",
     }
 }
