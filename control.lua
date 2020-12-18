@@ -60,7 +60,7 @@ local function getRailTypes()
             rails_by_item = {}
         end
     end
-    local items = game.get_filtered_item_prototypes{{filter="place-result", elem_filters={{filter="rail"}}}}
+    --local items = game.get_filtered_item_prototypes{{filter="place-result", elem_filters={{filter="rail"}}}}
     local railstring = ""
     local rails = game.get_filtered_entity_prototypes({{filter="rail"}})
     for name, proto in pairs(rails) do
