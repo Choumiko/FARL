@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 4.1.1
-Date: ????
+Date: 2020-12-18
   Bugfixes:
     - Fixed FARL not being able to start in Bulldozer/Maintenance mode when no custom blueprint was used
 ---------------------------------------------------------------------------------------------------
