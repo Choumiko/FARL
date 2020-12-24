@@ -44,7 +44,7 @@ if not mods["IndustrialRevolution"] then
 else
     farlRoboportRecipe.ingredients = {
         {"iron-gear-wheel", 5},
-        {"controller-mk1", 1},
+        {"electronic-circuit", 5},
         {"iron-plate-heavy", 5},
     }
 end
