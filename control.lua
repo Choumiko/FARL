@@ -75,7 +75,7 @@ local function getRailTypes()
                 end
             end
         end
-        if proto.type == "curved-rail" then
+        if proto.type == "curved-rail" and proto.items_to_place_this then
             for _, item in pairs(proto.items_to_place_this) do
                 --log(serpent.block(item))
                 local item_proto = game.item_prototypes[item.name]
