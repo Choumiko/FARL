@@ -745,12 +745,15 @@ FARL.removeTrees = function(self, area)
                             if product.probability then
                                 if product.probability == 1 or (product.probability >= random()) then
                                     name = product.name
+                                    amount = product.amount
                                 end
                                 if name then
-                                    if product.amount_max == product.amount_min then
+                                    if product.amount_min and (product.amount_max == product.amount_min) then
                                         amount = product.amount_max
-                                    else
+                                    elseif product.amount_min and product.amount_max then
                                         amount = random(product.amount_min, product.amount_max)
+                                    else 
+                                        amount = product.amount
                                     end
                                     if amount and amount > 0 then
                                         self:addItemToCargo(name, ceil(amount/2))
